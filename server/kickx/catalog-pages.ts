@@ -48,9 +48,13 @@ export async function readPlayerDetail(client: SupabaseClient, id: string): Prom
     client.from("player_analyses").select("body").eq("id",id).maybeSingle(),
   ]);
   for(const result of [history,records,analysis]) if(result.error) throw result.error;
+  const opponents = [...new Set((records.data ?? []).map(row => row.opponent))];
+  const teamNames = opponents.length ? await client.from("teams").select("*").in("name",opponents) : {data:[],error:null};
+  if (teamNames.error) throw teamNames.error;
+  const localized = new Map((teamNames.data ?? []).map(row => [row.name,row.name_ko || row.name]));
   const player=mapPlayer(data,data);
   player.history=(history.data||[]).reverse().map(row=>({at:row.recorded_at,value:Number(row.value)}));
-  player.records=(records.data||[]).map(row=>({id:row.id,playedAt:row.played_at,opponent:row.opponent,result:row.result,minutes:row.minutes,goals:row.goals,assists:row.assists,performance:row.performance == null ? null : Number(row.performance)}));
+  player.records=(records.data||[]).map(row=>({id:row.id,playedAt:row.played_at,opponent:localized.get(row.opponent) || row.opponent,result:row.result,minutes:row.minutes,goals:row.goals,assists:row.assists,performance:row.performance == null ? null : Number(row.performance)}));
   player.analysis=analysis.data?.body ?? null;
   const scores=await client.from("performance_results").select("fixture_id,score,status,rule_version,breakdown,warnings").eq("player_id",id).order("calculated_at",{ascending:false}).limit(20);
   if(!migrationMissing(scores.error)){checkDatabase(scores.error);player.scoreDetails=scores.data??[];}

@@ -51,3 +51,13 @@ test("BSD photos and partial imported-match scope cross the public catalog contr
  assert.equal(result.players[0].statsScope,'imported_matches');assert.equal(result.players[0].importedMatches,2);
  assert.equal(result.players[0].goals,null);assert.equal(result.players[0].price,null);
 });
+
+test("Korean columns take priority while English identity and pre-migration aliases remain usable",async()=>{
+ const result=await readCatalog(clientFor({
+  player_catalog:[{id:"bsd-1",name:"Original",english:"Original",name_ko:"직접 표기",display_name:"이전 표기"},{id:"bsd-2",name:"Fallback",display_name:"기존 표기"}],
+  teams:[{id:"bsd-10",name:"Liverpool FC",name_ko:"리버풀"},{id:"bsd-20",name:"Unmapped"}],
+ }));
+ assert.equal(result.players[0].name,"직접 표기");assert.equal(result.players[0].originalName,"Original");
+ assert.equal(result.players[1].name,"기존 표기");assert.equal(result.teams[0].name,"리버풀");
+ assert.equal(result.teams[0].english,"Liverpool FC");assert.equal(result.teams[1].name,"Unmapped");
+});

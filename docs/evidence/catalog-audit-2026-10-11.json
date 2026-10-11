@@ -1,0 +1,53 @@
+{
+  "players": 3118,
+  "scored": 2023,
+  "snapshot_date": "2026-10-11",
+  "sample_players": 93,
+  "sample_results": 439,
+  "sample_status": {
+    "provisional": 305,
+    "blocked": 62,
+    "not-played": 72
+  },
+  "warnings": {
+    "assists:UNVERIFIED_OR_MISSING_EXCLUDED": 290,
+    "shots_on_target:UNVERIFIED_OR_MISSING_EXCLUDED": 112,
+    "crosses_completed:UNVERIFIED_OR_MISSING_EXCLUDED": 187,
+    "PROTOTYPE_INCIDENT_COMPLETENESS_ASSUMPTION": 305,
+    "defensive_actions:PARTIAL_COUNTERS": 67,
+    "pass_accuracy:UNVERIFIED_OR_THRESHOLD_NOT_MET": 71,
+    "defensive_actions:UNVERIFIED_OR_MISSING_EXCLUDED": 40,
+    "key_passes:UNVERIFIED_OR_MISSING_EXCLUDED": 125,
+    "penalty_saves:UNVERIFIED_OR_MISSING_EXCLUDED": 81,
+    "saves:UNVERIFIED_OR_MISSING_EXCLUDED": 5
+  },
+  "nonzero_metrics": {
+    "minutes": 305,
+    "yellow_cards": 26,
+    "key_passes": 98,
+    "defensive_actions": 33,
+    "assists": 15,
+    "crosses_completed": 36,
+    "pass_accuracy": 48,
+    "shots_on_target": 45,
+    "clean_sheet": 54,
+    "goals": 26,
+    "saves": 47,
+    "conceded": 57,
+    "penalty_saves": 1
+  },
+  "code_commit": "e8d1b99dc9e72ac896feafc57a5ac09a9e8aaf26",
+  "source": "https://kick-x-test.vercel.app/api/kickx/players?size=50&page=N&sort=name",
+  "snapshot_scope": "one latest published score per player; not all matches",
+  "latest_scores": {
+    "zero_to_three": 1289,
+    "below_four": 1395,
+    "median": 2.5,
+    "mean": 3.35121107266436,
+    "min": -3,
+    "max": 20.5,
+    "missing": 1095
+  },
+  "sampling": "seed 20261011; up to 4 players per league-position bucket with match participation",
+  "warning_caveat": "UNVERIFIED_OR_MISSING also includes unverified real zero values; not a count of genuinely missing observations"
+}
