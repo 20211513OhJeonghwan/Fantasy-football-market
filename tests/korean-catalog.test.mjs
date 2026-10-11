@@ -21,9 +21,9 @@ test("Supabase transport sends opaque server keys only as apikey and retains JWT
 });
 
 test("Korean catalog has unique provider identities and explicitly marked provisional names", () => {
-  assert.equal(validateKoreanCatalog(players).length, 3118);
+  assert.equal(validateKoreanCatalog(players).length, 3122);
   assert.equal(validateKoreanCatalog(teams).length, 96);
-  assert.equal(players.filter(row => row.source === "wikidata").length, 1212);
+  assert.equal(players.filter(row => row.source === "wikidata").length, 1182);
   assert.ok(players.filter(row => row.source === "transliteration").every(row => row.review === "provisional"));
   assert.throws(() => validateKoreanCatalog([players[0], players[0]]));
   assert.throws(() => validateKoreanCatalog([{ ...players[0], name_ko: "English" }]));

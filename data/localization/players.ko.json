@@ -3779,13 +3779,14 @@
     "id": "bsd-822",
     "name": "Tyler Dibling",
     "name_ko": "타일러 디블링",
-    "birth_date": "2006-03-12",
-    "source_id": "Q115973966",
-    "aliases": [
-      "Tyler Dibling"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "타일러 디블링",
+      "source_id": "Q115973966",
+      "birth_date": "2006-03-12"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-823",
@@ -4772,13 +4773,14 @@
     "id": "bsd-961",
     "name": "Federico Bernardeschi",
     "name_ko": "페데리코 베르나르데스키",
-    "birth_date": "1994-02-16",
-    "source_id": "Q15220993",
-    "aliases": [
-      "Federico Bernardeschi"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "페데리코 베르나르데스키",
+      "source_id": "Q15220993",
+      "birth_date": "1994-02-16"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-962",
@@ -7387,13 +7389,14 @@
     "id": "bsd-1426",
     "name": "Mory Diaw",
     "name_ko": "모리 디아우",
-    "birth_date": "1993-06-22",
-    "source_id": "Q17686992",
-    "aliases": [
-      "Mory Diaw"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "모리 디아우",
+      "source_id": "Q17686992",
+      "birth_date": "1993-06-22"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-1428",
@@ -7823,13 +7826,14 @@
     "id": "bsd-1486",
     "name": "Antoine Mendy",
     "name_ko": "앙투안 멘디",
-    "birth_date": "2004-05-27",
-    "source_id": "Q114713518",
-    "aliases": [
-      "Antoine Mendy"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "앙투안 멘디",
+      "source_id": "Q114713518",
+      "birth_date": "2004-05-27"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-1488",
@@ -8228,13 +8232,14 @@
     "id": "bsd-1578",
     "name": "Cucho Hernández",
     "name_ko": "쿠초 에르난데스",
-    "birth_date": "1999-04-22",
-    "source_id": "Q27037962",
-    "aliases": [
-      "Cucho Hernández"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "쿠초 에르난데스",
+      "source_id": "Q27037962",
+      "birth_date": "1999-04-22"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-1580",
@@ -9545,13 +9550,14 @@
     "id": "bsd-1774",
     "name": "Ayoze Pérez",
     "name_ko": "아요세 페레스",
-    "birth_date": "1993-07-29",
-    "source_id": "Q15427728",
-    "aliases": [
-      "Ayoze Pérez"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "아요세 페레스",
+      "source_id": "Q15427728",
+      "birth_date": "1993-07-29"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-1776",
@@ -10048,13 +10054,14 @@
     "id": "bsd-1838",
     "name": "Marcus Pedersen",
     "name_ko": "마르쿠스 페데르센",
-    "birth_date": "1990-06-08",
-    "source_id": "Q1894303",
-    "aliases": [
-      "Marcus Pedersen"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "마르쿠스 페데르센",
+      "source_id": "Q1894303",
+      "birth_date": "1990-06-08"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-1839",
@@ -10173,13 +10180,14 @@
     "id": "bsd-1854",
     "name": "Tino Anjorin",
     "name_ko": "티노 안조린",
-    "birth_date": "2001-11-23",
-    "source_id": "Q68603852",
-    "aliases": [
-      "Tino Anjorin"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "티노 안조린",
+      "source_id": "Q68603852",
+      "birth_date": "2001-11-23"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-1863",
@@ -10395,13 +10403,14 @@
     "id": "bsd-1940",
     "name": "Arthur Vermeeren",
     "name_ko": "아르투르 베르미렌",
-    "birth_date": "2005-02-07",
-    "source_id": "Q113499581",
-    "aliases": [
-      "Arthur Vermeeren"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "아르투르 베르미렌",
+      "source_id": "Q113499581",
+      "birth_date": "2005-02-07"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-1941",
@@ -10438,13 +10447,14 @@
     "id": "bsd-1944",
     "name": "Charlie Cresswell",
     "name_ko": "찰리 크레스웰",
-    "birth_date": "2002-08-17",
-    "source_id": "Q99396781",
-    "aliases": [
-      "Charlie Cresswell"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "찰리 크레스웰",
+      "source_id": "Q99396781",
+      "birth_date": "2002-08-17"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-1945",
@@ -10810,13 +10820,14 @@
     "id": "bsd-2009",
     "name": "Alessio Romagnoli",
     "name_ko": "알레시오 로마뇰리",
-    "birth_date": "1995-01-12",
-    "source_id": "Q795017",
-    "aliases": [
-      "Alessio Romagnoli"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "알레시오 로마뇰리",
+      "source_id": "Q795017",
+      "birth_date": "1995-01-12"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-2010",
@@ -11174,13 +11185,14 @@
     "id": "bsd-2103",
     "name": "Josué Casimir",
     "name_ko": "조쥐에 카지미르",
-    "birth_date": "2001-09-24",
-    "source_id": "Q100792937",
-    "aliases": [
-      "Josué Casimir"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "조쥐에 카지미르",
+      "source_id": "Q100792937",
+      "birth_date": "2001-09-24"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-2104",
@@ -11480,13 +11492,14 @@
     "id": "bsd-2147",
     "name": "Claudio Echeverri",
     "name_ko": "클라우디오 에체베리",
-    "birth_date": "2006-01-02",
-    "source_id": "Q116463164",
-    "aliases": [
-      "Claudio Echeverri"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "클라우디오 에체베리",
+      "source_id": "Q116463164",
+      "birth_date": "2006-01-02"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-2148",
@@ -11775,13 +11788,14 @@
     "id": "bsd-2175",
     "name": "Mattia Perin",
     "name_ko": "마티아 페린",
-    "birth_date": "1992-11-10",
-    "source_id": "Q861615",
-    "aliases": [
-      "Mattia Perin"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "마티아 페린",
+      "source_id": "Q861615",
+      "birth_date": "1992-11-10"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-2176",
@@ -11859,13 +11873,14 @@
     "id": "bsd-2183",
     "name": "Francisco Conceição",
     "name_ko": "프란시스쿠 콘세이상",
-    "birth_date": "2002-12-14",
-    "source_id": "Q99617367",
-    "aliases": [
-      "Francisco Conceição"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "프란시스쿠 콘세이상",
+      "source_id": "Q99617367",
+      "birth_date": "2002-12-14"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-2184",
@@ -11907,13 +11922,14 @@
     "id": "bsd-2188",
     "name": "Fabio Miretti",
     "name_ko": "파비오 미레티",
-    "birth_date": "2003-08-03",
-    "source_id": "Q105477844",
-    "aliases": [
-      "Fabio Miretti"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "파비오 미레티",
+      "source_id": "Q105477844",
+      "birth_date": "2003-08-03"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-2189",
@@ -12179,13 +12195,14 @@
     "id": "bsd-2224",
     "name": "Thilo Kehrer",
     "name_ko": "틸로 케러",
-    "birth_date": "1996-09-21",
-    "source_id": "Q20823439",
-    "aliases": [
-      "Thilo Kehrer"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "틸로 케러",
+      "source_id": "Q20823439",
+      "birth_date": "1996-09-21"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-2225",
@@ -12709,13 +12726,14 @@
     "id": "bsd-2361",
     "name": "Moussa Diarra",
     "name_ko": "무사 디아라",
-    "birth_date": "2000-11-10",
-    "source_id": "Q66586585",
-    "aliases": [
-      "Moussa Diarra"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "무사 디아라",
+      "source_id": "Q66586585",
+      "birth_date": "2000-11-10"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-2362",
@@ -14227,13 +14245,14 @@
     "id": "bsd-2598",
     "name": "Vitinha",
     "name_ko": "비티냐",
-    "birth_date": "2000-02-13",
-    "source_id": "Q66818509",
-    "aliases": [
-      "Vitinha"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "비티냐",
+      "source_id": "Q66818509",
+      "birth_date": "2000-02-13"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-2600",
@@ -15223,13 +15242,14 @@
     "id": "bsd-2841",
     "name": "Álvaro Morata",
     "name_ko": "알바로 모라타",
-    "birth_date": "1992-10-23",
-    "source_id": "Q48770",
-    "aliases": [
-      "Álvaro Morata"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "알바로 모라타",
+      "source_id": "Q48770",
+      "birth_date": "1992-10-23"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-2843",
@@ -19386,14 +19406,15 @@
   {
     "id": "bsd-4811",
     "name": "Theo Bair",
-    "name_ko": "시오 블레어",
-    "birth_date": "1999-08-27",
-    "source_id": "Q65029258",
-    "aliases": [
-      "Theo Bair"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "name_ko": "테오 베어",
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "시오 블레어",
+      "source_id": "Q65029258",
+      "birth_date": "1999-08-27"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-4814",
@@ -20530,14 +20551,15 @@
   {
     "id": "bsd-6190",
     "name": "Liam Millar",
-    "name_ko": "리엄 밀라",
-    "birth_date": "1999-09-27",
-    "source_id": "Q50505969",
-    "aliases": [
-      "Liam Millar"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "name_ko": "리엄 밀러",
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "리엄 밀라",
+      "source_id": "Q50505969",
+      "birth_date": "1999-09-27"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-6191",
@@ -20554,14 +20576,15 @@
   {
     "id": "bsd-6197",
     "name": "Darko Gyabi",
-    "name_ko": "다코 갸비",
-    "birth_date": "2004-02-18",
-    "source_id": "Q112801051",
-    "aliases": [
-      "Darko Gyabi"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "name_ko": "다르코 갸비",
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "다코 갸비",
+      "source_id": "Q112801051",
+      "birth_date": "2004-02-18"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-6198",
@@ -20884,13 +20907,14 @@
     "id": "bsd-6736",
     "name": "Daniel Jebbison",
     "name_ko": "다니엘 제비슨",
-    "birth_date": "2003-08-13",
-    "source_id": "Q106766809",
-    "aliases": [
-      "Daniel Jebbison"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "다니엘 제비슨",
+      "source_id": "Q106766809",
+      "birth_date": "2003-08-13"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-6800",
@@ -21043,14 +21067,15 @@
   {
     "id": "bsd-7351",
     "name": "Nathan-Dylan Saliba",
-    "name_ko": "나탕 살리바",
-    "birth_date": "2004-08-29",
-    "source_id": "Q116908746",
-    "aliases": [
-      "Nathan-Dylan Saliba"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "name_ko": "네이선 딜런 살리바",
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "나탕 살리바",
+      "source_id": "Q116908746",
+      "birth_date": "2004-08-29"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-7353",
@@ -21669,13 +21694,14 @@
     "id": "bsd-8593",
     "name": "Chadi Riad",
     "name_ko": "샤디 리아드",
-    "birth_date": "2003-06-17",
-    "source_id": "Q104784108",
-    "aliases": [
-      "Chadi Riad"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "샤디 리아드",
+      "source_id": "Q104784108",
+      "birth_date": "2003-06-17"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-8596",
@@ -22180,6 +22206,13 @@
     "review": "name-and-age-matched;birth-date-required-on-write"
   },
   {
+    "id": "bsd-9011",
+    "name": "Yoann Becker",
+    "name_ko": "요안 베케르",
+    "source": "transliteration",
+    "review": "provisional"
+  },
+  {
     "id": "bsd-9013",
     "name": "Jacen Russell Rowe",
     "name_ko": "제이슨 러셀로",
@@ -22525,13 +22558,14 @@
     "id": "bsd-13577",
     "name": "Álvaro Cortés",
     "name_ko": "알바로 코르테스",
-    "birth_date": "2005-03-17",
-    "source_id": "Q121944083",
-    "aliases": [
-      "Álvaro Cortés"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "알바로 코르테스",
+      "source_id": "Q121944083",
+      "birth_date": "2005-03-17"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-13578",
@@ -22710,13 +22744,14 @@
     "id": "bsd-15420",
     "name": "Nathanaël Mbuku",
     "name_ko": "나타나엘 음부쿠",
-    "birth_date": "2002-03-16",
-    "source_id": "Q66363768",
-    "aliases": [
-      "Nathanaël Mbuku"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "나타나엘 음부쿠",
+      "source_id": "Q66363768",
+      "birth_date": "2002-03-16"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-15535",
@@ -22824,13 +22859,14 @@
     "id": "bsd-16386",
     "name": "Gustavo Puerta",
     "name_ko": "구스타보 푸에르타",
-    "birth_date": "2003-07-23",
-    "source_id": "Q116447721",
-    "aliases": [
-      "Gustavo Puerta"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "구스타보 푸에르타",
+      "source_id": "Q116447721",
+      "birth_date": "2003-07-23"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-16395",
@@ -24748,13 +24784,14 @@
     "id": "bsd-29732",
     "name": "Marko Farji",
     "name_ko": "마르코 파르지",
-    "birth_date": "2004-03-16",
-    "source_id": "Q126373302",
-    "aliases": [
-      "Marko Farji"
-    ],
-    "source": "wikidata",
-    "review": "name-and-age-matched;birth-date-required-on-write"
+    "source": "transliteration",
+    "review": "provisional",
+    "unverified_public_candidate": {
+      "name_ko": "마르코 파르지",
+      "source_id": "Q126373302",
+      "birth_date": "2004-03-16"
+    },
+    "review_reason": "public_candidate_not_verified_against_provider_identity; use phonetic draft only"
   },
   {
     "id": "bsd-29733",
@@ -25344,6 +25381,13 @@
     "id": "bsd-36746",
     "name": "Xavier Mandza",
     "name_ko": "그자비에 망자",
+    "source": "transliteration",
+    "review": "provisional"
+  },
+  {
+    "id": "bsd-36850",
+    "name": "Martin Ochoa",
+    "name_ko": "마르틴 오초아",
     "source": "transliteration",
     "review": "provisional"
   },
@@ -28460,6 +28504,13 @@
     "review": "provisional"
   },
   {
+    "id": "bsd-210580",
+    "name": "Mikel Bermejo",
+    "name_ko": "미켈 베르메호",
+    "source": "transliteration",
+    "review": "provisional"
+  },
+  {
     "id": "bsd-210971",
     "name": "Sebastian Williams",
     "name_ko": "서배스천 윌리엄스",
@@ -28934,6 +28985,13 @@
     "id": "bsd-217748",
     "name": "Djibril Diallo",
     "name_ko": "지브릴 디알로",
+    "source": "transliteration",
+    "review": "provisional"
+  },
+  {
+    "id": "bsd-217787",
+    "name": "Youssef Khoudda",
+    "name_ko": "유세프 쿠다",
     "source": "transliteration",
     "review": "provisional"
   }
