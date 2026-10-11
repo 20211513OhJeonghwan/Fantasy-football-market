@@ -4,6 +4,9 @@ on:
     branches: [main]
     paths:
       - 'data/localization/*.json'
+      - 'scripts/apply-korean-names.mjs'
+      - 'scripts/lib/korean-catalog.mjs'
+      - '.github/workflows/korean-catalog.yml'
   workflow_dispatch:
 permissions:
   contents: read

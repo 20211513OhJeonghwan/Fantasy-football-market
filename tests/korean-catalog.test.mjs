@@ -1,9 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { validateKoreanCatalog, planKoreanPlayers, insertMissingPlayerNames } from "../scripts/lib/korean-catalog.mjs";
+import { validateKoreanCatalog, planKoreanPlayers, insertMissingPlayerNames, nameImportFetch } from "../scripts/lib/korean-catalog.mjs";
+import { createClient } from "@supabase/supabase-js";
 const players = JSON.parse(readFileSync(new URL("../data/localization/players.ko.json", import.meta.url)));
 const teams = JSON.parse(readFileSync(new URL("../data/localization/teams.ko.json", import.meta.url)));
+
+test("Supabase transport sends opaque server keys only as apikey and retains JWT authentication", async () => {
+  for (const key of ["sb_secret_test_only", "test.legacy.jwt"]) {
+    let sent;
+    const db = createClient("https://test-only.supabase.co", key, { auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: nameImportFetch(key, async (_url, init) => { sent = init.headers; return new Response("[]", { headers: { "content-type": "application/json" } }); }) } });
+    await db.from("players").select("id");
+    assert.equal(sent.get("apikey"), key);
+    assert.equal(sent.get("authorization"), key.startsWith("sb_secret_") ? null : `Bearer ${key}`);
+  }
+  let sent;
+  await nameImportFetch("sb_secret_test_only", async (_url, init) => { sent = init.headers; })("https://test-only.supabase.co", { headers: { authorization: "Bearer independent.user.jwt" } });
+  assert.equal(sent.get("authorization"), "Bearer independent.user.jwt");
+});
 
 test("Korean catalog has unique provider identities and explicitly marked provisional names", () => {
   assert.equal(validateKoreanCatalog(players).length, 3118);

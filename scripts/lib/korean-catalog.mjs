@@ -12,6 +12,18 @@ export function validateKoreanCatalog(rows) {
   return rows;
 }
 
+/** New Supabase secret keys authenticate via apikey, not as a JWT bearer.
+ * Preserve legacy JWT keys and any independently supplied user JWT. */
+export function nameImportFetch(key, fetchImpl = fetch) {
+  return (input, init) => {
+    const headers = new Headers(init?.headers);
+    if (key.startsWith("sb_secret_") && headers.get("authorization") === `Bearer ${key}`) {
+      headers.delete("authorization");
+    }
+    return fetchImpl(input, { ...init, headers, signal: AbortSignal.timeout(60000) });
+  };
+}
+
 /** Never infer identity from name alone, and never replace an existing override. */
 export function planKoreanPlayers(catalog, players, existingNames) {
   validateKoreanCatalog(catalog);

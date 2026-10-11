@@ -1,18 +1,18 @@
 import { readFile } from "node:fs/promises";
 import nextEnv from "@next/env";
 import { createClient } from "@supabase/supabase-js";
-import { validateKoreanCatalog, planKoreanPlayers, readAllNames, insertMissingPlayerNames } from "./lib/korean-catalog.mjs";
+import { validateKoreanCatalog, planKoreanPlayers, readAllNames, insertMissingPlayerNames, nameImportFetch } from "./lib/korean-catalog.mjs";
 
 nextEnv.loadEnvConfig(process.cwd());
 const apply = process.argv.includes("--apply");
 try {
   const players = validateKoreanCatalog(JSON.parse(await readFile(new URL("../data/localization/players.ko.json", import.meta.url), "utf8")));
   const teams = validateKoreanCatalog(JSON.parse(await readFile(new URL("../data/localization/teams.ko.json", import.meta.url), "utf8")));
-  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL)?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url || !key) throw new Error("SERVER_CONFIGURATION_MISSING");
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false },
-    global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(60000) }) } });
+    global: { fetch: nameImportFetch(key) } });
   const [current, names] = await Promise.all([
     readAllNames(client, "players", "id,name,birth_date,provider"),
     readAllNames(client, "player_names", "player_id,display_name,source"),
@@ -35,7 +35,8 @@ try {
   }
 } catch (error) {
   // Do not print client configuration, service credentials or provider payloads.
-  console.error(JSON.stringify({ error: error.code || "KOREAN_CATALOG_FAILED", message:
+  const kind = /expir/i.test(error.message ?? "") ? "expired" : /signature/i.test(error.message ?? "") ? "signature" : /claim|pars|JWT/i.test(error.message ?? "") ? "jwt_validation" : "unknown";
+  console.error(JSON.stringify({ error: error.code || "KOREAN_CATALOG_FAILED", authFailure: error.code === "PGRST303" ? kind : undefined, message:
     error.message === "SERVER_CONFIGURATION_MISSING" ? "Missing server Supabase configuration" : "Korean catalog operation failed; completed batches are safe to rerun" }));
   process.exitCode = 1;
 }
