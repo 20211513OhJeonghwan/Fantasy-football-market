@@ -68,7 +68,7 @@ KICK-X 웹 서비스의 현재 디자인을 읽고, **커뮤니티를 우선으�
 
 ## 한글 이름 연결
 
-이번 변경은 DB `players.name_ko`, `teams.name_ko`를 사용합니다. 선수는 기존 `player_names`와 동기화되어 거래 견적·보유 선수·커뮤니티가 같은 이름을 보게 됩니다.
+이번 변경은 DB `players.name_ko`, `teams.name_ko`를 사용할 준비가 되어 있습니다. **운영 선수 3,122명 한글명은 기존 `player_names`에 저장 완료, 두 신규 컬럼과 구단 96개 값은 SQL 실행 대기**입니다. 마이그레이션 적용 뒤 선수 컬럼과 기존 `player_names`가 동기화되어 거래 견적·보유 선수·커뮤니티가 같은 이름을 보게 됩니다.
 
 - 프론트 `Player.name`, `Team.name`을 표시용으로 사용합니다.
 - `Player.originalName`, `english`, 별칭은 보존합니다. 상세에서 원어명은 보조 정보로 보여줄 수 있습니다.

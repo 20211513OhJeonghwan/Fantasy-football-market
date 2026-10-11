@@ -61,4 +61,5 @@ Wikidata 후보에는 `source_id`, `birth_date`, 원어 별칭을 보관한다. 
 - **players.name_ko / teams.name_ko 컬럼과 구단 96개 값은 아직 운영 DB에 적용되지 않았다.** 현재 연결은 데이터 API용이라 DDL을 실행할 수 없다. 준비한 전체 SQL을 Supabase SQL Editor에서 한 번 실행해야 한다. 선수들은 기존 player_names를 통해 이미 한글로 노출된다.
 - 전체 테스트 111개와 PostgreSQL 17·데스크톱/모바일 CI가 통과했다. 실제 계정 OAuth E2E와 운영 컬럼 생성 확인은 별개다.
 
-추가 34명의 실제 적용 결과는 마지막 실행 기록으로 확인한다.
+- [최종 이름 실행](https://github.com/hyun1290/kick-x-test/actions/runs/38179129628), 2026-10-11 22:07:41 UTC: 기존 3,088개 보존, 추가 34개 INSERT, 신원 불일치 0개. **DB 선수 3,122명 중 한글명 3,122명**을 확인했다. 두 실행의 신규 INSERT 합계는 2,735개다.
+- 현재 완료 범위는 운영 선수 표시명이다. 구단 96개와 직접 편집 컬럼은 위 전체 SQL 실행 대기 상태다.
