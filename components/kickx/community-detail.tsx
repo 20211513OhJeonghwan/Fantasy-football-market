@@ -36,7 +36,7 @@ function threads(comments: Comment[]) {
 type Action = { kind: "report" | "deletePost" | "deleteComment"; comment?: Comment };
 export function PostDetail() {
   const { postId } = useParams<{ postId: string }>(), router = useRouter();
-  const { data, mock, notify, getTeam, getPlayer } = usePlatform();
+  const { data, mock, notify, getTeam, getPlayer, reload: reloadPlatform } = usePlatform();
   const [page, setPage] = useState(1);
   const resource = usePost(postId, page);
   const { post, comments } = resource.data;
@@ -76,7 +76,8 @@ export function PostDetail() {
       ? { action: "report", commentId: action.comment?.id, reason }
       : { action: action.kind, commentId: action.comment?.id, revision: action.comment?.revision ?? post?.revision };
     if (await mutate(payload)) {
-      if (action.kind === "deletePost") router.push(lounge);
+      // Lounge post counts live in the bootstrap data; refresh them when a post disappears.
+      if (action.kind === "deletePost") { reloadPlatform(); router.push(lounge); }
       notify(action.kind === "report" ? "신고를 접수했습니다." : "삭제했습니다.");
       setAction(null); setReason("");
     }

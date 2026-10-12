@@ -3,19 +3,20 @@ import { Select } from "./select";
 import { simple, useTeamOptions } from "./options";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { ArrowRight, Eye, Heart, LoaderCircle, Lock, MessageCircle, Paperclip, Pencil, Search, Users } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { ArrowRight, ChevronLeft, ChevronRight, Eye, Heart, LoaderCircle, Lock, LogIn, MessageCircle, Paperclip, Pencil, Search, UserRound, Users } from "lucide-react";
 import { dateText, money, relativeTime, score } from "@/lib/kickx/data";
 import type { Post, Player } from "@/lib/kickx/types";
-import { clubIdentity, leagueIdentity } from "@/lib/kickx/club-identity";
+import { clubIdentity } from "@/lib/kickx/club-identity";
 import { POST_LIMITS, validatePost, type PostField } from "@/lib/kickx/validation";
 import {apiRequest} from "@/lib/kickx/client";
 import {usePost} from "./community-detail";
 import { usePlatform, useResource } from "./provider";
 import { useCatalogPage, useCatalogPlayer } from "./catalog";
-import { BackLink, Change, ClubCrest, LeagueMark, useClub, DataEmpty, MemberNotice, PageHeading, PlayerPortrait, SectionTitle, Tabs, TeamBadge } from "./ui";
+import { BackLink, Change, ClubCrest, LeagueMark, DataEmpty, MemberNotice, PageHeading, PlayerPortrait, PositionBadge, SectionTitle, Tabs } from "./ui";
 
 const HUB = { club: "/community/clubs", player: "/community/players" } as const;
+const POST_PAGE = 20, LOUNGE_PAGE = 24;
 function useTargetName() {
   const { getTeam, getPlayer } = usePlatform();
   return (post: Post) => post.targetName || (post.scope === "club" ? getTeam(post.target)?.name : getPlayer(post.target)?.name) || "—";
@@ -25,6 +26,18 @@ function PostTarget({ post, name }: { post: Post; name: string }) {
   const { getPlayer } = usePlatform();
   const crest = post.scope === "club" ? post.target : getPlayer(post.target)?.team ?? null;
   return <span className="post-target"><ClubCrest id={crest} size="small" />{post.scope === "player" && <span className="post-target-kind">선수</span>}{name}</span>;
+}
+/** The attached trade as recorded at execution time (name and price are not rewritten). */
+function TradeChip({ trade }: { trade: NonNullable<Post["transaction"]> }) {
+  return (
+    <span className="post-trade">
+      <Paperclip size={12} aria-hidden="true" />
+      <span className={`trade-type ${trade.type}`}>{trade.type === "buy" ? "매입" : "매각"}</span>
+      <b>{trade.playerName}</b>
+      <span className="num">{money(trade.price)} P</span>
+      <small>체결 {dateText(trade.date, false)}</small>
+    </span>
+  );
 }
 function PostList({ posts, filtered, showTarget = true }: { posts: Post[]; filtered?: boolean; showTarget?: boolean }) {
   const targetName = useTargetName();
@@ -38,17 +51,17 @@ function PostList({ posts, filtered, showTarget = true }: { posts: Post[]; filte
                 <span className="category-tag">{p.category}</span>
                 {showTarget && <PostTarget post={p} name={targetName(p)} />}
               </div>
-              <h3>{p.title}{p.transaction && <span className="tag outline"><Paperclip size={12} />거래 첨부</span>}</h3>
-              <p className="post-preview">{p.body}</p>
+              <h3>{p.title}</h3>
               <div className="post-byline">
                 <span className="post-author">{p.author}</span>
-                <span>{relativeTime(p.date)}</span>
-                <span><Eye size={13} />{money(p.views)}</span>
+                <time dateTime={p.date} title={dateText(p.date)}>{relativeTime(p.date)}</time>
               </div>
+              {p.transaction && <TradeChip trade={p.transaction} />}
             </div>
-            <div className="post-counts">
-              <span><Heart size={15} /><b className="num">{money(p.likes)}</b></span>
-              <span><MessageCircle size={15} /><b className="num">{money(p.commentCount)}</b></span>
+            <div className="post-counts" aria-label={`공감 ${p.likes}, 댓글 ${p.commentCount}, 조회 ${p.views}`}>
+              <span title="공감"><Heart size={14} /><b className="num">{money(p.likes)}</b></span>
+              <span title="댓글"><MessageCircle size={14} /><b className="num">{money(p.commentCount)}</b></span>
+              <span title="조회"><Eye size={14} /><b className="num">{money(p.views)}</b></span>
             </div>
           </Link>
         </li>
@@ -58,8 +71,22 @@ function PostList({ posts, filtered, showTarget = true }: { posts: Post[]; filte
     <DataEmpty entity="게시글" filtered={filtered} rows={4} />
   );
 }
-const emptyPosts=()=>({items:[] as Post[],total:0,page:1,size:20});
-function PostBrowser({ posts, scope, target, showTarget = true }: { posts: Post[]; scope:"club"|"player";target?:string; showTarget?: boolean }) {
+function Pager({ page, total, size, label, onPage }: { page: number; total: number; size: number; label: string; onPage: (page: number) => void }) {
+  const count = Math.max(1, Math.ceil(total / size));
+  if (total <= size) return null;
+  return (
+    <div className="panel-foot pagination">
+      <span className="num">{`${(page - 1) * size + 1}–${Math.min(page * size, total)} / ${money(total)}`}</span>
+      <div>
+        <button aria-label={`이전 ${label} 페이지`} disabled={page <= 1} onClick={() => onPage(page - 1)}><ChevronLeft size={17} /></button>
+        <span className="num">{page} / {count}</span>
+        <button aria-label={`다음 ${label} 페이지`} disabled={page >= count} onClick={() => onPage(page + 1)}><ChevronRight size={17} /></button>
+      </div>
+    </div>
+  );
+}
+const emptyPosts=()=>({items:[] as Post[],total:0,page:1,size:POST_PAGE});
+function PostBrowser({ posts, scope, target, showTarget = true, title, action }: { posts: Post[]; scope:"club"|"player";target?:string; showTarget?: boolean; title?: string; action?: ReactNode }) {
   const { data, mock, status } = usePlatform();
   const [tab, setTab] = useState("전체"),
     [q, setQ] = useState(""),
@@ -70,20 +97,32 @@ function PostBrowser({ posts, scope, target, showTarget = true }: { posts: Post[
   const params=new URLSearchParams({scope,q:search,sort:sort==="인기순"?"popular":"new",page:String(page)});
   if(target)params.set("target",target);if(tab!=="전체")params.set("category",tab);
   const remote=useResource(!mock&&status==="ready"?`/api/kickx/community?${params}`:null,emptyPosts);
-  const visible = posts
-    .filter((p) => (tab === "전체" || p.category === tab) && `${p.title} ${p.body} ${p.author}`.toLowerCase().includes(q.trim().toLowerCase()))
+  const local = posts
+    .filter((p) => (tab === "전체" || p.category === tab) && `${p.title} ${p.body}`.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => (sort === "인기순" ? b.likes - a.likes : Date.parse(b.date) - Date.parse(a.date)));
+  const total = mock ? local.length : remote.data.total;
+  const items = mock ? local.slice((page - 1) * POST_PAGE, page * POST_PAGE) : remote.data.items;
+  const filtered = !!q || tab !== "전체";
   return (
     <section className="panel flush post-browser">
+      {title && (
+        <div className="post-browser-title">
+          <h2>{title}{(mock || remote.status === "ready") && <span className="num">{money(total)}건</span>}</h2>
+          {action}
+        </div>
+      )}
       <div className="panel-head">
         <Tabs items={["전체", ...data.categories]} value={tab} onChange={v=>{setTab(v);setPage(1);}} label="게시글 주제" />
       </div>
       <div className="toolbar post-tools">
-        <label className="input-search"><Search size={16} /><input aria-label="게시글 검색" value={q} onChange={(e) => setQ(e.target.value)} placeholder="제목, 내용 검색" /></label>
-        <Select label="게시글 정렬" value={sort} onChange={v=>{setSort(v);setPage(1);}} options={simple(["최신순", "인기순"])} variant="compact" />
+        <label className="input-search"><Search size={16} /><input aria-label="게시글 검색" value={q} onChange={(e) => setQ(e.target.value)} placeholder="제목·내용 검색" maxLength={100} /></label>
+        <Select label="게시글 정렬" value={sort} onChange={v=>{setSort(v);setPage(1);}} options={[{ value: "최신순", label: "최신순" }, { value: "인기순", label: "인기순", hint: "누적 공감" }]} variant="compact" />
+        {filtered && <button type="button" className="button ghost small" onClick={() => { setQ(""); setTab("전체"); setPage(1); }}>초기화</button>}
       </div>
-      {!mock&&remote.status!=="ready"?<DataEmpty entity="게시글" status={remote.status}/>:<PostList posts={mock?visible:remote.data.items} filtered={!!q||tab!=="전체"} showTarget={showTarget} />}
-      {!mock&&<div className="button-row frame"><button className="button secondary small" disabled={page===1} onClick={()=>setPage(p=>p-1)}>이전</button><span>{page} 페이지 · {remote.status==="ready"?remote.data.total:"—"}건</span><button className="button secondary small" disabled={page*20>=remote.data.total} onClick={()=>setPage(p=>p+1)}>다음</button></div>}
+      {!mock&&remote.status!=="ready"
+        ? <DataEmpty entity="게시글" status={remote.status} retry={remote.reload} />
+        : <PostList posts={items} filtered={filtered} showTarget={showTarget} />}
+      <Pager page={page} total={total} size={POST_PAGE} label="게시글" onPage={setPage} />
     </section>
   );
 }
@@ -93,8 +132,8 @@ function PopularPosts({ posts,scope }: { posts: Post[];scope:"club"|"player" }) 
   const targetName = useTargetName();
   const top = [...(mock?posts:remote.data.items)].sort((a, b) => b.likes - a.likes).slice(0, 5);
   return (
-    <section className="panel">
-      <SectionTitle title="인기 게시글" meta="공감 순" />
+    <section className="panel side-panel">
+      <SectionTitle title="인기 게시글" meta="누적 공감 순" />
       {top.length ? (
         <ol className="popular-list">
           {top.map((p, i) => (
@@ -107,156 +146,159 @@ function PopularPosts({ posts,scope }: { posts: Post[];scope:"club"|"player" }) 
             </li>
           ))}
         </ol>
-      ) : <DataEmpty entity="인기 게시글" rows={3} />}
+      ) : <DataEmpty entity="인기 게시글" status={mock ? undefined : remote.status} rows={3} />}
     </section>
   );
 }
-function ClubTile({ id, mine, posts }: { id: string; mine: boolean; posts: number | null }) {
-  const { team, identity } = useClub(id);
-  if (!team) return null;
+/** Quick links to the lounges the member can act in: their club and the players they own. */
+function MyLounges() {
+  const { data, status, getTeam, getPlayer } = usePlatform();
+  const myTeam = getTeam(data.session?.profile?.team);
+  const owned = (data.member?.holdings.map((h) => getPlayer(h.playerId)).filter(Boolean) ?? []) as Player[];
+  if (status !== "ready") return null;
   return (
-    <Link className={`club-tile ${mine ? "mine" : ""}`} href={`/community/clubs/${id}`} style={{ "--club": identity?.primary, "--club-2": identity?.secondary } as CSSProperties}>
-      <span className="club-tile-band" aria-hidden="true" />
-      <span className="club-tile-code" aria-hidden="true">{identity?.code}</span>
-      <ClubCrest id={id} size="large" />
-      <strong>{team.name}</strong>
-      {team.english && team.english !== team.name && <span className="club-tile-sub">{team.english}</span>}
-      <span className="club-tile-foot">
-        <small className="num"><MessageCircle size={12} />{posts??"—"}</small>
-        <span className="club-tile-go">라운지 <ArrowRight size={13} /></span>
-      </span>
-      {mine && <span className="tag yellow">MY CLUB</span>}
-    </Link>
+    <section className="my-lounges" aria-label="내 라운지 바로가기">
+      {myTeam ? (
+        <Link className="my-lounge club" href={`/community/clubs/${myTeam.id}`} style={{ "--club": clubIdentity(myTeam)?.primary } as CSSProperties}>
+          <ClubCrest id={myTeam.id} size="large" />
+          <span><small>나의 응원 구단</small><strong>{myTeam.name}</strong></span>
+          <ArrowRight size={16} />
+        </Link>
+      ) : (
+        <Link className="my-lounge unset" href={data.session ? "/mypage" : "/login"}>
+          <span className="my-lounge-icon"><Users size={20} /></span>
+          <span><small>{data.session ? "응원 구단 미설정" : "로그인 전"}</small><strong>{data.session ? "응원 구단 정하기" : "로그인하고 참여하기"}</strong></span>
+          <ArrowRight size={16} />
+        </Link>
+      )}
+      <div className="my-lounge-players">
+        <small>보유 선수 라운지{owned.length ? ` · ${owned.length}` : ""}</small>
+        {owned.length ? (
+          <div>{owned.map((p) => <Link key={p.id} href={`/community/players/${p.id}`} className="lounge-chip"><PlayerPortrait player={p} size="sm" />{p.short || p.name}</Link>)}</div>
+        ) : <p>{data.session ? "선수를 보유하면 여기에서 바로 라운지로 이동할 수 있습니다." : "로그인하면 보유 선수 라운지가 표시됩니다."}</p>}
+      </div>
+    </section>
+  );
+}
+function ClubExplorer({ count }: { count: (target: string) => number | null }) {
+  const { data, status, getTeam } = usePlatform();
+  const [league, setLeague] = useState(data.leagues[0]?.id ?? "");
+  const current = league || data.leagues[0]?.id;
+  const myTeam = getTeam(data.session?.profile?.team);
+  const clubs = data.teams.filter((t) => t.leagueId === current);
+  return (
+    <section className="panel flush explorer">
+      <div className="explorer-head">
+        <h2>구단 라운지 찾기<span className="num">{data.teams.length ? `${data.teams.length}개 구단` : ""}</span></h2>
+        <div className="league-switch compact" role="group" aria-label="리그 선택">
+          {data.leagues.map((l) => (
+            <button key={l.id} type="button" aria-pressed={current === l.id} className={current === l.id ? "active" : ""} onClick={() => setLeague(l.id)}>
+              <LeagueMark league={l} size="sm" /><span>{l.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      {clubs.length ? (
+        <ul className="club-list">
+          {clubs.map((t) => (
+            <li key={t.id}>
+              <Link href={`/community/clubs/${t.id}`} className={t.id === myTeam?.id ? "mine" : ""} style={{ "--club": clubIdentity(t)?.primary } as CSSProperties}>
+                <ClubCrest id={t.id} size="small" />
+                <span className="club-list-name"><strong>{t.name}</strong>{t.english && t.english !== t.name && <small>{t.english}</small>}</span>
+                {t.id === myTeam?.id && <span className="tag yellow">MY</span>}
+                <span className="club-list-count num" title="게시글"><MessageCircle size={12} />{count(t.id) ?? "—"}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : <DataEmpty entity="구단 라운지" status={status === "ready" && data.teams.length ? "ready" : undefined} />}
+    </section>
+  );
+}
+function PlayerExplorer({ count }: { count: (target: string) => number | null }) {
+  const { data, status, getTeam } = usePlatform();
+  const [q, setQ] = useState(""), [page, setPage] = useState(1);
+  // Real mode pages through the server catalog; the mock sample is small and filtered locally.
+  const remote = useCatalogPage<Player>("players", { q, size: LOUNGE_PAGE, sort: "name", page });
+  const local = data.players.filter((p) => `${p.name} ${p.english || ""} ${getTeam(p.team)?.name || ""}`.toLowerCase().includes(q.trim().toLowerCase()));
+  const items = remote.enabled ? (remote.status === "ready" ? remote.data.items : []) : local.slice((page - 1) * LOUNGE_PAGE, page * LOUNGE_PAGE);
+  const total = remote.enabled ? remote.data.total : local.length;
+  return (
+    <section className="panel flush explorer">
+      <div className="explorer-head">
+        <h2>선수 라운지 찾기<span className="num">{remote.enabled ? (remote.status === "ready" ? `${money(total)}명` : "") : `${money(total)}명`}</span></h2>
+        <label className="input-search hub-search"><Search size={16} /><input aria-label="선수 라운지 검색" placeholder="한글·영문 선수 이름" value={q} maxLength={100} onChange={(e) => { setQ(e.target.value); setPage(1); }} /></label>
+      </div>
+      {items.length ? (
+        <ul className="lounge-grid">
+          {items.map((p) => (
+            <li key={p.id}>
+              <Link className="lounge-card" href={`/community/players/${p.id}`} style={{ "--club": clubIdentity(getTeam(p.team))?.primary ?? "var(--ink)" } as CSSProperties}>
+                <PlayerPortrait player={p} size="sm" />
+                <span className="lounge-card-text">
+                  <strong>{p.name}</strong>
+                  <span>{getTeam(p.team)?.name || "소속 정보 없음"}</span>
+                </span>
+                <span className="lounge-card-meta">
+                  <PositionBadge position={p.position} />
+                  <small className="num" title="게시글"><MessageCircle size={12} />{count(p.id) ?? "—"}</small>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : <DataEmpty entity="선수 라운지" status={remote.enabled ? remote.status : status} retry={remote.enabled ? remote.reload : undefined} filtered={!!q} />}
+      <Pager page={page} total={total} size={LOUNGE_PAGE} label="선수 라운지" onPage={setPage} />
+    </section>
   );
 }
 export function CommunityHub({ kind }: { kind: "club" | "player" }) {
-  const { data, status, getTeam } = usePlatform();
-  const [league, setLeague] = useState("전체");
-  const [q, setQ] = useState("");
+  const { data } = usePlatform();
   const posts = data.posts.filter((p) => p.scope === kind);
-  const count = (target: string) => data.communityCounts?.find(c=>c.scope===kind&&c.target===target)?.count ?? (data.policy?0:posts.filter(p=>p.target===target).length);
-  const myTeam = getTeam(data.session?.profile?.team);
-  const leagueId = data.leagues.find((l) => l.name === league)?.id;
-  const clubs = data.teams.filter((t) => league === "전체" || t.leagueId === leagueId);
-  const owned = new Set(data.member?.holdings.map((h) => h.playerId));
-  const localLounges = data.players
-    .filter((p) => `${p.name} ${p.english || ""} ${getTeam(p.team)?.name || ""}`.toLowerCase().includes(q.trim().toLowerCase()))
-    .sort((a, b) => count(b.id) - count(a.id) || Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0))
-    .slice(0, q ? 24 : 12);
-  const remote=useCatalogPage<Player>("players",{q,size:24,sort:"name"});
-  const lounges=remote.enabled ? (remote.status === "ready" ? remote.data.items : []) : localLounges;
+  // Post counts come from the bootstrap response; null when the server does not report them.
+  const count = (target: string) => data.communityCounts?.find(c=>c.scope===kind&&c.target===target)?.count ?? (data.policy ? 0 : data.communityCounts ? 0 : posts.filter(p=>p.target===target).length);
   return (
     <>
       <PageHeading
-        eyebrow={kind === "club" ? "CLUB COMMUNITY" : "PLAYER COMMUNITY"}
-        title={kind === "club" ? "구단 커뮤니티" : "선수 커뮤니티"}
-        description={kind === "club" ? "같은 팀을 응원하는 팬들과 경기·이적·구단 이슈를 나누세요." : "선수의 경기력과 가치 변화, 거래 판단을 함께 이야기하세요."}
+        eyebrow="COMMUNITY"
+        title="커뮤니티"
+        description={kind === "club" ? "응원 구단 팬끼리 경기·구단 이야기를 나눕니다. 읽기는 누구나, 글쓰기는 응원 팬만 가능합니다." : "선수의 경기력과 가치 변화, 거래 판단을 함께 이야기합니다. 프로필을 만든 회원 누구나 쓸 수 있습니다."}
         action={<Link className="button primary" href={`/community/write?scope=${kind}`}><Pencil size={16} />글쓰기</Link>}
       />
-      {kind === "club" ? (
-        <>
-          <div className={`my-club ${myTeam ? "" : "unset"}`}>
-            {myTeam ? (
-              <>
-                <TeamBadge id={myTeam.id} size="large" />
-                <div><span>나의 응원 구단</span><strong>{myTeam.name}</strong><small>응원 구단 라운지에서 글과 댓글을 작성할 수 있습니다.</small></div>
-                <Link className="button primary" href={`/community/clubs/${myTeam.id}`}>라운지 입장 <ArrowRight size={16} /></Link>
-              </>
-            ) : (
-              <>
-                <span className="my-club-icon"><Users size={24} /></span>
-                <div><span>응원 구단 미설정</span><strong>응원 구단을 정하고 팬 라운지에 참여하세요</strong><small>구단 라운지의 글·댓글 작성은 해당 구단 팬에게만 열립니다.</small></div>
-                <Link className="button secondary" href="/mypage">응원 구단 설정 <ArrowRight size={16} /></Link>
-              </>
-            )}
+      <nav className="community-switch" aria-label="커뮤니티 종류">
+        <Link href={HUB.club} aria-current={kind === "club" ? "page" : undefined}><Users size={16} />구단 커뮤니티</Link>
+        <Link href={HUB.player} aria-current={kind === "player" ? "page" : undefined}><UserRound size={16} />선수 커뮤니티</Link>
+      </nav>
+      <MyLounges />
+      <div className="hub-layout">
+        <PostBrowser posts={posts} scope={kind} title={kind === "club" ? "최신 구단 게시글" : "최신 선수 게시글"} />
+        <aside className="hub-aside">
+          <PopularPosts posts={posts} scope={kind} />
+          <div className="community-guide">
+            <MessageCircle size={20} />
+            <h3>함께 지키는 라운지 규칙</h3>
+            <p>근거 있는 의견과 서로 다른 응원에 대한 존중을 지켜 주세요. 거래 첨부는 본인 거래만 가능합니다.</p>
           </div>
-          <div className="hub-layout">
-            <section>
-              <div className="section-title">
-                <h2>구단 라운지<span>{data.teams.length ? `${clubs.length}개 구단` : ""}</span></h2>
-              </div>
-              <div className="league-switch" role="group" aria-label="리그 선택">
-                {["전체", ...data.leagues.map((l) => l.name)].map((name) => {
-                  const l = data.leagues.find((x) => x.name === name);
-                  const n = l ? data.teams.filter((t) => t.leagueId === l.id).length : data.teams.length;
-                  return (
-                    <button key={name} type="button" aria-pressed={league === name} className={league === name ? "active" : ""} onClick={() => setLeague(name)}>
-                      {l ? <LeagueMark league={l} size="sm" /> : <span className="league-all">ALL</span>}
-                      <span>{l ? name : "전체 리그"}</span>
-                      <small className="num">{n}</small>
-                    </button>
-                  );
-                })}
-              </div>
-              {clubs.length ? (
-                (league === "전체" ? data.leagues.filter((l) => clubs.some((t) => t.leagueId === l.id)) : [data.leagues.find((l) => l.name === league)!]).map((l) => {
-                  const mark = leagueIdentity(l);
-                  const group = clubs.filter((t) => t.leagueId === l.id);
-                  return (
-                    <section key={l.id} className="club-league" style={{ "--league": mark?.color, "--league-ink": mark?.ink } as CSSProperties}>
-                      <header className="club-league-head">
-                        <LeagueMark league={l} size="lg" />
-                        <strong>{l.name}</strong>
-                        {mark?.country && <span>{mark.country}</span>}
-                        <small className="num">{group.length}개 구단 · 게시글 {group.reduce((sum, t) => sum + count(t.id), 0)}</small>
-                      </header>
-                      <div className="club-grid">
-                        {group.map((t) => <ClubTile key={t.id} id={t.id} mine={t.id === myTeam?.id} posts={count(t.id)} />)}
-                      </div>
-                    </section>
-                  );
-                })
-              ) : <div className="panel"><DataEmpty entity="구단 라운지" status={status === "ready" && data.teams.length ? "ready" : undefined} filtered={data.teams.length > 0} /></div>}
-            </section>
-            <aside><PopularPosts posts={posts} scope={kind} /></aside>
-          </div>
-        </>
-      ) : (
-        <>
-          {owned.size > 0 && (
-            <div className="owned-lounges">
-              <span>내 보유 선수 라운지</span>
-              <div>
-                {data.players.filter((p) => owned.has(p.id)).map((p) => (
-                  <Link key={p.id} href={`/community/players/${p.id}`} className="lounge-chip"><PlayerPortrait player={p} size="sm" />{p.short || p.name}</Link>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="hub-layout">
-            <section>
-              <div className="section-title">
-                <h2>{q ? "검색 결과" : "선수 라운지"}<span>{q ? `${lounges.length}명` : "선수 탐색에서 전체 보기"}</span></h2>
-                <label className="input-search hub-search"><Search size={16} /><input aria-label="선수 라운지 검색" placeholder="선수 이름 검색" value={q} onChange={(e) => setQ(e.target.value)} /></label>
-              </div>
-              {lounges.length ? (
-                <div className="lounge-grid">
-                  {lounges.map((p) => (
-                    <Link className="lounge-card hover-lift" href={`/community/players/${p.id}`} key={p.id} style={{ "--club": clubIdentity(getTeam(p.team))?.primary ?? "var(--ink)" } as CSSProperties}>
-                      <PlayerPortrait player={p} size="md" />
-                      <span className="lounge-card-text">
-                        <strong>{p.name}</strong>
-                        <span>{getTeam(p.team)?.name || "—"}</span>
-                      </span>
-                      <span className="lounge-card-meta">
-                        <Change value={p.change} />
-                        <small className="num"><MessageCircle size={12} />{count(p.id)}</small>
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              ) : <div className="panel"><DataEmpty entity="선수 라운지" status={remote.enabled ? remote.status : status} retry={remote.enabled ? remote.reload : undefined} filtered={!!q} /></div>}
-            </section>
-            <aside><PopularPosts posts={posts} scope={kind} /></aside>
-          </div>
-        </>
-      )}
-      <div className="hub-posts">
-        <SectionTitle title={kind === "club" ? "최근 구단 게시글" : "최근 선수 게시글"} />
-        <PostBrowser posts={posts} scope={kind} />
+        </aside>
       </div>
+      {kind === "club" ? <ClubExplorer count={count} /> : <PlayerExplorer count={count} />}
     </>
   );
+}
+/** What the visitor can do in this lounge, and the next step when they cannot write. */
+function WriteAccess({ scope, target, name, found }: { scope: "club" | "player"; target: string; name?: string; found: boolean }) {
+  const { data, status, getTeam } = usePlatform();
+  if (status !== "ready" || !found) return null;
+  const write = `/community/write?scope=${scope}&target=${encodeURIComponent(target)}`;
+  const myTeam = getTeam(data.session?.profile?.team);
+  const [icon, text, action] = !data.session
+    ? [<LogIn key="i" size={16} />, "로그인하면 글과 댓글을 쓸 수 있습니다. 읽기는 누구나 가능합니다.", <Link key="a" className="button primary small" href="/login">로그인</Link>]
+    : !data.session.profile
+      ? [<UserRound key="i" size={16} />, "닉네임과 응원 구단을 정하면 커뮤니티에 참여할 수 있습니다.", <Link key="a" className="button primary small" href="/mypage">프로필 설정</Link>]
+      : scope === "club" && data.session.profile.team !== target
+        ? [<Lock key="i" size={16} />, <>이 라운지의 글·댓글은 <b>{name}</b> 응원 팬만 쓸 수 있습니다.{myTeam ? <> 현재 응원 구단은 <b>{myTeam.name}</b>입니다.</> : " 아직 응원 구단이 없습니다."}</>, <Link key="a" className="button secondary small" href={myTeam ? `/community/clubs/${myTeam.id}` : "/mypage"}>{myTeam ? "내 구단 라운지" : "응원 구단 설정"}</Link>]
+        : [<Pencil key="i" size={16} />, "이 라운지에 글을 쓸 수 있습니다. 이용 제한 중인 계정은 저장 시 안내됩니다.", <Link key="a" className="button primary small" href={write}><Pencil size={14} />글쓰기</Link>];
+  return <div className="write-access" role="note">{icon}<span>{text}</span>{action}</div>;
 }
 export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
   const params = useParams();
@@ -265,88 +307,79 @@ export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
   const detail=useCatalogPlayer(scope === "player" ? target : null);
   const team = scope === "club" ? getTeam(target) : undefined,
     player = scope === "player" ? detail.player : undefined;
-  const found = team || player;
+  const found = !!(team || player);
   const posts = data.posts.filter((p) => p.scope === scope && p.target === target);
-  const isFan = scope === "player" || (!!data.session?.profile?.team && data.session.profile.team === target);
-  const writable = !!found && !!data.session && isFan;
-  const roster=useCatalogPage<Player>("players",{team:team?.id,size:12,sort:"name"});
+  const roster=useCatalogPage<Player>("players",{team:team?.id,size:12,sort:"number"});
   const squad=roster.enabled ? (team && roster.status === "ready" ? roster.data.items : []) : team ? data.players.filter(p=>p.team===team.id) : [];
-  const heroIdentity = clubIdentity(team ?? getTeam(player?.team));
-  const heroStyle = heroIdentity ? ({ "--club": heroIdentity.primary, "--club-2": heroIdentity.secondary } as CSSProperties) : undefined;
+  const identity = clubIdentity(team ?? getTeam(player?.team));
+  const style = identity ? ({ "--club": identity.primary, "--club-2": identity.secondary } as CSSProperties) : undefined;
+  const postCount = found ? (data.communityCounts?.find(c=>c.scope===scope&&c.target===target)?.count ?? (data.policy || data.communityCounts ? 0 : posts.length)) : null;
+  const league = getLeague(team?.leagueId ?? getTeam(player?.team)?.leagueId);
+  const name = team?.name ?? player?.name;
   return (
     <>
       <BackLink href={HUB[scope]} label={scope === "club" ? "구단 커뮤니티" : "선수 커뮤니티"} />
-      <section className={`lounge-hero ${scope}`} style={heroStyle}>
-        <span className="lounge-hero-code" aria-hidden="true">{heroIdentity?.code ?? ""}</span>
-        <div className="lounge-hero-mark">
-          {team ? <TeamBadge id={team.id} size="large" /> : player ? <PlayerPortrait player={player} size="lg" /> : <MessageCircle size={36} />}
+      <header className={`lounge-head ${scope}`} style={style}>
+        <div className="lounge-head-mark">
+          {team ? <ClubCrest id={team.id} size="large" /> : player ? <PlayerPortrait player={player} size="md" /> : <MessageCircle size={28} />}
         </div>
-        <div className="lounge-hero-text">
-          <span className="eyebrow plain">{scope === "club" ? "CLUB LOUNGE" : "PLAYER LOUNGE"}{team && ` · ${getLeague(team.leagueId)?.name || ""}`}{player && ` · ${getTeam(player.team)?.name || ""}`}</span>
-          <h1>{team ? `${team.name} 팬 라운지` : player ? `${player.name} 라운지` : scope === "club" ? "구단 라운지" : "선수 라운지"}</h1>
+        <div className="lounge-head-text">
+          <span className="lounge-head-kicker">
+            {scope === "club" ? "구단 라운지" : "선수 라운지"}
+            {league && <LeagueMark league={league} size="sm" />}
+          </span>
+          <h1>{name ? `${name} 라운지` : status === "ready" && (scope === "club" || detail.status !== "loading") ? "라운지를 찾을 수 없습니다" : "라운지"}</h1>
           <p>
-            {status === "ready" && !found
-              ? "요청한 라운지를 찾을 수 없습니다."
-              : scope === "club"
-                ? "함께 응원할 때, 더 커지는 경기."
-                : "경기력부터 가치까지, 함께 보는 선수."}
+            {team && [team.english, league?.name].filter(Boolean).join(" · ")}
+            {player && [player.originalName && player.originalName !== player.name ? player.originalName : player.english !== player.name ? player.english : null, getTeam(player.team)?.name, player.position].filter(Boolean).join(" · ")}
+            {!found && status === "ready" && "주소를 확인하거나 커뮤니티에서 라운지를 찾아 주세요."}
           </p>
         </div>
-        <div className="lounge-hero-stats">
-          <div><span>게시글</span><b className="num">{found ? (data.communityCounts?.find(c=>c.scope===scope&&c.target===target)?.count ?? (data.policy?0:posts.length)) : "—"}</b></div>
-          {player && <div><span>현재 가치</span><b className="num">{money(player.price)} P</b><Change value={player.change} /></div>}
-          {team && <div><span>선수 미리보기</span><b className="num">{squad.length}</b></div>}
+        <dl className="lounge-head-stats">
+          <div><dt>게시글</dt><dd className="num">{postCount ?? "—"}</dd></div>
+          {player && <div><dt>현재 가치</dt><dd className="num">{player.price != null ? `${money(player.price)} P` : "산정 전"}</dd></div>}
+          {team && <div><dt>소속 선수</dt><dd className="num">{roster.enabled ? (roster.status === "ready" ? roster.data.total : "—") : squad.length}</dd></div>}
+        </dl>
+        <div className="lounge-head-links">
+          {team && <Link className="text-link" href={`/teams/${team.id}`}>구단 정보 <ArrowRight size={14} /></Link>}
+          {player && <Link className="text-link" href={`/players/${player.id}`}>선수 상세 <ArrowRight size={14} /></Link>}
         </div>
-        <div className="lounge-hero-actions">
-          {writable ? (
-            <Link className="button primary" href={`/community/write?scope=${scope}&target=${encodeURIComponent(target)}`}><Pencil size={16} />글쓰기</Link>
-          ) : (
-            <button className="button primary" disabled title={!data.session ? "로그인 후 작성할 수 있습니다." : "응원 구단 팬만 작성할 수 있습니다."}><Lock size={15} />글쓰기</button>
-          )}
-          {player && <Link className="button secondary" href={`/players/${player.id}`}>선수 상세 <ArrowRight size={16} /></Link>}
-        </div>
-      </section>
-      {scope === "club" && found && data.session && !isFan && (
-        <div className="data-notice"><Lock size={16} /><span>구단 라운지의 글·댓글 작성은 <b>{team?.name}</b> 응원 팬에게만 열려 있습니다. 읽기는 누구나 가능합니다.</span><Link className="text-link" href="/mypage">응원 구단 설정</Link></div>
-      )}
+      </header>
+      <WriteAccess scope={scope} target={target} name={name} found={found} />
       <MemberNotice />
       <div className="hub-layout">
-        <PostBrowser posts={posts} scope={scope} target={target} showTarget={false} />
-        <aside>
+        <PostBrowser posts={posts} scope={scope} target={target} showTarget={false} title="라운지 게시글" />
+        <aside className="hub-aside">
           {team ? (
-            <section className="panel">
-              <SectionTitle title="구단 선수 라운지" />
+            <section className="panel side-panel">
+              <SectionTitle title="소속 선수 라운지" meta="등번호 순" />
               {squad.length ? (
                 <ul className="side-players">
                   {squad.map((p) => (
                     <li key={p.id}>
                       <Link href={`/community/players/${p.id}`}>
                         <PlayerPortrait player={p} size="sm" />
-                        <span><strong>{p.name}</strong><small>{p.position || "—"} · {money(p.price)} P</small></span>
-                        <Change value={p.change} />
+                        <span><strong>{p.name}</strong><small>{[p.number != null ? `#${p.number}` : null, p.position].filter(Boolean).join(" · ") || "—"}</small></span>
+                        <ArrowRight size={14} />
                       </Link>
                     </li>
                   ))}
                 </ul>
               ) : <DataEmpty entity="선수" status={roster.enabled ? roster.status : status} retry={roster.enabled ? roster.reload : undefined} rows={3} />}
-              {team && roster.enabled && roster.data.total > 12 && <Link className="text-link" href={`/players?team=${encodeURIComponent(team.id)}`}>구단 선수 전체 보기 <ArrowRight size={14} /></Link>}
+              {roster.enabled && roster.data.total > 12 && <Link className="text-link" href={`/teams/${team.id}`}>소속 선수 전체 보기 <ArrowRight size={14} /></Link>}
             </section>
           ) : player ? (
-            <section className="panel">
+            <section className="panel side-panel">
               <SectionTitle title="선수 요약" href={`/players/${player.id}`} link="상세" />
               <dl className="summary-list">
-                <div><dt>현재 가치</dt><dd>{money(player.price)} P</dd></div>
-                <div><dt>변동</dt><dd><Change value={player.change} /></dd></div>
-                <div><dt>Performance</dt><dd>{score(player.performance)}</dd></div>
+                <div><dt>현재 가치</dt><dd>{player.price != null ? `${money(player.price)} P` : "산정 전"}</dd></div>
+                <div><dt>직전 발행 대비</dt><dd><Change value={player.change} /></dd></div>
+                <div><dt>최근 경기 Performance</dt><dd>{score(player.performance)}</dd></div>
                 <div><dt>시즌 득점 · 도움</dt><dd>{money(player.goals)} · {money(player.assists)}</dd></div>
               </dl>
             </section>
           ) : null}
-          <div className="community-guide">
-            <MessageCircle size={20} />
-            <h3>함께 지키는 라운지 규칙</h3>
-            <p>근거 있는 의견, 서로 다른 응원에 대한 존중. 거래 내역 첨부는 본인 거래만 가능합니다.</p>
-          </div>
+          <PopularPosts posts={data.posts.filter((p) => p.scope === scope)} scope={scope} />
         </aside>
       </div>
     </>
@@ -527,7 +560,13 @@ export function WritePost() {
             </div>
           )}
         </div>
-        {serverNote && <p className="data-notice" role="status"><Lock size={15} />{serverNote}</p>}
+        {serverNote && (
+          <div className="data-notice" role="alert">
+            <Lock size={15} />
+            <span>{serverNote}{/다른 창/.test(serverNote) && " 작성 중인 내용은 그대로 남아 있습니다. 필요한 부분을 복사한 뒤 최신 글을 확인해 주세요."}</span>
+            {/다른 창/.test(serverNote) && existing && <Link className="text-link" href={`/community/posts/${existing.id}`} target="_blank">최신 글 새 창에서 보기</Link>}
+          </div>
+        )}
         <div className="form-actions">
           <p className="fine-print">{mock ? "예시 모드 · 등록해도 실제로 저장되지 않습니다." : status === "ready" && !data.session ? "로그인 후 작성할 수 있습니다." : "저장한 글은 해당 라운지에 공개됩니다."}</p>
           <Link className="button secondary" href={hub}>취소</Link>

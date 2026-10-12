@@ -1,4 +1,4 @@
-> 2026-10-12 추가: [정책·구현 검토](REVIEW_2026-10-12.md), [한글화 적용](LOCALIZATION_2026-10-12.md), [Claude 디자인 인계](CLAUDE_DESIGN_HANDOFF_2026-10-12.md)를 먼저 확인하세요. 새 점수·가격은 아직 제안 단계입니다.
+> 2026-10-12 추가: [정책·구현 검토](REVIEW_2026-10-12.md), [한글화 적용](LOCALIZATION_2026-10-12.md), [Claude 디자인 인계](CLAUDE_DESIGN_HANDOFF_2026-10-12.md), [Claude 디자인 결과·남은 백엔드 의존성](CLAUDE_DESIGN_RESULT_2026-10-12.md)를 먼저 확인하세요. 새 점수·가격은 아직 제안 단계입니다.
 
 # KICK-X 인수인계 — 2026-10-09
 

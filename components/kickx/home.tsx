@@ -237,9 +237,9 @@ export function HomeScreen() {
                   {valued ? (
                     <>
                       <th className="numeric">현재 가치</th>
-                      <th className="numeric hide-sm">변동</th>
+                      <th className="numeric hide-sm"><abbr title="직전 발행 가격 대비 변화율">변동</abbr></th>
                       <th className="hide-md">30일 추이</th>
-                      <th className="numeric hide-sm">Performance</th>
+                      <th className="numeric hide-sm"><abbr title="최근 경기 1건의 저장 점수">Performance</abbr></th>
                     </>
                   ) : (
                     <>

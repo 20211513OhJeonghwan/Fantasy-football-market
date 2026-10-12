@@ -114,3 +114,4 @@ label small { font-weight: 500; color: var(--text-3); font-size: var(--fs-captio
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+abbr[title] { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }

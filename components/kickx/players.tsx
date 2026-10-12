@@ -182,7 +182,7 @@ export function PlayerList({ market = false }: { market?: boolean }) {
           )}
           {movers.length > 0 && (
             <section className="market-movers" aria-labelledby="market-movers">
-              <SectionTitle title="오늘의 움직임" meta="변동폭 상위" />
+              <SectionTitle title="최근 움직임" meta="직전 발행 대비 변동폭 상위" />
               <div className="mover-cards">
                 {movers.map((p) => (
                   <Link key={p.id} href={`/players/${p.id}`} className="mover-card hover-lift">
@@ -245,9 +245,9 @@ export function PlayerList({ market = false }: { market?: boolean }) {
                   <th>선수</th>
                   <th className="hide-sm">포지션</th>
                   <th className="numeric">현재 가치</th>
-                  <th className="numeric hide-sm">변동</th>
+                  <th className="numeric hide-sm"><abbr title="직전 발행 가격 대비 변화율">변동</abbr></th>
                   <th className="hide-md">30일 추이</th>
-                  <th className="numeric hide-sm">Performance</th>
+                  <th className="numeric hide-sm"><abbr title="최근 경기 1건의 저장 점수">Performance</abbr></th>
                   <th className="numeric hide-md">거래량</th>
                   <th className="cell-actions hide-sm">거래</th>
                 </tr>
@@ -351,11 +351,11 @@ export function PlayerDetail() {
           </div>
         </div>
         <div className="detail-price">
-          <span className="detail-price-label">현재 선수 가치</span>
+          <span className="detail-price-label">현재 가치 <small>마지막 발행 가격</small></span>
           {p.price != null ? (
             <>
               <strong className="num">{money(p.price)}<span className="unit">P</span></strong>
-              <Change value={p.change} size="lg" />
+              <span className="detail-change"><Change value={p.change} size="lg" /><small>직전 발행 대비</small></span>
             </>
           ) : (
             <div className="detail-pending">
@@ -363,7 +363,7 @@ export function PlayerDetail() {
               <div><strong>가치 산정 전</strong><small>Performance 계산이 연결되면 가치와 변동률이 표시됩니다.</small></div>
             </div>
           )}
-          <small className="detail-updated">최근 갱신 {dateText(p.updatedAt)}</small>
+          <small className="detail-updated">가격 적용 {p.updatedAt ? dateText(p.updatedAt) : "—"}</small>
           <div className="detail-cta">
             <TradeButton player={p} side="buy" className="button primary large" label="매입하기" />
             <TradeButton player={owned ? p : undefined} side="sell" className="button secondary large" label="매각하기" />
@@ -373,11 +373,16 @@ export function PlayerDetail() {
         </div>
       </section>
       <div className="stat-grid detail-stats">
-        <StatCard label="최근 Performance" value={score(p.performance)} hint={p.performance == null ? "계산 준비 중" : "최근 경기 기준"} tone="yellow" />
+        <StatCard label="최근 경기 Performance" value={score(p.performance)} hint={p.performance == null ? "저장된 점수 없음" : `경기 1건의 저장 점수 · ${p.scoreDetails?.[0]?.rule_version ?? "원점수"}`} tone="yellow" />
         <StatCard label={p.statsScope === "imported_matches" ? `수집된 ${p.importedMatches ?? 0}경기 득점 · 도움` : p.season ? `${p.season} 시즌 득점 · 도움` : "시즌 득점 · 도움"} value={`${money(p.goals)} · ${money(p.assists)}`} />
         <StatCard label="출전 시간" value={money(p.minutes)} unit="분" />
         <StatCard label="거래량" value={money(p.volume)} unit="건" />
       </div>
+      <ul className="value-legend" aria-label="숫자의 의미">
+        <li><b>현재 가치</b>마지막으로 발행된 거래 기준 가격입니다.</li>
+        <li><b>변동률</b>직전 발행 대비 변화입니다. 여러 경기가 한 번에 반영되면 한 경기 변화보다 클 수 있습니다.</li>
+        <li><b>Performance</b>경기 1건의 저장 점수입니다. 가격·손익과는 다른 숫자입니다. <Link className="text-link" href="/rules">점수표</Link></li>
+      </ul>
       <div className="detail-layout">
         <div className="detail-main">
           <section className="panel">
@@ -416,7 +421,7 @@ export function PlayerDetail() {
                           <td className="numeric">{r.minutes == null ? "—" : r.minutes > 0 ? `${money(r.minutes)}′` : <span className="muted">미출전</span>}</td>
                           <td className="numeric">{money(r.goals)}</td>
                           <td className="numeric">{money(r.assists)}</td>
-                          <td className="numeric strong">{score(r.performance)}</td>
+                          <td className="numeric"><span className={`score-chip ${r.performance == null ? "none" : ""}`}>{score(r.performance)}</span></td>
                         </tr>
                       ))}
                     </tbody>

@@ -16,7 +16,8 @@ export function PerformanceDetails({ player }: { player: Player }) {
     const record = player.records.find((r) => r.id === row.fixture_id);
     if (record) return { title: `vs ${record.opponent}`, date: record.playedAt };
     const fixture = data.fixtures.find((f) => f.id === row.fixture_id);
-    if (!fixture) return { title: "경기 정보 불러오는 중", date: null };
+    // The stored result carries only the fixture id; without a matching record the match name is unknown here.
+    if (!fixture) return { title: `경기 ${row.fixture_id.replace(/^bsd-/, "#")}`, date: null };
     const opponent = fixture.home === player.team ? fixture.away : fixture.home;
     return { title: `vs ${getTeam(opponent)?.name ?? "상대 팀"}`, date: fixture.startsAt };
   }

@@ -193,8 +193,8 @@ try {
   await mockPage.getByRole("button",{name:"회원 관리",exact:true}).click();
   await mockPage.getByLabel("회원 처리 사유").fill("반복적인 운영 규칙 위반");
   await mockPage.getByRole("button",{name:"이용 제한 적용",exact:true}).click();
-  await mockPage.getByText(/이용 제한 ·/).waitFor();assert.deepEqual(actions,[7]);
-  await mockPage.reload({waitUntil:"networkidle"});await mockPage.getByText(/이용 제한 ·/).waitFor();
+  await mockPage.getByText("이용 제한",{exact:true}).waitFor();assert.deepEqual(actions,[7]);
+  await mockPage.reload({waitUntil:"networkidle"});await mockPage.getByText("이용 제한",{exact:true}).waitFor();
   await mockPage.getByRole("button",{name:"회원 관리",exact:true}).click();
   await mockPage.getByLabel("회원 처리 사유").fill("운영 검토 후 제한 해제");
   await mockPage.getByRole("button",{name:"제한 해제",exact:true}).click();
