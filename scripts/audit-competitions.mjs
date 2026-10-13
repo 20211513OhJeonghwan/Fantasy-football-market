@@ -3,7 +3,9 @@ import { mkdir,writeFile } from 'node:fs/promises';
 import { createFootballClient } from './lib/football.mjs';
 import { discoverClubCompetitions,DOMESTIC_LEAGUE_IDS } from './lib/competitions.mjs';
 import { processBulkTask } from './lib/bulk-plan.mjs';
-import { calculatePerformance } from '../server/kickx/engine/performance.ts';
+import * as performanceModule from '../server/kickx/engine/performance.ts';
+const calculatePerformance=performanceModule.calculatePerformance??performanceModule.default?.calculatePerformance;
+if(typeof calculatePerformance!=='function')throw new Error('SCORING_MODULE_UNAVAILABLE');
 const api=createFootballClient({key:process.env.BSD_API_KEY,budget:150});
 const response=await fetch('https://kick-x-test.vercel.app/api/kickx',{signal:AbortSignal.timeout(20000)});
 if(!response.ok)throw new Error('PUBLIC_SCOPE_UNAVAILABLE');
@@ -20,7 +22,8 @@ for(const l of discovery.found){
   if(!selected || selected.end_date<new Date().toISOString().slice(0,10)){row.state='out-of-season';continue;}
   const p=await api.page('/api/v2/events/',{league_id:l.id,season_id:selected.id,status:'finished',limit:200,offset:0});
   row.finished=p.count;
-  const selectedFixture=p.results.find(f=>scopeTeamIds.includes(f.home_team_id)||scopeTeamIds.includes(f.away_team_id));
+  const tracked=p.results.filter(f=>scopeTeamIds.includes(f.home_team_id)||scopeTeamIds.includes(f.away_team_id));
+  const selectedFixture=tracked.find(f=>f.extra_time_score||f.penalty_shootout)??tracked[0];
   if(!selectedFixture){row.state='no-tracked-finished-fixture-in-sample';continue;}
   row.fixtureId=selectedFixture.id;
   row.availability=await api.get(`/api/v2/events/${selectedFixture.id}/availability/`);
