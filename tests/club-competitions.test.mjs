@@ -3,11 +3,21 @@ import assert from 'node:assert/strict';
 import { resolveClubCompetitions } from '../scripts/lib/competitions.mjs';
 import { processBulkTask } from '../scripts/lib/bulk-plan.mjs';
 import { normalizeBatch,normalizeStatus } from '../scripts/lib/football.mjs';
+import { runClubCollection } from '../scripts/lib/club-collection.mjs';
+import { pollHistoricalCorrections } from '../scripts/lib/automatic-football.mjs';
 import { loadTs } from './load-ts.mjs';
 const policy=loadTs('../server/kickx/engine/policy.ts');
 const {calculatePerformance:calc}=loadTs('../server/kickx/engine/performance.ts',{'./policy':policy});
 const frame=()=>({fixtureId:'bsd-100',playerId:'bsd-2',teamId:'bsd-1',status:'AET',homeTeam:'bsd-1',awayTeam:'bsd-2',homeScore:0,awayScore:0,stats:{minutes_played:120,goals:0},legacy:null,clubCompetitions:true,source:{detail:{extra_time_score:{home:0,away:0}},lineups:{lineup_status:'confirmed',lineups:{home:{team_id:1,players:Array.from({length:11},(_,i)=>({id:i+1,position:i===1?'F':'D'})),substitutes:[{id:30,position:'D'}]},away:{team_id:2,players:Array.from({length:11},(_,i)=>({id:i+12,position:'D'}))}}},incidents:{incidents:[]}}});
 const metric=(r,k)=>r.breakdown.find(b=>b.metric===k)?.points;
+test('background backfills and old corrections preserve provider calls for newly finished matches',async()=>{
+ let reads=0;
+ const db={from:()=>{reads++;return {select(){return this;},single:async()=>({data:{club_competitions_enabled:true}})};}};
+ const api={remaining:1499};
+ assert.equal((await runClubCollection(db,api,{},Infinity)).deferred,'PROVIDER_BUDGET_RESERVED_FOR_NEW_MATCHES');
+ assert.equal(reads,1);
+ assert.equal(await pollHistoricalCorrections({from:()=>{throw Error('must not query old data');}},api,'2026-10-13T12:00:00Z'),0);
+});
 test('competition discovery uses exact aliases and rejects ambiguous IDs rather than importing unrelated leagues',()=>{
  const r=resolveClubCompetitions([{id:7,name:'Champions League'},{id:29,name:'CAF Champions League'},{id:43,name:'DFB Pokal'},{id:999,name:'FA Cup Women'}]);
  assert.deepEqual(r.found.map(x=>x.id),[7,43]);assert.ok(r.missing.includes('FA컵'));

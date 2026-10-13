@@ -10,10 +10,12 @@ alter table public.fixtures add column penalties_home integer check(penalties_ho
 alter table public.fixtures add column penalties_away integer check(penalties_away>=0);
 create table public.club_competition_backfills(league_id text not null references public.leagues(id),season_id bigint not null,completed_at timestamptz not null default now(),primary key(league_id,season_id));
 create table public.club_collection_tasks(key text primary key,kind text not null,priority integer not null,payload jsonb not null,label text not null,completed boolean not null default false,updated_at timestamptz not null default now(),retry_at timestamptz not null default now(),error_code text);
+create table public.club_competition_discovery(singleton boolean primary key default true check(singleton),day date not null,payload jsonb not null);
 alter table public.club_competition_backfills enable row level security;
 alter table public.club_collection_tasks enable row level security;
-revoke all on public.club_competition_backfills,public.club_collection_tasks from anon,authenticated;
-grant all on public.club_competition_backfills,public.club_collection_tasks to service_role;
+alter table public.club_competition_discovery enable row level security;
+revoke all on public.club_competition_backfills,public.club_collection_tasks,public.club_competition_discovery from anon,authenticated;
+grant all on public.club_competition_backfills,public.club_collection_tasks,public.club_competition_discovery to service_role;
 create function public.kickx_market_eligible(p_player text) returns boolean language sql security definer set search_path='' as $$
  select exists(select 1 from public.players p join public.teams t on t.id=p.team_id where p.id=p_player and t.league_id in ('bsd-1','bsd-3','bsd-4','bsd-5','bsd-6')) or exists(select 1 from public.holdings where player_id=p_player)
 $$;
