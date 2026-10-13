@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, CornerDownRight, Flag, Heart, Lock, MessageC
 import type { Comment, Post } from "@/lib/kickx/types";
 import { apiRequest } from "@/lib/kickx/client";
 import { dateText, money, relativeTime } from "@/lib/kickx/data";
+import {postHeading} from "@/lib/kickx/community";
 import { usePlatform, useResource } from "./provider";
 import { BackLink, ClubCrest, DataEmpty, Empty, Modal, PlayerPortrait } from "./ui";
 
@@ -88,10 +89,10 @@ export function PostDetail() {
   if (!post) {
     return (
       <div className="reading-width">
-        <BackLink href="/community/clubs" label="커뮤니티" />
+        <BackLink href="/community" label="커뮤니티" />
         <article className="article">
           {resource.status === "ready"
-            ? <Empty title="게시글을 찾을 수 없습니다" description="삭제되었거나 주소가 올바르지 않습니다." action={<Link className="button primary small" href="/community/clubs">커뮤니티로</Link>} />
+            ? <Empty title="게시글을 찾을 수 없습니다" description="삭제되었거나 주소가 올바르지 않습니다." action={<Link className="button primary small" href="/community">커뮤니티로</Link>} />
             : <DataEmpty entity="게시글" status={resource.status} retry={resource.reload} />}
         </article>
       </div>
@@ -111,7 +112,7 @@ export function PostDetail() {
           </Link>
           <span className="category-tag">{post.category}</span>
         </div>
-        <h1>{post.title}</h1>
+        <h1>{postHeading(post.title,post.body) || `${targetName ?? (post.scope === "club" ? "구단" : "선수")} 이야기`}</h1>
         <div className="article-author">
           <span className="rank-avatar">{post.author.slice(0, 1)}</span>
           <div>

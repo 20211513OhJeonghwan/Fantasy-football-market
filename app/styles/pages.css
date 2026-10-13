@@ -1376,3 +1376,61 @@ button.pitch-player:hover { transform: translateY(-3px); }
 @media (max-width: 900px) {
   .value-legend { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Community feed: functional defaults. See the Claude handoff for visual iteration. */
+.community-entry-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--s-6); }
+.community-entry-card { display:grid; gap:var(--s-4); padding:var(--s-6); color:var(--ink); }
+.community-entry-card h2 { font-size:24px; font-weight:900; }
+.community-entry-card p { color:var(--text-2); }
+.community-entry-card > span { display:flex; align-items:center; gap:8px; font-weight:800; }
+.community-entry-card:hover { background:var(--yellow-wash); }
+.community-feed { min-width:0; display:grid; gap:var(--s-5); }
+.community-feed .panel + .panel { margin-top:0; }
+.community-feed .post-browser-title { padding:var(--s-5) var(--s-6); }
+.community-feed .post-browser-title h2 { display:flex; flex-wrap:wrap; gap:8px; }
+.feed-composer { padding:var(--s-5); }
+.feed-composer-open { width:100%; display:flex; align-items:center; gap:var(--s-3); text-align:left; }
+.feed-composer-open > span:first-of-type { flex:1; }
+.feed-composer-locked, .feed-composer-heading, .feed-composer-options, .feed-composer-foot { display:flex; align-items:center; justify-content:space-between; gap:var(--s-3); flex-wrap:wrap; }
+.feed-composer-heading { margin-bottom:var(--s-3); }
+.feed-composer-form fieldset { margin:0; padding:0; border:0; min-width:0; }
+.feed-composer-form textarea, .feed-comments textarea { width:100%; resize:vertical; padding:var(--s-3); border:var(--border); background:var(--surface); color:var(--ink); font:inherit; }
+.feed-composer-form input { width:100%; padding:var(--s-3); border:var(--border); background:var(--surface); }
+.feed-player-picker, .feed-composer-advanced { display:grid; gap:var(--s-3); margin-bottom:var(--s-3); }
+.feed-composer-advanced { margin-top:var(--s-4); }
+.feed-composer-options { margin-top:var(--s-2); }
+.feed-composer-foot { margin-top:var(--s-4); }
+.community-feed-card { padding:var(--s-6); border-bottom:var(--border); overflow-wrap:anywhere; }
+.community-feed-card:last-child { border-bottom:0; }
+.feed-card-header { display:flex; align-items:center; gap:var(--s-3); margin-bottom:var(--s-4); }
+.feed-card-header > div { flex:1; min-width:0; display:grid; gap:3px; }
+.feed-card-header time { color:var(--text-2); font-size:var(--fs-small); }
+.feed-card-target { display:inline-flex; align-items:center; gap:8px; margin-bottom:var(--s-3); font-weight:800; }
+.community-feed-card h3 { font-size:19px; font-weight:900; margin-bottom:var(--s-3); }
+.feed-card-body { white-space:pre-wrap; line-height:1.75; margin-bottom:var(--s-3); }
+.feed-card-actions { display:flex; align-items:center; flex-wrap:wrap; gap:var(--s-4); margin-top:var(--s-4); font-size:var(--fs-small); }
+.feed-card-actions button { display:inline-flex; align-items:center; gap:6px; min-height:40px; }
+.feed-card-actions button[aria-pressed=true] { color:var(--down); font-weight:800; }
+.feed-card-actions button:disabled { opacity:.5; }
+.feed-card-actions a { color:var(--text-2); }
+.feed-trade-card { display:flex; align-items:center; gap:var(--s-3); padding:var(--s-4); margin-top:var(--s-3); background:var(--surface-2); border:var(--border); }
+.feed-trade-card > div { display:grid; gap:4px; }
+.feed-trade-card small, .feed-trade-card time { color:var(--text-2); font-size:var(--fs-small); }
+.feed-comments { display:grid; gap:var(--s-3); margin-top:var(--s-4); padding-top:var(--s-4); border-top:var(--border); }
+.feed-comments ul { list-style:none; display:grid; gap:var(--s-3); }
+.feed-comments li p { white-space:pre-wrap; line-height:1.6; margin-top:4px; }
+.feed-comments form { display:grid; gap:var(--s-2); }
+.feed-comments form button { justify-self:end; }
+.feed-empty { padding:var(--s-6); display:grid; gap:var(--s-3); }
+.feed-empty p { color:var(--text-2); }
+@media(max-width:640px) {
+ .community-entry-grid { grid-template-columns:minmax(0,1fr); }
+ .community-feed-card { padding:var(--s-4); }
+ .feed-card-header { align-items:flex-start; }
+ .feed-card-header .category-tag { max-width:90px; }
+ .feed-card-actions { gap:var(--s-3); }
+ .community-feed .post-browser-title { padding:var(--s-4); }
+ .feed-composer-foot .fine-print { flex-basis:100%; }
+}
+
+.my-lounges[data-scope] { grid-template-columns:minmax(0,1fr); }

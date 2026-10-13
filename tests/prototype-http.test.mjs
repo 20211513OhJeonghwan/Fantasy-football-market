@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loadTs} from './load-ts.mjs';
 const validation=loadTs('../lib/kickx/validation.ts');
+const community=loadTs('../lib/kickx/community.ts',{'./validation':validation});
 const http=loadTs('../server/kickx/http.ts',{'server-only':{},'@/lib/kickx/validation':validation,'./config':{},'./supabase':{}});
 const prototype=loadTs('../server/kickx/prototype.ts',{'server-only':{},'./http':http});
 const req=(data,origin='https://kickx.invalid')=>new Request('https://kickx.invalid/api/kickx',{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify(data)});
@@ -18,7 +19,7 @@ test('all new writes reject foreign origins and missing authentication before da
  for(const [path,method] of [['trades/quote','POST'],['trades','POST'],['squad','PUT'],['community','POST'],['admin/prototype','POST']]){
   let calls=0,denied=true;
   const authenticatedClient=async()=>{if(denied)throw new http.HttpError(401,'로그인 필요');return {user:{id:'verified'},client:{rpc:async()=>{calls++;return {data:{},error:null};}}};};
-  const route=loadTs(`../app/api/kickx/${path}/route.ts`,{'@/server/kickx/http':{...http,authenticatedClient},'@/server/kickx/prototype':prototype,'@/server/kickx/config':{},'@/server/kickx/supabase':{},'@/lib/kickx/validation':validation,'@/server/kickx/admin-db':{requireAdmin:async()=>{throw new http.HttpError(401,'로그인 필요');},createAdminDatabase:()=>{calls++;}},'@/server/kickx/engine/service':{calculatePlayer:()=>{calls++;}}});
+  const route=loadTs(`../app/api/kickx/${path}/route.ts`,{'@/server/kickx/http':{...http,authenticatedClient},'@/server/kickx/prototype':prototype,'@/server/kickx/config':{},'@/server/kickx/supabase':{},'@/lib/kickx/validation':validation,'@/lib/kickx/community':community,'@/server/kickx/admin-db':{requireAdmin:async()=>{throw new http.HttpError(401,'로그인 필요');},createAdminDatabase:()=>{calls++;}},'@/server/kickx/engine/service':{calculatePlayer:()=>{calls++;}}});
   assert.equal((await route[method](req({}))).status,401);denied=false;
   assert.equal((await route[method](req({},'https://foreign.invalid'))).status,403);assert.equal(calls,0);
  }

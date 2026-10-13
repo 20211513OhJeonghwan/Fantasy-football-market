@@ -58,6 +58,12 @@ try {
   const disconnected=await context.request.put(base+"/api/kickx/watchlist",{headers:{origin:base},data:{playerId:"test-player",watched:true}});
   assert.equal(disconnected.status(),503);
   report.checks.push("Disconnected services and cross-origin writes stay blocked");
+  for (const path of ["/community/players", "/community/clubs"]) {
+    await page.goto(base + path, {waitUntil:"networkidle"});
+    assert.ok(await page.locator(".community-feed").getByRole("heading", {name:"게시글 정보를 준비하고 있습니다",exact:true}).isVisible());
+    assert.equal(await page.locator(".community-feed .loading-state").count(),0);
+  }
+  report.checks.push("Disconnected community feeds show their actual state without indefinite loading");
   for(const endpoint of ["/api/kickx/players?page=0","/api/kickx/fixtures?day=2026-02-30"]) {
     assert.equal((await context.request.get(base+endpoint)).status(),400);
   }
@@ -240,17 +246,27 @@ try {
   await mockPage.getByRole('button',{name:'스쿼드 저장',exact:true}).click();await mockPage.getByText('스쿼드를 저장했습니다.',{exact:true}).waitFor();assert.equal(squadCalls,1);
   await mockPage.reload({waitUntil:'networkidle'});assert.ok(await mockPage.getByRole('button',{name:'9번 FW 자리 CI-only player',exact:true}).isVisible());
   report.checks.push('Squad saves 11 slots and revision; saved owned lineup survives reload');
-  let savedPost=null;const savedComments=[];const communityActions=[];
+  let savedPost=null;const savedPosts=[];const savedComments=[];const communityActions=[];let quickAttempts=0,quickRequest=null;
   await mock.route(/\/api\/kickx\/community(?:\?|$)/,async route=>{
     const req=route.request();
     if(req.method()==='GET'){
       const params=new URL(req.url()).searchParams;
-      return route.fulfill({json:{status:'ready',data:params.has('postId')?{post:savedPost,comments:savedComments}:{items:savedPost?[savedPost]:[],total:savedPost?1:0,page:1,size:20}}});
+      const posts=savedPosts.filter(p=>p.scope===params.get('scope')&&(!params.get('target')||p.target===params.get('target'))).slice().reverse();
+      return route.fulfill({json:{status:'ready',data:params.has('postId')?{post:savedPosts.find(p=>p.id===params.get('postId'))??null,comments:savedComments.filter(c=>c.postId===params.get('postId'))}:{items:posts,total:posts.length,page:1,size:20}}});
     }
     const body=req.postDataJSON();communityActions.push(body.action);
-    if(body.action==='createPost')savedPost={...body,id:'22222222-2222-2222-2222-222222222222',author:'새 닉네임',authorId:'test-account',targetName:'CI-only player',date:new Date().toISOString(),revision:1,likes:0,liked:false,views:0,commentCount:0,transaction:null};
-    if(body.action==='comment'){assert.match(body.requestId,/^[a-f0-9-]{36}$/);savedComments.push({id:'33333333-3333-3333-3333-333333333333',postId:savedPost.id,author:'새 닉네임',authorId:'test-account',body:body.body,date:new Date().toISOString(),revision:1});savedPost.commentCount++;}
-    if(body.action==='like'){savedPost.liked=body.liked;savedPost.likes=body.liked?1:0;}
+    if(body.action==='createPost'){
+      assert.match(body.requestId,/^[a-f0-9-]{36}$/);
+      if(body.body==='실패해도 유지되는 선수 이야기입니다.'){
+        quickAttempts++;
+        if(quickAttempts===1){quickRequest=body.requestId;return route.fulfill({status:500,json:{error:'글 저장 테스트 오류'}});}
+        assert.equal(body.requestId,quickRequest);
+      }
+      savedPost={...body,title:body.title||body.body.trim().replace(/\s+/g,' ').slice(0,80),id:`22222222-2222-2222-2222-${String(savedPosts.length+1).padStart(12,'0')}`,author:'새 닉네임',authorId:'test-account',targetName:body.scope==='club'?'테스트 구단':'CI-only player',date:new Date().toISOString(),revision:1,likes:0,liked:false,views:0,commentCount:0,transaction:null};savedPosts.push(savedPost);
+    }
+    const selectedPost=savedPosts.find(p=>p.id===body.postId);
+    if(body.action==='comment'){assert.match(body.requestId,/^[a-f0-9-]{36}$/);savedComments.push({id:'33333333-3333-3333-3333-333333333333',postId:body.postId,author:'새 닉네임',authorId:'test-account',body:body.body,date:new Date().toISOString(),revision:1});selectedPost.commentCount++;}
+    if(body.action==='like'){selectedPost.liked=body.liked;selectedPost.likes=body.liked?1:0;}
     await route.fulfill({json:{id:savedPost?.id}});
   });
   await mockPage.goto(base+'/community/write?scope=player&target=test-player',{waitUntil:'networkidle'});
@@ -263,6 +279,39 @@ try {
   await mockPage.getByRole('button',{name:'게시글 신고',exact:true}).click();await mockPage.getByLabel('신고 사유',{exact:true}).fill('신고 등록 테스트입니다');await mockPage.getByRole('button',{name:'신고 제출',exact:true}).click();
   assert.ok(['createPost','comment','like','report'].every(action=>communityActions.includes(action)));
   report.checks.push('Post creation, direct detail, comment, desired-state like and report use real endpoint contracts');
+  // Separate, body-first feeds and titleless composer use the existing write contract.
+  state.session.profile.team='test-team';
+  savedPosts.push({...savedPost,id:'44444444-4444-4444-4444-444444444444',scope:'club',target:'test-team',targetName:'테스트 구단',title:'구단 전용 제목',body:'구단에서만 보여야 하는 이야기입니다.',likes:0,liked:false,commentCount:0});
+  await mockPage.goto(base+'/community',{waitUntil:'networkidle'});
+  assert.equal(new URL(mockPage.url()).pathname,'/community');assert.equal(await mockPage.locator('.community-entry-card').count(),2);
+  await mockPage.goto(base+'/community/players',{waitUntil:'networkidle'});
+  assert.ok(await mockPage.locator('.feed-card-body').filter({hasText:'저장 흐름을 점검하는 테스트 게시글 내용입니다.'}).isVisible());
+  assert.equal(await mockPage.locator('.community-feed-card[data-scope=club]').count(),0);
+  await mockPage.locator('.feed-composer-open').click();
+  await mockPage.getByRole('combobox',{name:'이야기할 선수'}).click();await mockPage.getByRole('option',{name:/CI-only player/}).click();
+  await mockPage.getByLabel('빠른 글 내용',{exact:true}).fill('실패해도 유지되는 선수 이야기입니다.');
+  await mockPage.getByRole('button',{name:'게시하기',exact:true}).click();await mockPage.getByRole('alert').filter({hasText:'글 저장 테스트 오류'}).waitFor();
+  assert.equal(await mockPage.getByLabel('빠른 글 내용',{exact:true}).inputValue(),'실패해도 유지되는 선수 이야기입니다.');
+  await mockPage.getByRole('button',{name:'게시하기',exact:true}).click();await mockPage.locator('.feed-card-body').filter({hasText:'실패해도 유지되는 선수 이야기입니다.'}).waitFor();
+  assert.equal(quickAttempts,2);assert.equal(savedPost.scope,'player');assert.equal(savedPost.target,'test-player');assert.equal(await mockPage.getByLabel('빠른 글 내용',{exact:true}).count(),0);
+  const card=mockPage.locator('.community-feed-card').filter({hasText:'실패해도 유지되는 선수 이야기입니다.'});
+  await card.getByRole('button',{name:'피드 공감 0',exact:true}).click();await card.getByRole('button',{name:'피드 공감 1',exact:true,pressed:true}).waitFor();
+  await card.getByRole('button',{name:'댓글 0',exact:true}).click();await card.getByLabel('피드 댓글 내용').fill('피드에서 작성하는 댓글입니다.');await card.getByRole('button',{name:'댓글 등록',exact:true}).click();await card.getByText('피드에서 작성하는 댓글입니다.',{exact:true}).waitFor();
+  await mockPage.goto(base+'/community/clubs',{waitUntil:'networkidle'});assert.equal(await mockPage.locator('.community-feed-card[data-scope=player]').count(),0);assert.ok(await mockPage.locator('.feed-card-body').filter({hasText:'구단에서만 보여야 하는 이야기입니다.'}).isVisible());
+  await mockPage.goto(base+'/players/test-player',{waitUntil:'networkidle'});await mockPage.getByRole('button',{name:'커뮤니티',exact:true}).click();await mockPage.locator('.feed-card-body').filter({hasText:'실패해도 유지되는 선수 이야기입니다.'}).waitFor();assert.equal(await mockPage.locator('.community-feed-card[data-scope=club]').count(),0);
+  state.session.profile.team=null;
+  await mockPage.goto(base+'/community/clubs/test-team',{waitUntil:'networkidle'});assert.equal(await mockPage.locator('.feed-composer-open').count(),0);assert.ok(await mockPage.locator('.feed-composer-locked').isVisible());
+  state.session.profile.team='test-team';
+  for(const width of [1440,390]){
+    await mockPage.setViewportSize({width,height:900});
+    for(const path of ['/community','/community/players','/community/clubs','/community/players/test-player','/community/clubs/test-team']){
+      await mockPage.goto(base+path,{waitUntil:'networkidle'});assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${path} community overflows at ${width}`);
+      await mockPage.screenshot({path:`test-artifacts/community-${path.split('/').slice(2).join('-')||'entry'}-${width}.png`,fullPage:true});
+    }
+    await mockPage.goto(base+'/players/test-player',{waitUntil:'networkidle'});await mockPage.getByRole('button',{name:'커뮤니티',exact:true}).click();assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await mockPage.screenshot({path:`test-artifacts/community-player-tab-${width}.png`,fullPage:true});
+  }
+  report.checks.push('Separate community entry and scoped feeds, body preview, titleless quick post retry UUID, inline like/comments, fan gate and player detail community tab');
+
   for(const width of [1440,390]){
     await mockPage.setViewportSize({width,height:900});
     for(const path of ['/teams/test-team','/squad',`/community/posts/${savedPost.id}`,'/rules']){
