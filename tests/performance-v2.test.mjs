@@ -42,3 +42,10 @@ test('DNP, incomplete score timeline and invalid passing keep null instead of in
  const bad=match();bad.homeScore=1;assert.equal(calc(bad).status,'blocked');
  const pass=match('F');Object.assign(pass.stats,{total_pass:10,accurate_pass:11});assert.equal(calc(pass).status,'blocked');
 });
+
+test('same-minute goal and dismissal needs explicit timing before charging participation',()=>{
+ const m=match();m.stats.minutes_played=60;m.awayScore=1;m.source.incidents.incidents=[{type:'card',card_type:'red',minute:60,player_id:2},goal(1,60,false,12)];
+ assert.equal(calc(m).status,'blocked');assert.ok(calc(m).warnings.includes('GOAL_BOUNDARY_TIME_AMBIGUOUS'));
+ m.source.incidents.incidents[0].period_second=3610;m.source.incidents.incidents[1].period_second=3620;
+ assert.equal(points(calc(m),'conceded'),0);
+});

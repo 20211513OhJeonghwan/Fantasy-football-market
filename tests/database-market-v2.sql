@@ -76,6 +76,28 @@ do $$declare p jsonb;r jsonb;begin
  r:=jsonb_set(jsonb_set(r,'{10,status}','"blocked"'),'{10,score}','null');p:=pg_temp.publish('v2-incomplete',r);
  if not (p->>'withheld')::boolean or (select price from public.player_market_snapshots where id='bsd-9100')<>148320 then raise exception 'Incomplete correction erased published value';end if;
  if (select count(*) from public.calculation_revisions)<>3 then raise exception 'Revision retention wrong';end if;
+ if (select pricing_status from public.player_market_snapshots where id='bsd-9100')<>'pending' then raise exception 'Incomplete data remained tradeable';end if;
+end $$;
+reset role;
+set local role authenticated;
+select pg_temp.expect_error($q$select public.kickx_quote('bsd-9100','sell')$q$,'PRICE_RECALCULATING');
+-- Retrying an already settled trade remains idempotent while a new valuation waits.
+select public.kickx_trade(current_setting('v2.quote')::uuid,current_setting('v2.request')::uuid);
+reset role;
+set local role service_role;
+do $$declare p jsonb;begin
+ p:=pg_temp.publish('v2-correction',jsonb_set(pg_temp.results(),'{11,score}','40'));
+ if (select pricing_status from public.player_market_snapshots where id='bsd-9100')<>'ready' or (p->>'price')::bigint<>148320 then raise exception 'Same-hash recovery stayed pending';end if;
+ if (select count(*) from public.price_history)<>2 then raise exception 'Recovery duplicated price history';end if;
+end $$;
+reset role;
+-- A confirmed correction to DNP is complete data, not a permanently blocked correction.
+update public.football_match_stats set stats='{"minutes_played":0}' where fixture_id='bsd-9302';
+set local role service_role;
+do $$declare p jsonb;r jsonb;begin
+ r:=jsonb_set(jsonb_set(pg_temp.results(),'{11,status}','"not-played"'),'{11,score}','null');
+ p:=pg_temp.publish('v2-confirmed-dnp',r);
+ if coalesce((p->>'withheld')::boolean,false) or (p->>'price')::bigint<>151200 or (select count(*) from public.player_price_results)<>1 then raise exception 'Verified DNP correction was withheld or still counted';end if;
 end $$;
 reset role;
 set local role anon;

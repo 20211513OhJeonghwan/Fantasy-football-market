@@ -68,7 +68,7 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
   if(count(a.period_second)!=null&&count(b.period_second)!=null&&a.period_second!==b.period_second)return Number(a.period_second)-Number(b.period_second);
   return null;
  };
- if(goals.some(e=>(entry&&compareTime(e,entry)==null)||(!red.length&&exit&&compareTime(e,exit)==null)))return stop("GOAL_BOUNDARY_TIME_AMBIGUOUS");
+ if(goals.some(e=>(entry&&compareTime(e,entry)==null)||(exit&&compareTime(e,exit)==null)))return stop("GOAL_BOUNDARY_TIME_AMBIGUOUS");
  const afterEntry = (e: Json) => !entry || (compareTime(e,entry)??0)>0;
  const beforeExit = (e: Json) => !exit || (compareTime(e,exit)??0)<0;
  // Team concessions are charged only during the player's actual participation.

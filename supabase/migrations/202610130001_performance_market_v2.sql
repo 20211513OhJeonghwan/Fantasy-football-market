@@ -2,6 +2,8 @@
 -- Wallets, settled trades, costs and past snapshots are preserved. Price revaluation
 -- is queued automatically; quotes wait for each player's first v2 publication.
 begin;
+select pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('kickx:bsd-import',0));
+select public.kickx_economy_lock();
 alter table public.kickx_policy add column pricing_reference_at timestamptz;
 alter table public.kickx_policy add column pricing_reference_season integer;
 alter table public.player_market_snapshots add column pricing_status text check(pricing_status in('pending','ready'));
@@ -26,6 +28,24 @@ do $$declare t text;begin
   execute format('grant all on public.%I to service_role',t);
   execute format('create policy pricing_public_read on public.%I for select to anon,authenticated using(true)',t);
  end loop;
+end $$;
+
+create or replace function public.kickx_queue_match_change() returns trigger language plpgsql security definer set search_path='' as $$
+declare f text; m record;begin
+ if TG_OP='UPDATE' and (to_jsonb(new)-'updated_at')=(to_jsonb(old)-'updated_at') then return new;end if;
+ if TG_TABLE_NAME='football_event_sources' then
+  if TG_OP='UPDATE' and (new.player_stats,new.lineups,new.incidents,new.legacy_stats) is not distinct from (old.player_stats,old.lineups,old.incidents,old.legacy_stats) then return new;end if;
+ end if;
+ if TG_TABLE_NAME='football_match_stats' then
+  if TG_OP<>'DELETE' then perform public.kickx_queue_player(new.player_id);end if;
+  if TG_OP<>'INSERT' then perform public.kickx_queue_player(old.player_id);end if;
+ elsif TG_TABLE_NAME='fixtures' then
+  if TG_OP='UPDATE' and (new.status,new.starts_at,new.home_score,new.away_score,new.home_team_id,new.away_team_id,new.season) is not distinct from (old.status,old.starts_at,old.home_score,old.away_score,old.home_team_id,old.away_team_id,old.season) then return new;end if;
+  f:=case when TG_OP='DELETE' then old.id else new.id end;
+ else f:=case when TG_OP='DELETE' then old.fixture_id else new.fixture_id end;
+ end if;
+ if f is not null then for m in select player_id from public.football_match_stats where fixture_id=f loop perform public.kickx_queue_player(m.player_id);end loop;end if;
+ return case when TG_OP='DELETE' then old else new end;
 end $$;
 
 -- Independent SQL implementation of engine/pricing.ts, verified by shared vectors.
@@ -96,9 +116,11 @@ begin
   jsonb_typeof(x->'breakdown') is distinct from 'array' or jsonb_typeof(x->'warnings') is distinct from 'array' or
   (x->>'status' in('ready','provisional') and (jsonb_typeof(x->'score') is distinct from 'number' or abs((x->>'score')::numeric)>10000)) or
   (x->>'status' in('blocked','not-played') and x->>'score' is not null)) then raise exception 'INVALID_INPUT';end if;
+ if exists(select 1 from jsonb_array_elements(p_results) x join public.football_match_stats m on m.player_id=p_player and m.fixture_id=x->>'fixtureId' join public.fixtures f on f.id=m.fixture_id
+ where x->>'status' in('ready','provisional') and (f.status<>'FT' or f.starts_at>clock_timestamp() or coalesce((m.stats->>'minutes_played')::numeric,0)<=0 or (m.stats->>'minutes_played')::numeric>90)) or exists(select 1 from jsonb_array_elements(p_results) x join public.football_match_stats m on m.player_id=p_player and m.fixture_id=x->>'fixtureId' where x->>'status'='not-played' and (m.stats->>'minutes_played')::numeric is distinct from 0) then raise exception 'INVALID_INPUT';end if;
  if exists(select 1 from public.player_calculation_state where player_id=p_player and input_hash=p_hash and rule_version=p.version) and exists(select 1 from public.player_market_snapshots where id=p_player and pricing_status='ready') then return jsonb_build_object('unchanged',true);end if;
  -- A previously published score becoming incomplete must not erase asset value.
- if not public.kickx_check_calculation(p_player,p_results) then
+ if exists(select 1 from public.performance_results old where old.player_id=p_player and old.status in('ready','provisional') and not exists(select 1 from jsonb_array_elements(p_results) x where x->>'fixtureId'=old.fixture_id and x->>'status' in('ready','provisional','not-played'))) then
   update public.player_market_snapshots set pricing_status='pending' where id=p_player;
   insert into public.operation_audit(actor,action,target,detail) values(p_actor,'calculation.withheld',p_player,'{"reason":"PREVIOUS_RESULT_NOW_INCOMPLETE"}');
   return jsonb_build_object('withheld',true,'reason','PREVIOUS_RESULT_NOW_INCOMPLETE');
