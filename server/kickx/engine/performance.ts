@@ -76,7 +76,7 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
  const own = my.filter(e => e.type === "goal" && ownGoal(e)).length;
  const scored = my.filter(e => e.type === "goal" && !ownGoal(e)).length;
  const rawGoals = count(input.stats.goals);
- if (rawGoals != null && rawGoals !== scored) return stop("PLAYER_GOALS_MISMATCH");
+ if (rawGoals != null && rawGoals > 0 && rawGoals !== scored) return stop("PLAYER_GOALS_MISMATCH");
  const add = (metric: string, value: number, points: number, evidence = "incident") => result.breakdown.push({ metric, value, points:points===0?0:points, evidence });
  const position = result.position as keyof typeof SCORING.goals;
  const exposure = minutes / 90;

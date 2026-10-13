@@ -49,3 +49,9 @@ test('same-minute goal and dismissal needs explicit timing before charging parti
  m.source.incidents.incidents[0].period_second=3610;m.source.incidents.incidents[1].period_second=3620;
  assert.equal(points(calc(m),'conceded'),0);
 });
+
+test('an unverified zero goal counter does not override verified scoring incidents',()=>{
+ const m=match('F');m.homeScore=1;m.stats.goals=0;m.source.incidents.incidents=[goal(1,40)];
+ assert.equal(points(calc(m),'goals'),30);assert.equal(calc(m).score,65);
+ m.stats.goals=2;assert.equal(calc(m).status,'blocked');
+});
