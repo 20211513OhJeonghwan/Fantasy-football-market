@@ -35,6 +35,8 @@ select pg_temp.expect_error($q$select public.kickx_quote_base('bsd-9100','buy')$
 reset role;
 set local role service_role;
 do $$declare p jsonb;begin
+ p:=pg_temp.publish('v2-historical-window-incomplete',jsonb_set(jsonb_set(pg_temp.results(),'{9,status}','"blocked"'),'{9,score}','null'));
+ if not (p->>'withheld')::boolean or exists(select 1 from public.player_initial_values) then raise exception 'Pre-reference missing game silently left rolling window';end if;
  p:=pg_temp.publish('v2-first',pg_temp.results());
  if (p->>'price')::bigint<>153653 or (p->>'initialPrice')::bigint<>140000 then raise exception 'V2 price/initial wrong: %',p;end if;
  if (p#>>'{pricing,baseline,source}')<>'previous-season' or (p#>>'{pricing,baseline,gameCount}')::integer<>10 then raise exception 'Past season not selected';end if;

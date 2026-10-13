@@ -132,7 +132,11 @@ begin
  select pricing into old_plan from public.calculation_revisions where player_id=p_player and rule_version=p.version order by created_at desc limit 1;
  old_ready:=old_pricing_status='ready';
  -- Newly finished but unscorable matches cannot silently vanish from the last-five window.
- withheld:=exists(select 1 from jsonb_array_elements(p_results) x join public.fixtures f on f.id=x->>'fixtureId' where f.status in('FT','AET','PEN') and f.starts_at>p.pricing_reference_at and x->>'status'='blocked');
+ withheld:=exists(select 1 from jsonb_array_elements(p_results) x join public.fixtures f on f.id=x->>'fixtureId' where f.status in('FT','AET','PEN') and f.starts_at>p.pricing_reference_at and x->>'status'='blocked')
+ or (jsonb_array_length(plan->'steps')>0 and exists(select 1 from
+  (select x from jsonb_array_elements(p_results) x join public.fixtures f on f.id=x->>'fixtureId'
+   where f.status in('FT','AET','PEN') and x->>'status'<>'not-played' order by f.starts_at desc,f.id desc limit 5) candidates
+  where x->>'status'='blocked'));
  value_now:=case when withheld then coalesce(old_value,p.initial_price) else (plan->>'price')::bigint end;
  delete from public.performance_results where player_id=p_player;
  update public.player_match_records set performance=null,rule_version=null where player_id=p_player;
