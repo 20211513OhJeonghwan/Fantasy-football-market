@@ -12,18 +12,19 @@ export function useTeamOptions(allLabel: string | null, leagueId = "all", allVal
     const leagueName = new Map(data.leagues.map((l) => [l.id, l.name]));
     const order = new Map(data.leagues.map((l, i) => [l.id, i]));
     const teams = data.teams
+      .filter(t=>t.leagueId && ['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6'].includes(t.leagueId) || !t.id.startsWith('bsd-'))
       .filter((t) => leagueId === "all" || t.leagueId === leagueId)
       .sort((a, b) => (order.get(a.leagueId ?? "") ?? 99) - (order.get(b.leagueId ?? "") ?? 99) || a.name.localeCompare(b.name));
     const options: SelectOption[] = teams.map((t) => ({ value: t.id, label: t.name, group: leagueId === "all" ? leagueName.get(t.leagueId ?? "") ?? "기타" : undefined, icon: <ClubCrest id={t.id} size="small" />, keywords: [t.english, t.code, clubIdentity(t)?.code].filter(Boolean).join(" ") }));
     return allLabel ? [{ value: allValue, label: allLabel }, ...options] : options;
   }, [data.teams, data.leagues, leagueId, allLabel, allValue]);
 }
-export function useLeagueOptions(allLabel = "모든 리그"): SelectOption[] {
+export function useLeagueOptions(allLabel = "모든 리그", includeClubCompetitions=false): SelectOption[] {
   const { data } = usePlatform();
   return useMemo(() => [
     { value: "all", label: allLabel },
-    ...data.leagues.map((l) => ({ value: l.id, label: l.name, icon: <LeagueMark league={l} size="sm" /> })),
-  ], [data.leagues, allLabel]);
+    ...data.leagues.filter(l=>includeClubCompetitions || !l.id.startsWith('bsd-') || ['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6'].includes(l.id)).map((l) => ({ value: l.id, label: l.name, icon: <LeagueMark league={l} size="sm" /> })),
+  ], [data.leagues, allLabel,includeClubCompetitions]);
 }
 export const POSITION_OPTIONS: SelectOption[] = [
   { value: "all", label: "포지션 전체" },

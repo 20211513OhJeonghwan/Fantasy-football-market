@@ -20,10 +20,11 @@ export async function calculatePlayer(db: SupabaseClient, playerId: string, acto
  }
  const expected=stats.map(m=>({fixture:m.fixture_id,statsAt:m.updated_at,sourceAt:m.fixtures.football_event_sources?.updated_at??null,fixtureAt:m.fixtures.updated_at}));
  const ordered=stats.sort((a,b)=>a.fixtures.starts_at.localeCompare(b.fixtures.starts_at)||a.fixture_id.localeCompare(b.fixture_id));
- const results=ordered.map(m=>({...calculator({fixtureId:m.fixture_id,playerId,teamId:m.team_id,status:m.fixtures.status,homeTeam:m.fixtures.home_team_id,awayTeam:m.fixtures.away_team_id,homeScore:m.fixtures.home_score,awayScore:m.fixtures.away_score,stats:m.stats,legacy:m.legacy_stats,source:m.fixtures.football_event_sources??{}}),ruleVersion:version}));
+ const clubCompetitions=policy.data.club_competitions_enabled===true;
+ const results=ordered.map(m=>({...calculator({fixtureId:m.fixture_id,playerId,teamId:m.team_id,status:m.fixtures.status,homeTeam:m.fixtures.home_team_id,awayTeam:m.fixtures.away_team_id,homeScore:m.fixtures.home_score,awayScore:m.fixtures.away_score,stats:m.stats,legacy:m.legacy_stats,source:m.fixtures.football_event_sources??{},clubCompetitions}),ruleVersion:version,...(clubCompetitions?{scoringRevision:'club-competitions-v1'}:{})}));
  const referenceAt = previewPolicy?.referenceAt ?? policy.data.pricing_reference_at;
  const referenceSeason = previewPolicy?.referenceSeason ?? policy.data.pricing_reference_season;
- const pricing = version === RULE_VERSION ? calculatePricing(results.map((r,i)=>({...r,minutes:ordered[i].stats?.minutes_played ?? null,startedAt:ordered[i].fixtures.starts_at,season:ordered[i].fixtures.season})),referenceAt,referenceSeason) : null;
+ const pricing = version === RULE_VERSION ? calculatePricing(results.map((r,i)=>({...r,minutes:ordered[i].stats?.minutes_played ?? null,startedAt:ordered[i].fixtures.starts_at,season:ordered[i].fixtures.season})),referenceAt,referenceSeason,clubCompetitions ? 120 : 90) : null;
  const hash=createHash("sha256").update(JSON.stringify({version,reference:referenceAt ?? null,referenceSeason:referenceSeason ?? null,results,pricing})).digest("hex");
  if(preview)return {playerId,version,results,pricing,hash};
  // The DB independently computes prices from these scores and its own fixture dates.

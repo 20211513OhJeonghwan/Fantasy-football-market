@@ -29,3 +29,14 @@ test('TypeScript and independent PostgreSQL pricing agree across 60 historical/r
   }
  } finally {await db.close();}
 });
+test('120-minute appearances use the same SQL/TypeScript rolling formula and retain the eight-percent cap',async()=>{
+ const db=new PGlite();
+ try{
+  const sql=readFileSync(new URL('../supabase/migrations/202610140001_club_competitions.sql',import.meta.url),'utf8');
+  await db.exec(sql.match(/create or replace function public\.kickx_market_plan\([\s\S]*?end \$\$;/)[0]);
+  const rows=[{fixtureId:'bsd-1',startedAt:'2026-08-02T12:00:00Z',season:2026,minutes:120,score:120,status:'provisional'},{fixtureId:'bsd-2',startedAt:'2026-08-03T12:00:00Z',season:2026,minutes:30,score:20,status:'provisional'}];
+  const ts=calculatePricing(rows,'2026-08-01T00:00:00Z',2026,120);
+  const pg=(await db.query('select public.kickx_market_plan($1::jsonb,$2::timestamptz,2026) plan',[JSON.stringify(rows),'2026-08-01T00:00:00Z'])).rows[0].plan;
+  assert.equal(ts.steps.length,2);assert.equal(ts.steps[0].priceAfter,108000);assert.equal(pg.price,ts.price);assert.deepEqual(pg.steps.map(s=>s.priceAfter),ts.steps.map(s=>s.priceAfter));
+ }finally{await db.close();}
+});

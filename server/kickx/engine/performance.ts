@@ -2,7 +2,7 @@
 import { SCORING } from "./policy";
 export { RULE_VERSION } from "./policy";
 type Json = Record<string, unknown>;
-export type ScoreInput = { fixtureId: string; playerId: string; teamId: string; status: string; homeTeam: string; awayTeam: string; homeScore: number | null; awayScore: number | null; stats: Json; legacy: Json | null; source: { lineups?: Json | null; incidents?: Json | null } };
+export type ScoreInput = { fixtureId: string; playerId: string; teamId: string; status: string; homeTeam: string; awayTeam: string; homeScore: number | null; awayScore: number | null; stats: Json; legacy: Json | null; source: { detail?: Json | null; lineups?: Json | null; incidents?: Json | null }; clubCompetitions?: boolean };
 export type ScoreResult = { fixtureId: string; position: string | null; minutes: number | null; score: number | null; status: "ready" | "provisional" | "blocked" | "not-played"; breakdown: { metric: string; value: number; points: number; evidence: string }[]; warnings: string[] };
 const object = (v: unknown): Json => v && typeof v === "object" && !Array.isArray(v) ? v as Json : {};
 const list = (v: unknown): Json[] => Array.isArray(v) ? v.map(object) : [];
@@ -15,10 +15,16 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
  const result: ScoreResult = { fixtureId: input.fixtureId, position: null, minutes: null, score: null, status: "blocked", breakdown: [], warnings: [] };
  const stop = (why: string) => { result.warnings.push(why); return result; };
  if (!["FT", "AET", "PEN"].includes(input.status)) return stop("MATCH_NOT_FINISHED");
- if (input.status !== "FT") return stop("EXTRA_TIME_REQUIRES_REVIEW");
+ if (input.status !== "FT" && !input.clubCompetitions) return stop("EXTRA_TIME_REQUIRES_REVIEW");
+ const detail=object(input.source.detail),extra=object(detail.extra_time_score),shootout=object(detail.penalty_shootout);
+ const duration=input.clubCompetitions && (input.status==='AET'||detail.extra_time_score!=null)?120:90;
+ if(input.status==='AET' && (count(extra.home)==null||count(extra.away)==null))return stop('EXTRA_TIME_SCORE_REQUIRED');
+ if(input.status==='PEN' && (count(shootout.home)==null||count(shootout.away)==null||shootout.home===shootout.away))return stop('SHOOTOUT_RESULT_REQUIRED');
+ if(input.status==='PEN' && input.homeScore!==input.awayScore)return stop('SHOOTOUT_SCORE_CONFLICT');
+ if(duration===120 && (count(extra.home)==null||count(extra.away)==null))return stop('EXTRA_TIME_SCORE_REQUIRED');
  if (![input.homeTeam, input.awayTeam].includes(input.teamId)) return stop("INVALID_TEAM");
  const minutes = count(input.stats.minutes_played);
- if (minutes == null || minutes > 90) return stop("INVALID_MINUTES");
+ if (minutes == null || minutes > duration) return stop("INVALID_MINUTES");
  result.minutes = minutes;
  const lineups = input.source.lineups;
  if (lineups?.lineup_status !== "confirmed") return stop("CONFIRMED_LINEUP_REQUIRED");
@@ -30,7 +36,8 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
  result.position = ({ G: "GK", D: "DF", M: "MF", F: "FW", GK: "GK", DF: "DF", MF: "MF", FW: "FW" } as Record<string, string>)[String(player?.position)] ?? null;
  if (!player || !result.position) return stop("MATCH_POSITION_REQUIRED");
  if (!Array.isArray(input.source.incidents?.incidents)) return stop("INCIDENTS_REQUIRED");
- const events = list(input.source.incidents?.incidents).filter(e => e.rescinded !== true && e.cancelled !== true && e.disallowed !== true);
+ const isShootout=(e:Json)=>e.is_penalty_shootout===true || e.penalty_shootout===true || ['penalties','penaltyshootout','shootout'].some(v=>[e.period,e.phase,e.incident_class,e.goal_type].some(x=>code(x)===v));
+ const events = list(input.source.incidents?.incidents).filter(e => e.rescinded !== true && e.cancelled !== true && e.disallowed !== true && !isShootout(e));
  // Duplicate provider incident IDs are counted once. Distinct same-minute events stay distinct.
  const seen = new Set<unknown>();
  const ordered: Json[] = events.filter(e => e.id == null || (!seen.has(e.id) && !!seen.add(e.id))).map((e, index) => ({ ...e, order: index }));
@@ -59,8 +66,8 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
  if (!starter && enters.length !== 1) return stop("ENTRY_TIME_REQUIRED");
  const entry = starter ? null : enters[0];
  const exit = exits[0] ?? red[0];
- const start = entry ? count(entry.minute) : 0, end = exit ? count(exit.minute) : 90;
- if (start == null || end == null || start > end || Math.abs(Math.min(90,end)-Math.min(90,start)-minutes) > 2) return stop("MINUTES_INTERVAL_MISMATCH");
+ const start = entry ? count(entry.minute) : 0, end = exit ? count(exit.minute) : duration;
+ if (start == null || end == null || start > end || Math.abs(Math.min(duration,end)-Math.min(duration,start)-minutes) > 2) return stop("MINUTES_INTERVAL_MISMATCH");
  // Provider arrays may be newest-first. Equal-minute boundaries need explicit timing.
  const compareTime=(a:Json,b:Json)=>{
   if(Number(a.minute)!==Number(b.minute))return Number(a.minute)-Number(b.minute);
@@ -79,8 +86,8 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
  if (rawGoals != null && rawGoals > 0 && rawGoals !== scored) return stop("PLAYER_GOALS_MISMATCH");
  const add = (metric: string, value: number, points: number, evidence = "incident") => result.breakdown.push({ metric, value, points:points===0?0:points, evidence });
  const position = result.position as keyof typeof SCORING.goals;
- const exposure = minutes / 90;
- add("minutes",minutes,SCORING.appearance + SCORING.fullMinutes * exposure,"minutes_played + lineup/substitution");
+ const exposure = minutes / duration;
+ add("minutes",minutes,SCORING.appearance + SCORING.fullMinutes * Math.min(minutes,90)/90,"minutes_played + lineup/substitution; capped at 90 minutes");
  add("goals",scored,scored * SCORING.goals[position]);
  add("yellow_cards",yellow,SCORING.yellow * yellow);add("red_cards",red.length,SCORING.red * red.length);add("own_goals",own,SCORING.ownGoal * own);
  // BSD's zero defaults remain unknown. Optional metrics contribute only when positively
@@ -104,9 +111,11 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
  const myScore = input.teamId === input.homeTeam ? input.homeScore : input.awayScore;
  const opponentScore = input.teamId === input.homeTeam ? input.awayScore : input.homeScore;
  if (position !== "FW") add("clean_sheet",opponentScore===0 && !red.length ? 1 : 0,opponentScore===0 && !red.length ? SCORING.cleanSheet[position] * exposure : 0,"team full-time score; proportional minutes; no dismissal");
- add("team_win",myScore>opponentScore ? 1 : 0,myScore>opponentScore ? SCORING.teamWin * exposure : 0,"team full-time score; proportional minutes");
+ const shootoutWin=input.status==='PEN' && myScore===opponentScore && (input.teamId===input.homeTeam ? Number(shootout.home)>Number(shootout.away) : Number(shootout.away)>Number(shootout.home));
+ const win=myScore>opponentScore||shootoutWin;
+ add("team_win",win ? 1 : 0,win ? SCORING.teamWin * exposure : 0,"team match result including shootout winner; proportional minutes");
  if(position==='GK' || position==='DF') add("conceded",conceded,SCORING.conceded * conceded,"goals during participation only");
- if(position==='GK'){positive("saves","saves",SCORING.save);positive("penalty_save","penalty_saves",SCORING.penaltySave,1,input.legacy ?? {});}
+ if(position==='GK'){positive("saves","saves",SCORING.save);if(input.status!=='PEN')positive("penalty_save","penalty_saves",SCORING.penaltySave,1,input.legacy ?? {});else result.warnings.push('SHOOTOUT_PENALTY_SAVE_COUNTER_UNVERIFIED_EXCLUDED');}
  // Round each displayed contribution so its visible sum equals the stored total.
  result.breakdown = result.breakdown.map(b => ({...b,points:Math.round(b.points * 100) / 100}));
  result.score=Math.round(result.breakdown.reduce((sum,x)=>sum+x.points,0) * 100) / 100;

@@ -7,7 +7,7 @@ function clientFor(tables, calls = []) {
   return {from(table) {
     let start=0,end=499;
     const query={
-      select(){return query;},order(){return query;},gte(){return query;},
+      select(){return query;},order(){return query;},gte(){return query;},in(){return query;},
       range(a,b){start=a;end=b;return query;},limit(n){end=n-1;return query;},
       then(resolve){calls.push([table,start,end]);return Promise.resolve(tables[table] instanceof Error ? {data:null,error:tables[table]} : {data:(tables[table]||[]).slice(start,end+1),error:null,count:(tables[table]||[]).length}).then(resolve);}
     };

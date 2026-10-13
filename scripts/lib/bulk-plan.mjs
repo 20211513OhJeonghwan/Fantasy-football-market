@@ -30,6 +30,7 @@ function profileTask(context, teamId, offset = 0) {
 /** One bounded provider call (up to three transport attempts) per checkpoint. No timers/scheduler. */
 export async function processBulkTask(api, job, today) {
   const p = job.payload;
+  if(job.kind==='club-complete')return result(null,[],{completedSeason:{leagueId:externalId(p.context.league),seasonId:p.context.seasonId}});
   if (job.kind === "league") {
     if (p.phase === "detail") {
       const detail = await api.get(`/api/v2/leagues/${p.league}/`);
@@ -40,19 +41,28 @@ export async function processBulkTask(api, job, today) {
     const currentSeason = await api.get(`/api/v2/leagues/${p.league}/season/`);
     assertId(currentSeason?.league_id, p.league, "UNEXPECTED_LEAGUE");
     const selected = currentSeason.season;
-    if (selected === null) throw new SyncError("CURRENT_SEASON_UNAVAILABLE");
+    if (selected === null) {
+      if(p.supplemental)return result(null,[],{warning:'COMPETITION_OUT_OF_SEASON'});
+      throw new SyncError("CURRENT_SEASON_UNAVAILABLE");
+    }
     if (!selected || typeof selected !== "object" || Array.isArray(selected)) throw new SyncError("INVALID_CURRENT_SEASON_RESPONSE");
     externalId(selected.id);
     const fullWindows = seasonWindows(selected.start_date, selected.end_date);
+    if(p.supplemental && (selected.is_current!==true || selected.start_date>today || selected.end_date<today))return result(null,[],{warning:'COMPETITION_OUT_OF_SEASON'});
     const shift = days => new Date(Date.parse(today) + days * 86400000).toISOString().slice(0, 10);
-    const windows = p.automatic
+    const backfill=p.supplemental && !p.backfilledSeasonIds?.includes(selected.id);
+    const windows = p.automatic && !backfill
       ? [{ from: [selected.start_date, shift(-7)].sort().at(-1), to: [selected.end_date, shift(21)].sort()[0] }]
-      : fullWindows;
-    if (selected.is_current !== true || selected.start_date > today || selected.end_date < today) throw new SyncError("CURRENT_SEASON_UNAVAILABLE");
+      : (p.supplemental ? seasonWindows(selected.start_date,[selected.end_date,shift(21)].sort()[0]) : fullWindows);
+    if (selected.is_current !== true || selected.start_date > today || selected.end_date < today) {
+      if(p.supplemental)return result(null,[],{warning:'COMPETITION_OUT_OF_SEASON'});
+      throw new SyncError("CURRENT_SEASON_UNAVAILABLE");
+    }
     const seasons = { league_id: p.league, seasons: [selected] };
-    const context = { league: p.league, seasonId: selected.id, seasonYear: selected.year, leagueName: p.detail.name, ...(p.automatic ? { automatic: true } : {}) };
+    const context = { league: p.league, seasonId: selected.id, seasonYear: selected.year, leagueName: p.detail.name, ...(p.automatic ? { automatic: true } : {}),...(p.supplemental?{supplemental:true,scopeTeamIds:p.scopeTeamIds}:{}) };
     const batch = normalizeBatch("leagues", { ...p.detail, season: seasons }, context);
-    return result(batch, [task(`teams:${p.league}:0`, "teams", 10, { context, offset: 0, seen: [] }, `${p.detail.name} 구단`), ...windows.map(w => fixtureTask(context, w))], {
+    if(p.supplemental && p.displayName)batch.leagues[0].name=p.displayName;
+    return result(batch, [...(p.supplemental?[]:[task(`teams:${p.league}:0`, "teams", 10, { context, offset: 0, seen: [] }, `${p.detail.name} 구단`)]), ...windows.filter(w=>w.from<=w.to).map(w => fixtureTask(context, w)),...(backfill?[task(`club:complete:${p.league}:${selected.id}`,'club-complete',99,{context},'대회 최초 수집 완료')]:[])], {
       entities: [source("league", p.league, { detail: p.detail, currentSeason, seasons })],
     });
   }
@@ -79,8 +89,9 @@ export async function processBulkTask(api, job, today) {
   }
   if (job.kind === "fixtures") {
     const page = await api.page("/api/v2/events/", { league_id: c.league, season_id: c.seasonId, date_from: p.from, date_to: p.to, limit: 200, offset: p.offset });
-    const batch = normalizeBatch("fixtures", page.results, c);
-    const children = page.results.filter(f => ended(f.status)).map(f => task(`match:${f.id}`, "match", 40, { context: c, eventId: f.id, phase: "detail" }, `${f.home_team} · ${f.away_team}`));
+    const fixtures=c.supplemental?page.results.filter(f=>c.scopeTeamIds.includes(f.home_team_id)||c.scopeTeamIds.includes(f.away_team_id)):page.results;
+    const batch = normalizeBatch("fixtures", fixtures, c);
+    const children = fixtures.filter(f => ended(f)).map(f => task(`match:${f.id}`, "match", 40, { context: c, eventId: f.id, phase: "detail" }, `${f.home_team} · ${f.away_team}`));
     if (page.next != null) children.push(fixtureTask(c, p, page.next));
     return result(batch, children);
   }
@@ -89,9 +100,10 @@ export async function processBulkTask(api, job, today) {
   if (p.phase === "detail") {
     const detail = await api.get(base);
     assertId(detail.id, p.eventId);
+    if(c.supplemental&&!c.scopeTeamIds.some(id=>[detail.home_team_id,detail.away_team_id].includes(id)))return result(null,[],{warning:'OUTSIDE_DOMESTIC_SCOPE'});
     const batch = normalizeBatch("fixtures", [detail], c);
     // A correction to postponed/cancelled is saved without inventing player statistics.
-    if (!ended(detail.status)) return result(batch, [], { warning: "MATCH_NO_LONGER_FINISHED" });
+    if (!ended(detail)) return result(batch, [], { warning: "MATCH_NO_LONGER_FINISHED" });
     return advance({ ...p, phase: "stats", detail });
   }
   if (["stats", "lineups", "incidents"].includes(p.phase)) {
@@ -99,7 +111,7 @@ export async function processBulkTask(api, job, today) {
     const value = await api.get(base + endpoint);
     assertId(value.event_id, p.eventId);
     if (p.phase === "stats" && (!Array.isArray(value.player_stats) || value.count !== value.player_stats.length)) throw new SyncError("INVALID_MATCH_STATISTICS");
-    if (p.phase === "stats" && !value.count) return result(null, [], { warning: "MATCH_STATS_UNAVAILABLE" });
+    if (p.phase === "stats" && !value.count) return result(normalizeBatch('fixtures',[p.detail],c), [], { warning: "MATCH_STATS_UNAVAILABLE" });
     const phase = { stats: "lineups", lineups: "incidents", incidents: "legacy" }[p.phase];
     return advance({ ...p, [p.phase]: value, phase, ...(phase === "legacy" ? { legacy: [], page: 1 } : {}) });
   }

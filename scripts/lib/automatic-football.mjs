@@ -1,5 +1,6 @@
 import { createFootballClient, externalId, normalizeBatch, normalizeStatus, SyncError } from './football.mjs';
 import { BIG_FIVE, initialTasks, processBulkTask } from './bulk-plan.mjs';
+import { runClubCollection } from './club-collection.mjs';
 
 export function checked(reply) {
   if (reply.error) {
@@ -19,7 +20,7 @@ async function saveOutcome(db, outcome) {
   return 0;
 }
 async function noteMatch(db, id, starts, now, incomplete = false) {
-  const interval = incomplete || Date.parse(now) - Date.parse(starts) < 6 * 3600000 ? 15 * 60000 : 6 * 3600000;
+  const interval = incomplete ? 15 * 60000 : Date.parse(now) - Date.parse(starts) < 6 * 3600000 ? 60 * 60000 : 6 * 3600000;
   checked(await db.from('automatic_fixture_checks').upsert({ fixture_id: externalId(id), checked_at: now, retry_at: new Date(Date.parse(now) + interval).toISOString() }));
 }
 export async function runDailyCollection(db, api, claim, deadline, emit = value => { void value; }) {
@@ -72,6 +73,19 @@ export async function pollFinishedMatches(db, api, now, deadline = Infinity) {
   }
   return fetched;
 }
+export async function pollHistoricalCorrections(db,api,now,deadline=Infinity){
+  if(api.remaining!=null && api.remaining<1500)return 0;
+  const rows=checked(await db.from('automatic_fixture_checks').select('fixture_id,fixtures!inner(external_id,league_id,provider_season_id,season,starts_at,status)').in('fixtures.league_id',BIG_FIVE.map(l=>externalId(l.id))).lt('fixtures.starts_at',new Date(Date.parse(now)-7*86400000).toISOString()).lte('retry_at',now).order('checked_at').limit(4));
+  let fetched=0;
+  for(const row of rows){
+    if(Date.now()>=deadline || api.remaining!=null && api.remaining<1500)break;
+    const f=row.fixtures,context={league:Number(f.league_id.slice(4)),seasonId:Number(f.provider_season_id),seasonYear:f.season};
+    let job={kind:'match',payload:{context,eventId:Number(f.external_id),phase:'detail'}},outcome;
+    do {outcome=await processBulkTask(api,job,now.slice(0,10));await saveOutcome(db,outcome);if(!outcome.done)job={...job,payload:outcome.payload};}while(!outcome.done);
+    await noteMatch(db,Number(f.external_id),f.starts_at,now,!!outcome.warning);fetched++;
+  }
+  return fetched;
+}
 export async function drainCalculations(db, calculate, deadline, emit = value => { void value; }) {
   let calculated = 0, failed = 0, withheld = 0;
   while (Date.now() < deadline) {
@@ -107,6 +121,10 @@ export async function runAutomaticFootball(db, key, { calculate, mapNames, emit 
     catch (e) { failure = errorCode(e); emit({ stage: 'daily', error: failure }); }
     try { summary.matches = await pollFinishedMatches(db, api, now, started + 25 * 60000); }
     catch (e) { failure ??= errorCode(e); emit({ stage: 'matches', error: errorCode(e) }); }
+    try {summary.historicalCorrections=await pollHistoricalCorrections(db,api,now,started+27*60000);}
+    catch(e){failure??=errorCode(e);emit({stage:'historical-corrections',error:errorCode(e)});}
+    try { summary.clubs=await runClubCollection(db,api,claim,started+30*60000,emit); }
+    catch(e){failure??=errorCode(e);emit({stage:'clubs',error:errorCode(e)});}
     summary.initialized = checked(await db.rpc('kickx_auto_initialize_market'));
     summary.calculation = await drainCalculations(db, calculate, started + 35 * 60000, emit);
     summary.rankings = checked(await db.rpc('kickx_auto_refresh_rankings'));

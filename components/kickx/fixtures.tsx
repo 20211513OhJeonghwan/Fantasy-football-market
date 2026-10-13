@@ -21,7 +21,7 @@ export function MatchRow({ fixture, showDate = false }: { fixture: Fixture; show
   const { getTeam, getLeague } = usePlatform();
   const group = fixtureGroup(fixture.status);
   const scored = fixture.homeScore != null && fixture.awayScore != null;
-  const homeWin = scored && fixture.homeScore! > fixture.awayScore!, awayWin = scored && fixture.awayScore! > fixture.homeScore!;
+  const homeWin = scored && (fixture.homeScore! > fixture.awayScore! || fixture.homeScore===fixture.awayScore && fixture.penaltiesHome!=null && fixture.penaltiesAway!=null && fixture.penaltiesHome>fixture.penaltiesAway), awayWin = scored && (fixture.awayScore! > fixture.homeScore! || fixture.homeScore===fixture.awayScore && fixture.penaltiesHome!=null && fixture.penaltiesAway!=null && fixture.penaltiesAway>fixture.penaltiesHome);
   const homeId = clubIdentity(getTeam(fixture.home)), awayId = clubIdentity(getTeam(fixture.away));
   const tint = { "--home": homeId?.primary ?? "var(--line-2)", "--away": awayId?.primary ?? "var(--line-2)" } as CSSProperties;
   const [day, time] = [koreanDay(fixture.startsAt), dateText(fixture.startsAt).split(" ").slice(-1).join(" ")];
@@ -29,7 +29,7 @@ export function MatchRow({ fixture, showDate = false }: { fixture: Fixture; show
     <li className={`match-row ${group}`} style={tint}>
       <div className="match-meta">
         <time dateTime={fixture.startsAt} className="num">{showDate ? `${day.slice(5).replace("-", ".")} (${weekday(day)}) ${time}` : time}</time>
-        <span><LeagueMark league={getLeague(fixture.leagueId)} size="sm" />{getLeague(fixture.leagueId)?.name || "리그 정보 없음"}</span>
+        <span><LeagueMark league={getLeague(fixture.leagueId)} size="sm" />{getLeague(fixture.leagueId)?.name || "대회 정보 없음"}{fixture.roundLabel && ` · ${fixture.roundLabel}`}</span>
       </div>
       <Link href={"/teams/" + fixture.home} className={`match-team home ${awayWin ? "lost" : ""}`}>
         <span>{getTeam(fixture.home)?.name || "구단 정보 없음"}</span>
@@ -37,7 +37,9 @@ export function MatchRow({ fixture, showDate = false }: { fixture: Fixture; show
       </Link>
       <div className={`match-score ${scored ? "scored" : ""}`}>
         <strong className="num">{scored ? `${fixture.homeScore} : ${fixture.awayScore}` : "VS"}</strong>
+        {fixture.penaltiesHome!=null && fixture.penaltiesAway!=null && <small>승부차기 {fixture.penaltiesHome} : {fixture.penaltiesAway}</small>}
         <span className={`match-status ${group}`}>{fixtureStatus(fixture.status)}</span>
+        {fixture.reflectionStatus && <small>{({pending:'기록 수집·계산 대기',withheld:'기록 확인 · 계산 보류',partial:'일부 반영 · 기록 확인 중',reflected:'점수 계산 완료'} as Record<string,string>)[fixture.reflectionStatus]}</small>}
       </div>
       <Link href={"/teams/" + fixture.away} className={`match-team ${homeWin ? "lost" : ""}`}>
         <TeamBadge id={fixture.away} />
@@ -50,7 +52,7 @@ export function FixturesScreen() {
   const { data, status:platformStatus } = usePlatform();
   const [league, setLeague] = useState("all"), [state, setState] = useState("all");
   const [day, setDay] = useState(""), [query, setQuery] = useState(""), [page, setPage] = useState(1);
-  const leagueOptions = useLeagueOptions();
+  const leagueOptions = useLeagueOptions('모든 대회',true);
   const results = useMemo(() => data.fixtures.filter((fixture) => {
     const home = data.teams.find((t) => t.id === fixture.home), away = data.teams.find((t) => t.id === fixture.away);
     return (league === "all" || fixture.leagueId === league) && (state === "all" || fixtureGroup(fixture.status) === state)
@@ -76,7 +78,7 @@ export function FixturesScreen() {
       <PageHeading
         eyebrow="MATCH CENTRE"
         title="경기 일정"
-        description="다음 킥오프부터 경기 결과까지. 경기 결과는 선수 Performance와 가치에 반영됩니다."
+        description={data.policy?.clubCompetitionsEnabled ? '5대 리그와 소속 구단의 공식 컵대회·유럽 대항전. 검증된 경기 기록을 점수와 가치에 반영합니다.' : '5대 리그의 경기 일정과 결과. 검증된 경기 기록을 점수와 가치에 반영합니다.'}
         action={<span className="tag outline"><CalendarDays size={14} />대한민국 시간 · KST</span>}
       />
       <section className="panel flush">
@@ -85,7 +87,7 @@ export function FixturesScreen() {
         </div>
         <div className="toolbar fixture-tools">
           <label className="input-search"><Search size={17} /><input aria-label="경기 구단 검색" placeholder="구단 이름 검색" maxLength={100} value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} /></label>
-          <Select label="경기 리그" value={league} onChange={(v) => { setLeague(v); setPage(1); }} options={leagueOptions} />
+          <Select label="경기 대회" value={league} onChange={(v) => { setLeague(v); setPage(1); }} options={leagueOptions} />
           <input type="date" aria-label="경기 날짜 (대한민국 시간)" value={day} onChange={(e) => { setDay(e.target.value); setPage(1); }} />
           <button className="button secondary" disabled={!filtered} onClick={reset}><RotateCcw size={15} />초기화</button>
         </div>

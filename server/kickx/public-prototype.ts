@@ -14,6 +14,6 @@ export async function readPrototypePublic(db:SupabaseClient):Promise<Partial<Pub
  ]);
  for(const r of [posts,weekly,monthly,counts,market])checkDatabase(r.error);
  const p=policy.data;
- return {market:market.data,communityCounts:counts.data,policy:{version:p.version,initialPoints:p.initial_points,initialPrice:p.initial_price,sellFeeBps:p.sell_fee_bps,quoteSeconds:p.quote_seconds},formations:FORMATIONS as Formation[],categories:CATEGORIES,posts:posts.data.items,
+ return {market:market.data,communityCounts:counts.data,policy:{version:p.version,initialPoints:p.initial_points,initialPrice:p.initial_price,sellFeeBps:p.sell_fee_bps,quoteSeconds:p.quote_seconds,clubCompetitionsEnabled:p.club_competitions_enabled===true},formations:FORMATIONS as Formation[],categories:CATEGORIES,posts:posts.data.items,
  rankings:[...(weekly.data??[]),...(monthly.data??[])].map(r=>({id:r.period,startsAt:r.starts_at,endsAt:r.ends_at,calculatedAt:r.calculated_at,rows:r.rows}))};
 }

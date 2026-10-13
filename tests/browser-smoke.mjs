@@ -96,7 +96,7 @@ try {
   });
   await mock.route(/\/api\/kickx\/fixtures\?/,route=>{
     const params=new URL(route.request().url()).searchParams;
-    return route.fulfill({json:{status:"ready",data:{items:[],total:0,page:Number(params.get("page")||1),size:20}}});
+    return route.fulfill({json:{status:"ready",data:{items:state.fixtures,total:state.fixtures.length,page:Number(params.get("page")||1),size:20}}});
   });
   let watchCalls=0;
   await mock.route("**/api/kickx/watchlist",async route=>{
@@ -288,6 +288,21 @@ try {
     await mockPage.screenshot({path:`test-artifacts/market-v2-detail-${width}.png`,fullPage:true});
   }
   report.checks.push('Active v2 rules and persisted initial/last-five pricing evidence fit desktop and mobile');
+  state.policy.clubCompetitionsEnabled=true;
+  state.leagues.push({id:'bsd-7',name:'챔피언스리그'});
+  state.teams.push({id:'bsd-4401',name:'테스트 홈 구단',english:'Home',leagueId:'bsd-1'},{id:'bsd-4402',name:'테스트 원정 구단',english:'Away',leagueId:null});
+  state.fixtures=[{id:'cup-test',leagueId:'bsd-7',home:'bsd-4401',away:'bsd-4402',startsAt:'2026-10-13T12:00:00Z',status:'PEN',homeScore:1,awayScore:1,penaltiesHome:5,penaltiesAway:4,roundLabel:'League phase · Matchday 5',reflectionStatus:'partial'}];
+  for(const width of [1440,390]){
+    await mockPage.setViewportSize({width,height:900});
+    await mockPage.goto(base+'/fixtures',{waitUntil:'networkidle'});
+    await mockPage.getByText('승부차기 5 : 4',{exact:true}).waitFor();
+    await mockPage.getByText('일부 반영 · 기록 확인 중',{exact:true}).waitFor();
+    assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`cup fixtures overflow at ${width}`);
+    await mockPage.screenshot({path:`test-artifacts/club-fixtures-${width}.png`,fullPage:true});
+    await mockPage.goto(base+'/rules',{waitUntil:'networkidle'});
+    await mockPage.getByText(/연장전은 최대 120분/).waitFor();
+  }
+  report.checks.push('Cup stages, separate shootout score, partial reflection and 120-minute rules render on desktop and mobile');
   await mock.close();
   assert.deepEqual(errors,[],"Browser JavaScript errors");
   report.checks.push("No browser JavaScript errors");

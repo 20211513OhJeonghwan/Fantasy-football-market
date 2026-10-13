@@ -24,6 +24,14 @@ export function normalizePlayer(raw,teamId) {
   return p;
 }
 export function normalizeStatus(raw) {
+  if(raw && typeof raw==='object'){
+    const status=normalizeStatus(raw.status);
+    if(['FT','AET','PEN'].includes(status)){
+      if(raw.penalty_shootout!=null)return 'PEN';
+      if(raw.extra_time_score!=null)return 'AET';
+    }
+    return status;
+  }
   const status=String(raw).toLowerCase();
   if(["finished","ft"].includes(status)) return "FT";
   if(["aet","after_extra_time"].includes(status)) return "AET";
@@ -57,7 +65,9 @@ export function normalizeBatch(task,response,context={}) {
       batch.teams.push(home,away);
       const homeScore=number(raw.home_score),awayScore=number(raw.away_score);
       batch.fixtures.push({id:externalId(raw.id),external_id:raw.id,league_id:leagueId,home_team_id:home.id,away_team_id:away.id,
-        starts_at:date(raw.event_date),status:normalizeStatus(raw.status),season:context.seasonYear,provider_season_id:context.seasonId,
+        starts_at:date(raw.event_date),status:normalizeStatus(raw),season:context.seasonYear,provider_season_id:context.seasonId,
+        stage:typeof raw.stage==='string'?raw.stage:null,round_label:typeof raw.round_label==='string'?raw.round_label:null,
+        penalties_home:number(raw.penalty_shootout?.home),penalties_away:number(raw.penalty_shootout?.away),
         home_score:homeScore==null ? null : homeScore+(number(raw.extra_time_score?.home) ?? 0),
         away_score:awayScore==null ? null : awayScore+(number(raw.extra_time_score?.away) ?? 0)});
       batch.sources.push({fixture_id:externalId(raw.id),detail:raw});
