@@ -64,6 +64,11 @@ export type Fixture = {
   status: string;
   homeScore?: number | null;
   awayScore?: number | null;
+  stage?: string | null;
+  roundLabel?: string | null;
+  penaltiesHome?: number | null;
+  penaltiesAway?: number | null;
+  reflectionStatus?: string | null;
 };
 export type Formation = { id: string; name: string; positions: Position[] };
 export type Transaction = {
@@ -163,7 +168,7 @@ export type RankingPeriod = {
 };
 export type PublicData = {
   communityCounts?: {scope:"club"|"player";target:string;count:number}[];
-  policy?: {version:string;initialPoints:number;initialPrice:number;sellFeeBps:number;quoteSeconds:number} | null;
+  policy?: {version:string;initialPoints:number;initialPrice:number;sellFeeBps:number;quoteSeconds:number;clubCompetitionsEnabled?:boolean} | null;
   /** Total DB catalog count; players below are bounded previews. */
   playerTotal?: number;
   players: Player[];

@@ -9,6 +9,7 @@ export async function readPlayerPage(client: SupabaseClient, input: CatalogQuery
   let query = input.scope === "watch"
     ? client.rpc("watched_player_catalog", {}, { count: "exact" }).select("*")
     : input.scope === "owned" ? client.rpc("owned_player_catalog", {}, {count:"exact"}).select("*") : client.from("player_catalog").select("*", { count: "exact" });
+  if(!['owned','watch'].includes(input.scope))query=query.in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']);
   if (input.q) query = query.ilike("search_text", `%${literalLike(input.q)}%`);
   if (input.league) query = query.contains("league_ids", [input.league]);
   if (input.team) query = query.eq("team_id", input.team);

@@ -18,4 +18,10 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: node scripts/audit-competitions.mjs
+      - run: node --import tsx scripts/audit-competitions.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: competition-coverage-audit
+          path: test-artifacts/competition-audit.json
+          if-no-files-found: ignore

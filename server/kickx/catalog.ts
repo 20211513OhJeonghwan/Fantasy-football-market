@@ -45,7 +45,7 @@ export function mapPlayer(row: Row, snapshot?: Row): Player {
   };
 }
 export function mapFixture(row: Row) {
-  return {id:required(row.id),leagueId:text(row.league_id),home:required(row.home_team_id),away:required(row.away_team_id),startsAt:required(row.starts_at),status:required(row.status),homeScore:number(row.home_score),awayScore:number(row.away_score)};
+  return {id:required(row.id),leagueId:text(row.league_id),home:required(row.home_team_id),away:required(row.away_team_id),startsAt:required(row.starts_at),status:required(row.status),homeScore:number(row.home_score),awayScore:number(row.away_score),stage:text(row.stage),roundLabel:text(row.round_label),penaltiesHome:number(row.penalties_home),penaltiesAway:number(row.penalties_away),reflectionStatus:text(row.reflection_status)};
 }
 /** Only bounded previews and the small league/team reference catalog are bootstrapped.
  * Full searches and player histories use dedicated page/detail endpoints.
@@ -53,6 +53,7 @@ export function mapFixture(row: Row) {
 export async function readCatalog(client: SupabaseClient): Promise<PublicData> {
   const query = async (table: string, column: string, ascending=false, limit=24, since?: string) => {
     let q=client.from(table).select("*").order(column,{ascending,nullsFirst:false}).order("id").limit(limit);
+    if(table==='player_catalog')q=q.in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']);
     if(since) q=q.gte("starts_at",since);
     const {data,error}=await q;
     if(error) throw error;
@@ -63,7 +64,7 @@ export async function readCatalog(client: SupabaseClient): Promise<PublicData> {
     readRows(client,"leagues","id,name"),readRows(client,"teams","*"),
     query("player_catalog","price"),query("player_catalog","change_percent",false,5),query("player_catalog","change_percent",true,5),
     query("fixtures","starts_at",true,20,new Date(Date.now()-86400000).toISOString()),
-    client.from("players").select("id",{count:"exact",head:true}),
+    client.from("player_catalog").select("id",{count:"exact",head:true}).in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']),
   ]);
   if(summary.error || summary.count == null) throw summary.error || new Error("Missing player count");
   const players=[...new Map([...price,...rising,...falling].map(row=>[required(row.id),mapPlayer(row,row)])).values()];

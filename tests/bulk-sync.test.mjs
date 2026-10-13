@@ -99,7 +99,7 @@ test("match checkpoints keep partial resources private until the complete v1/v2 
   assert.equal(calls, 5);
   const partial = { kind: "match", payload: { context, eventId: 100, phase: "stats", detail: event } };
   const unavailable = await processBulkTask({ get: async () => ({ event_id: 100, count: 0, player_stats: [] }) }, partial);
-  assert.equal(unavailable.warning, "MATCH_STATS_UNAVAILABLE"); assert.equal(unavailable.batch, null);
+  assert.equal(unavailable.warning, "MATCH_STATS_UNAVAILABLE"); assert.equal(unavailable.batch.fixtures.length,1);
   await assert.rejects(processBulkTask({ get: async () => ({ ...statistics, event_id: 999 }) }, partial), /UNEXPECTED_EVENT/);
 });
 test("missing lineup profiles are fetched one per step; legacy pagination does not mix events", async () => {

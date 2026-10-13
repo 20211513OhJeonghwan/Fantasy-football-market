@@ -17,13 +17,13 @@ export type PricingPlan = {
 };
 const bound = (n: number) => Math.max(PRICING.minPrice, Math.min(PRICING.maxPrice, n));
 const round = (n: number, places = 2) => Math.round(n * 10 ** places) / 10 ** places;
-const eligible = (r: PricingMatch) => ["ready", "provisional"].includes(r.status) &&
-  r.score != null && Number.isFinite(r.score) && r.minutes != null && r.minutes > 0 && r.minutes <= 90;
+const eligible = (r: PricingMatch,maxMinutes:number) => ["ready", "provisional"].includes(r.status) &&
+  r.score != null && Number.isFinite(r.score) && r.minutes != null && r.minutes > 0 && r.minutes <= maxMinutes;
 
 /** Price is replayed from a fixed policy reference, never compounded again on scheduler retries.
  * Previous-season history seeds the market. If unavailable, the latest available historical
  * season before referenceAt is used, clearly labelled. Future matches cannot enter the seed. */
-export function calculatePricing(matches: PricingMatch[], referenceAt: string, referenceSeason: number | null = null): PricingPlan {
+export function calculatePricing(matches: PricingMatch[], referenceAt: string, referenceSeason: number | null = null,maxMinutes=90): PricingPlan {
   const cutoff = Date.parse(referenceAt);
   if (!Number.isFinite(cutoff)) throw new Error("INVALID_PRICING_REFERENCE");
   const ids = new Set<string>();
@@ -31,7 +31,7 @@ export function calculatePricing(matches: PricingMatch[], referenceAt: string, r
     if (!r.fixtureId || ids.has(r.fixtureId) || !Number.isFinite(Date.parse(r.startedAt))) throw new Error("INVALID_PRICING_MATCH");
     ids.add(r.fixtureId);
   }
-  const played = matches.filter(eligible).sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt) || a.fixtureId.localeCompare(b.fixtureId));
+  const played = matches.filter(r=>eligible(r,maxMinutes)).sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt) || a.fixtureId.localeCompare(b.fixtureId));
   const historical = played.filter(r => Date.parse(r.startedAt) <= cutoff);
   const seasons = historical.flatMap(r => r.season == null ? [] : [r.season]);
   const currentSeason = referenceSeason ?? (seasons.length ? Math.max(...seasons) : null);
