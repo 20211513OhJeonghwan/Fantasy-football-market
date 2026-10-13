@@ -1,4 +1,5 @@
 "use client";
+import {CommunityFeed} from "./community-feed";
 import {PerformanceDetails} from "./performance";
 import { Select } from "./select";
 import { useLeagueOptions, useTeamOptions } from "./options";
@@ -398,7 +399,7 @@ export function PlayerDetail() {
             <PriceChart points={points} />
           </section>
           <section className="panel">
-            <Tabs items={["최근 경기", "가치 분석"]} value={tab} onChange={setTab} label="상세 정보" />
+            <Tabs items={["최근 경기", "가치 분석", "커뮤니티"]} value={tab} onChange={setTab} label="상세 정보" />
             {tab === "최근 경기" ? (
               <>
                 <div className="table-scroll">
@@ -429,6 +430,8 @@ export function PlayerDetail() {
                 </div>
                 {!p.records.length && <DataEmpty entity="경기 기록" />}
               </>
+            ) : tab === "커뮤니티" ? (
+              <CommunityFeed key={p.id} scope="player" target={p.id} targetName={p.name} title={`${p.short || p.name} 이야기`} />
             ) : (
               <div className="analysis">
                 <span className="tag ink"><Sparkles size={13} />AI 가치 분석{mock ? " · 예시" : ""}</span>

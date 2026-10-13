@@ -3,73 +3,25 @@ import { Select } from "./select";
 import { simple, useTeamOptions } from "./options";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { ArrowRight, ChevronLeft, ChevronRight, Eye, Heart, LoaderCircle, Lock, LogIn, MessageCircle, Paperclip, Pencil, Search, UserRound, Users } from "lucide-react";
-import { dateText, money, relativeTime, score } from "@/lib/kickx/data";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { ArrowRight, ChevronLeft, ChevronRight, LoaderCircle, Lock, LogIn, MessageCircle, Paperclip, Pencil, Search, UserRound, Users } from "lucide-react";
+import { dateText, money, score } from "@/lib/kickx/data";
 import type { Post, Player } from "@/lib/kickx/types";
 import { clubIdentity } from "@/lib/kickx/club-identity";
 import { POST_LIMITS, validatePost, type PostField } from "@/lib/kickx/validation";
 import {apiRequest} from "@/lib/kickx/client";
 import {usePost} from "./community-detail";
+import {CommunityFeed} from "./community-feed";
+import {postTitle, postHeading} from "@/lib/kickx/community";
 import { usePlatform, useResource } from "./provider";
 import { useCatalogPage, useCatalogPlayer } from "./catalog";
-import { BackLink, Change, ClubCrest, LeagueMark, DataEmpty, MemberNotice, PageHeading, PlayerPortrait, PositionBadge, SectionTitle, Tabs } from "./ui";
+import { BackLink, Change, ClubCrest, LeagueMark, DataEmpty, MemberNotice, PageHeading, PlayerPortrait, PositionBadge, SectionTitle } from "./ui";
 
 const HUB = { club: "/community/clubs", player: "/community/players" } as const;
 const POST_PAGE = 20, LOUNGE_PAGE = 24;
 function useTargetName() {
   const { getTeam, getPlayer } = usePlatform();
   return (post: Post) => post.targetName || (post.scope === "club" ? getTeam(post.target)?.name : getPlayer(post.target)?.name) || "—";
-}
-/** Club crest for club posts, or the player's club crest for player posts. */
-function PostTarget({ post, name }: { post: Post; name: string }) {
-  const { getPlayer } = usePlatform();
-  const crest = post.scope === "club" ? post.target : getPlayer(post.target)?.team ?? null;
-  return <span className="post-target"><ClubCrest id={crest} size="small" />{post.scope === "player" && <span className="post-target-kind">선수</span>}{name}</span>;
-}
-/** The attached trade as recorded at execution time (name and price are not rewritten). */
-function TradeChip({ trade }: { trade: NonNullable<Post["transaction"]> }) {
-  return (
-    <span className="post-trade">
-      <Paperclip size={12} aria-hidden="true" />
-      <span className={`trade-type ${trade.type}`}>{trade.type === "buy" ? "매입" : "매각"}</span>
-      <b>{trade.playerName}</b>
-      <span className="num">{money(trade.price)} P</span>
-      <small>체결 {dateText(trade.date, false)}</small>
-    </span>
-  );
-}
-function PostList({ posts, filtered, showTarget = true }: { posts: Post[]; filtered?: boolean; showTarget?: boolean }) {
-  const targetName = useTargetName();
-  return posts.length ? (
-    <ul className="post-list">
-      {posts.map((p) => (
-        <li key={p.id}>
-          <Link href={`/community/posts/${p.id}`} className="post-row">
-            <div className="post-row-main">
-              <div className="post-meta">
-                <span className="category-tag">{p.category}</span>
-                {showTarget && <PostTarget post={p} name={targetName(p)} />}
-              </div>
-              <h3>{p.title}</h3>
-              <div className="post-byline">
-                <span className="post-author">{p.author}</span>
-                <time dateTime={p.date} title={dateText(p.date)}>{relativeTime(p.date)}</time>
-              </div>
-              {p.transaction && <TradeChip trade={p.transaction} />}
-            </div>
-            <div className="post-counts" aria-label={`공감 ${p.likes}, 댓글 ${p.commentCount}, 조회 ${p.views}`}>
-              <span title="공감"><Heart size={14} /><b className="num">{money(p.likes)}</b></span>
-              <span title="댓글"><MessageCircle size={14} /><b className="num">{money(p.commentCount)}</b></span>
-              <span title="조회"><Eye size={14} /><b className="num">{money(p.views)}</b></span>
-            </div>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  ) : (
-    <DataEmpty entity="게시글" filtered={filtered} rows={4} />
-  );
 }
 function Pager({ page, total, size, label, onPage }: { page: number; total: number; size: number; label: string; onPage: (page: number) => void }) {
   const count = Math.max(1, Math.ceil(total / size));
@@ -86,46 +38,6 @@ function Pager({ page, total, size, label, onPage }: { page: number; total: numb
   );
 }
 const emptyPosts=()=>({items:[] as Post[],total:0,page:1,size:POST_PAGE});
-function PostBrowser({ posts, scope, target, showTarget = true, title, action }: { posts: Post[]; scope:"club"|"player";target?:string; showTarget?: boolean; title?: string; action?: ReactNode }) {
-  const { data, mock, status } = usePlatform();
-  const [tab, setTab] = useState("전체"),
-    [q, setQ] = useState(""),
-    [sort, setSort] = useState("최신순");
-  const [page,setPage]=useState(1);
-  const [search,setSearch]=useState(q);
-  useEffect(()=>{const timer=setTimeout(()=>{setSearch(q);setPage(1);},250);return()=>clearTimeout(timer);},[q]);
-  const params=new URLSearchParams({scope,q:search,sort:sort==="인기순"?"popular":"new",page:String(page)});
-  if(target)params.set("target",target);if(tab!=="전체")params.set("category",tab);
-  const remote=useResource(!mock&&status==="ready"?`/api/kickx/community?${params}`:null,emptyPosts);
-  const local = posts
-    .filter((p) => (tab === "전체" || p.category === tab) && `${p.title} ${p.body}`.toLowerCase().includes(q.trim().toLowerCase()))
-    .sort((a, b) => (sort === "인기순" ? b.likes - a.likes : Date.parse(b.date) - Date.parse(a.date)));
-  const total = mock ? local.length : remote.data.total;
-  const items = mock ? local.slice((page - 1) * POST_PAGE, page * POST_PAGE) : remote.data.items;
-  const filtered = !!q || tab !== "전체";
-  return (
-    <section className="panel flush post-browser">
-      {title && (
-        <div className="post-browser-title">
-          <h2>{title}{(mock || remote.status === "ready") && <span className="num">{money(total)}건</span>}</h2>
-          {action}
-        </div>
-      )}
-      <div className="panel-head">
-        <Tabs items={["전체", ...data.categories]} value={tab} onChange={v=>{setTab(v);setPage(1);}} label="게시글 주제" />
-      </div>
-      <div className="toolbar post-tools">
-        <label className="input-search"><Search size={16} /><input aria-label="게시글 검색" value={q} onChange={(e) => setQ(e.target.value)} placeholder="제목·내용 검색" maxLength={100} /></label>
-        <Select label="게시글 정렬" value={sort} onChange={v=>{setSort(v);setPage(1);}} options={[{ value: "최신순", label: "최신순" }, { value: "인기순", label: "인기순", hint: "누적 공감" }]} variant="compact" />
-        {filtered && <button type="button" className="button ghost small" onClick={() => { setQ(""); setTab("전체"); setPage(1); }}>초기화</button>}
-      </div>
-      {!mock&&remote.status!=="ready"
-        ? <DataEmpty entity="게시글" status={remote.status} retry={remote.reload} />
-        : <PostList posts={items} filtered={filtered} showTarget={showTarget} />}
-      <Pager page={page} total={total} size={POST_PAGE} label="게시글" onPage={setPage} />
-    </section>
-  );
-}
 function PopularPosts({ posts,scope }: { posts: Post[];scope:"club"|"player" }) {
   const {mock,status}=usePlatform();
   const remote=useResource(!mock&&status==="ready"?`/api/kickx/community?scope=${scope}&sort=popular`:null,emptyPosts);
@@ -151,14 +63,14 @@ function PopularPosts({ posts,scope }: { posts: Post[];scope:"club"|"player" }) 
   );
 }
 /** Quick links to the lounges the member can act in: their club and the players they own. */
-function MyLounges() {
+function MyLounges({kind}: {kind:"club"|"player"}) {
   const { data, status, getTeam, getPlayer } = usePlatform();
   const myTeam = getTeam(data.session?.profile?.team);
   const owned = (data.member?.holdings.map((h) => getPlayer(h.playerId)).filter(Boolean) ?? []) as Player[];
   if (status !== "ready") return null;
   return (
-    <section className="my-lounges" aria-label="내 라운지 바로가기">
-      {myTeam ? (
+    <section className="my-lounges" data-scope={kind} aria-label="내 라운지 바로가기">
+      {kind === "club" && (myTeam ? (
         <Link className="my-lounge club" href={`/community/clubs/${myTeam.id}`} style={{ "--club": clubIdentity(myTeam)?.primary } as CSSProperties}>
           <ClubCrest id={myTeam.id} size="large" />
           <span><small>나의 응원 구단</small><strong>{myTeam.name}</strong></span>
@@ -170,28 +82,30 @@ function MyLounges() {
           <span><small>{data.session ? "응원 구단 미설정" : "로그인 전"}</small><strong>{data.session ? "응원 구단 정하기" : "로그인하고 참여하기"}</strong></span>
           <ArrowRight size={16} />
         </Link>
-      )}
-      <div className="my-lounge-players">
+      ))}
+      {kind === "player" && <div className="my-lounge-players">
         <small>보유 선수 라운지{owned.length ? ` · ${owned.length}` : ""}</small>
         {owned.length ? (
           <div>{owned.map((p) => <Link key={p.id} href={`/community/players/${p.id}`} className="lounge-chip"><PlayerPortrait player={p} size="sm" />{p.short || p.name}</Link>)}</div>
         ) : <p>{data.session ? "선수를 보유하면 여기에서 바로 라운지로 이동할 수 있습니다." : "로그인하면 보유 선수 라운지가 표시됩니다."}</p>}
-      </div>
+      </div>}
     </section>
   );
 }
 function ClubExplorer({ count }: { count: (target: string) => number | null }) {
   const { data, status, getTeam } = usePlatform();
-  const [league, setLeague] = useState(data.leagues[0]?.id ?? "");
-  const current = league || data.leagues[0]?.id;
+  const permitted = new Set(useTeamOptions(null).map(t=>t.value));
+  const leagues = data.leagues.filter(l=>data.teams.some(t=>permitted.has(t.id)&&t.leagueId===l.id));
+  const [league, setLeague] = useState("");
+  const current = leagues.some(l=>l.id===league) ? league : leagues[0]?.id;
   const myTeam = getTeam(data.session?.profile?.team);
   const clubs = data.teams.filter((t) => t.leagueId === current);
   return (
     <section className="panel flush explorer">
       <div className="explorer-head">
-        <h2>구단 라운지 찾기<span className="num">{data.teams.length ? `${data.teams.length}개 구단` : ""}</span></h2>
+        <h2>구단 라운지 찾기<span className="num">{permitted.size ? `${permitted.size}개 구단` : ""}</span></h2>
         <div className="league-switch compact" role="group" aria-label="리그 선택">
-          {data.leagues.map((l) => (
+          {leagues.map((l) => (
             <button key={l.id} type="button" aria-pressed={current === l.id} className={current === l.id ? "active" : ""} onClick={() => setLeague(l.id)}>
               <LeagueMark league={l} size="sm" /><span>{l.name}</span>
             </button>
@@ -261,7 +175,7 @@ export function CommunityHub({ kind }: { kind: "club" | "player" }) {
     <>
       <PageHeading
         eyebrow="COMMUNITY"
-        title="커뮤니티"
+        title={kind === "club" ? "구단 커뮤니티" : "선수 커뮤니티"}
         description={kind === "club" ? "응원 구단 팬끼리 경기·구단 이야기를 나눕니다. 읽기는 누구나, 글쓰기는 응원 팬만 가능합니다." : "선수의 경기력과 가치 변화, 거래 판단을 함께 이야기합니다. 프로필을 만든 회원 누구나 쓸 수 있습니다."}
         action={<Link className="button primary" href={`/community/write?scope=${kind}`}><Pencil size={16} />글쓰기</Link>}
       />
@@ -269,9 +183,9 @@ export function CommunityHub({ kind }: { kind: "club" | "player" }) {
         <Link href={HUB.club} aria-current={kind === "club" ? "page" : undefined}><Users size={16} />구단 커뮤니티</Link>
         <Link href={HUB.player} aria-current={kind === "player" ? "page" : undefined}><UserRound size={16} />선수 커뮤니티</Link>
       </nav>
-      <MyLounges />
+      <MyLounges kind={kind} />
       <div className="hub-layout">
-        <PostBrowser posts={posts} scope={kind} title={kind === "club" ? "최신 구단 게시글" : "최신 선수 게시글"} />
+        <CommunityFeed key={kind} scope={kind} title={kind === "club" ? "구단 이야기" : "선수 이야기"} />
         <aside className="hub-aside">
           <PopularPosts posts={posts} scope={kind} />
           <div className="community-guide">
@@ -348,7 +262,7 @@ export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
       <WriteAccess scope={scope} target={target} name={name} found={found} />
       <MemberNotice />
       <div className="hub-layout">
-        <PostBrowser posts={posts} scope={scope} target={target} showTarget={false} title="라운지 게시글" />
+        {found ? <CommunityFeed key={`${scope}:${target}`} scope={scope} target={target} targetName={name} title="라운지 이야기" /> : <DataEmpty entity="라운지" status={scope === "player" ? detail.status : status} />}
         <aside className="hub-aside">
           {team ? (
             <section className="panel side-panel">
@@ -396,7 +310,7 @@ function Counter({ value, min, max }: { value: string; min: number; max: number 
 }
 export function WritePost() {
   const sp = useSearchParams();
-  const { data, status, mock, notify, getTeam, getPlayer, reload } = usePlatform();
+  const { data, status, mock, notify, getTeam, reload } = usePlatform();
   const detail=usePost(sp.get("edit"));
   const existing=detail.data.post?.authorId===data.session?.userId?detail.data.post:undefined;
   const requestId=useRef("");
@@ -411,7 +325,7 @@ export function WritePost() {
     scope: initialScope,
     target: existing?.target ?? sp.get("target") ?? (initialScope === "club" ? myTeam ?? "" : ""),
     category: existing?.category ?? "",
-    title: existing?.title ?? "",
+    title: existing ? postHeading(existing.title, existing.body) : "",
     body: existing?.body ?? "",
     transaction: existing?.transaction?.id ?? "",
   };
@@ -425,7 +339,7 @@ export function WritePost() {
   const selectablePlayers=[...new Map([...(searched.enabled?searched.data.items:data.players),...(selectedPlayer.player?[selectedPlayer.player]:[])].map(p=>[p.id,p])).values()];
   const targets = value.scope === "club" ? data.teams : selectablePlayers;
   const clubTargets = useTeamOptions(null).filter((o) => o.value === myTeam);
-  const errors = validatePost(value, {
+  const errors = validatePost({...value,title:postTitle(value.title,value.body)}, {
     myTeam,
     categories: data.categories,
     targets: targets.map((t) => t.id),
@@ -466,7 +380,7 @@ export function WritePost() {
     }catch(e){setServerNote(e instanceof Error?e.message:"저장하지 못했습니다.");setPhase("edit");}finally{lock.current=false;}
   }
   const hub = HUB[value.scope];
-  const targetName = value.scope === "club" ? getTeam(value.target)?.name : getPlayer(value.target)?.name;
+  const targetName = value.scope === "club" ? getTeam(value.target)?.name : selectedPlayer.player?.name;
   const attached = data.member?.transactions.find((t) => t.id === value.transaction);
   if(isEdit&&!existing)return <DataEmpty entity="수정할 게시글" status={detail.status}/>;
   if (phase === "done")
@@ -530,9 +444,9 @@ export function WritePost() {
           </div>
         </div>
         <div className={`field ${visible("title") ? "invalid" : ""}`}>
-          <div className="label-row"><label htmlFor="post-title">제목 <span className="req" aria-hidden="true">*</span></label><Counter value={value.title} min={POST_LIMITS.titleMin} max={POST_LIMITS.titleMax} /></div>
-          <input {...fieldProps("title")} value={value.title} onChange={(e) => update({ title: e.target.value })} placeholder="이야기의 제목을 입력하세요" />
-          <small id="post-title-hint">{POST_LIMITS.titleMin}–{POST_LIMITS.titleMax}자</small>
+          <div className="label-row"><label htmlFor="post-title">제목 (선택)</label><Counter value={value.title} min={0} max={POST_LIMITS.titleMax} /></div>
+          <input {...fieldProps("title")} value={value.title} onChange={(e) => update({ title: e.target.value })} placeholder="분석 제목이 있다면 입력하세요" />
+          <small id="post-title-hint">제목 없이도 게시할 수 있습니다. 입력할 경우 {POST_LIMITS.titleMin}–{POST_LIMITS.titleMax}자</small>
           {fieldError("title")}
         </div>
         <div className={`field ${visible("body") ? "invalid" : ""}`}>
