@@ -27,6 +27,10 @@ export type Player = {
   originalName?: string;
   aliases?: string[];
   scoreDetails?: {fixture_id: string; score: number | null; status: string; rule_version: string; breakdown: {metric:string;value:number;points:number;evidence:string}[]; warnings:string[]}[];
+  pricing?: {
+    baseline: {source:string;season:number|null;gameCount:number;meanScore:number|null;seedScore:number;price:number;warnings:string[]} | null;
+    recent: {fixture_id:string;played_at:string;price_before:number;price_after:number;target_price:number;form_score:number;change_percent:number;window_fixture_ids:string[]}[];
+  };
   short: string | null;
   team: string | null;
   position: Position | null;

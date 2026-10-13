@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, ChevronDown } from "lucide-react";
 import type { Player } from "@/lib/kickx/types";
-import { dateText, score } from "@/lib/kickx/data";
+import { dateText, score, money } from "@/lib/kickx/data";
 import { METRIC_LABELS, SCORE_STATUS, warningText } from "@/lib/kickx/score-labels";
 import { usePlatform } from "./provider";
 
@@ -22,7 +22,15 @@ export function PerformanceDetails({ player }: { player: Player }) {
     return { title: `vs ${getTeam(opponent)?.name ?? "상대 팀"}`, date: fixture.startsAt };
   }
   const counts = Object.fromEntries(Object.keys(SCORE_STATUS).map((k) => [k, rows.filter((r) => r.status === k).length]));
-  return (
+  const baseline=player.pricing?.baseline;
+  const lastPrice=player.pricing?.recent[0];
+  return (<>
+    {baseline && <section className="panel score-panel">
+      <div className="score-panel-head"><div><h2>선수 가치 산정 근거</h2><p>과거 경기로 최초 기준을 만들고, 최근 5출전 점수로 경기마다 가치를 갱신합니다.</p></div><Link className="text-link" href="/rules">가격 규칙 보기 <ArrowRight size={14}/></Link></div>
+      <dl className="rules-policy"><div><dt>초기 가격</dt><dd className="num">{money(baseline.price)}P</dd></div><div><dt>초기 평가 기록</dt><dd>{baseline.gameCount}출전 경기 · {baseline.source==='previous-season'?'이전 시즌':baseline.source==='available-history'?'확보된 과거 기록':'기록 부족 · 기준값'}</dd></div><div><dt>초기 보정 점수</dt><dd className="num">{score(baseline.seedScore)}</dd></div>{lastPrice&&<div><dt>최근 5경기 가중 점수</dt><dd className="num">{score(lastPrice.form_score)}</dd></div>}</dl>
+      {baseline.warnings.length>0&&<p className="fine-print">{baseline.source!=='previous-season'?'직전 시즌 자료가 없어 확보된 기록 또는 기준 점수로 평가했습니다. ':''}{baseline.gameCount<10?'출전 기록이 적어 기준 점수와 섞어 보정했습니다. ':''}{baseline.warnings.includes('PROVISIONAL_HISTORY')?'잠정 경기 점수가 포함되어 기록 확인 후 값이 달라질 수 있습니다.':''}</p>}
+      {lastPrice&&<p>최근 반영 경기: {dateText(lastPrice.played_at,false)} · {lastPrice.window_fixture_ids.length}경기 사용 · 목표가 {money(lastPrice.target_price)}P · {money(lastPrice.price_before)}P → {money(lastPrice.price_after)}P</p>}
+    </section>}
     <section className="panel score-panel">
       <div className="score-panel-head">
         <div>
@@ -88,8 +96,8 @@ export function PerformanceDetails({ player }: { player: Player }) {
           })}
         </ul>
       ) : (
-        <p className="score-empty">아직 저장된 산정 내역이 없습니다. 관리자가 계산을 반영하면 경기별 점수가 표시됩니다.</p>
+        <p className="score-empty">아직 저장된 산정 내역이 없습니다. 경기 데이터 수집과 자동 산정 후 표시됩니다.</p>
       )}
-    </section>
+    </section></>
   );
 }

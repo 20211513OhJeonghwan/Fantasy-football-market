@@ -10,6 +10,9 @@ export const METRIC_LABELS: Record<string, string> = {
   key_passes: "키패스",
   crosses_completed: "성공 크로스",
   pass_accuracy: "패스 성공률 보너스",
+  tackles_won: "성공 태클",
+  interceptions: "가로채기",
+  team_win: "팀 승리",
   defensive_actions: "태클·가로채기",
   clean_sheet: "무실점",
   conceded: "실점",
@@ -23,6 +26,7 @@ export const SCORE_STATUS: Record<string, { label: string; tone: "ok" | "warn" |
   "not-played": { label: "미출전", tone: "off" },
 };
 const WARNINGS: Record<string, string> = {
+  BSD_OPTIONAL_METRICS_PROVISIONAL: "제공되지 않거나 확인되지 않은 세부 통계를 제외한 잠정 점수입니다.",
   MATCH_NOT_FINISHED: "경기가 아직 끝나지 않았습니다.",
   EXTRA_TIME_REQUIRES_REVIEW: "연장전·승부차기 경기는 세부 규칙 확정 전까지 보류합니다.",
   INVALID_TEAM: "선수의 소속 팀이 경기 양 팀과 맞지 않습니다.",
