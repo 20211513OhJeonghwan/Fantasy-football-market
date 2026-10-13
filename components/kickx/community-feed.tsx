@@ -71,12 +71,12 @@ function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: 
   </form>;
 }
 export function CommunityComposer(props: { scope: CommunityScope; target?: string; targetName?: string; onSaved: () => void }) {
-  const { data, status } = usePlatform();
+  const { data, status, reload: reloadPlatform } = usePlatform();
   const [open, setOpen] = useState(false);
   const fan = props.scope === "player" || !!data.session?.profile?.team && (!props.target || data.session.profile.team === props.target);
   const canWrite = !!data.session?.profile && fan;
   return <section className="feed-composer panel" aria-label={`${props.scope === "club" ? "구단" : "선수"} 빠른 글쓰기`}>
-    {status !== "ready" ? <p className="fine-print">커뮤니티를 불러오는 중입니다.</p> : !canWrite ? <div className="feed-composer-locked"><p>{!data.session ? "로그인하고 이야기를 나눠보세요." : !data.session.profile ? "프로필을 설정하면 이야기를 작성할 수 있습니다." : "구단 이야기는 해당 구단의 응원 팬만 작성할 수 있습니다."}</p><Link className="button secondary small" href={!data.session ? "/login" : "/mypage"}>{!data.session ? "로그인" : "프로필 설정"}</Link></div> : open ? <ComposerForm {...props} onSaved={() => { setOpen(false); props.onSaved(); }} onClose={() => setOpen(false)} /> : <button className="feed-composer-open" onClick={() => setOpen(true)}><Pencil size={18} /><span>{props.scope === "club" ? "응원 구단에 대한 이야기를 남겨보세요" : "선수에 대한 생각을 나눠보세요"}</span><span className="tag">글쓰기</span></button>}
+    {status !== "ready" ? <DataEmpty entity="커뮤니티" status={status} retry={reloadPlatform} rows={1} /> : !canWrite ? <div className="feed-composer-locked"><p>{!data.session ? "로그인하고 이야기를 나눠보세요." : !data.session.profile ? "프로필을 설정하면 이야기를 작성할 수 있습니다." : "구단 이야기는 해당 구단의 응원 팬만 작성할 수 있습니다."}</p><Link className="button secondary small" href={!data.session ? "/login" : "/mypage"}>{!data.session ? "로그인" : "프로필 설정"}</Link></div> : open ? <ComposerForm {...props} onSaved={() => { setOpen(false); props.onSaved(); }} onClose={() => setOpen(false)} /> : <button className="feed-composer-open" onClick={() => setOpen(true)}><Pencil size={18} /><span>{props.scope === "club" ? "응원 구단에 대한 이야기를 남겨보세요" : "선수에 대한 생각을 나눠보세요"}</span><span className="tag">글쓰기</span></button>}
   </section>;
 }
 
@@ -129,7 +129,7 @@ function FeedCard({ post, showTarget }: { post: Post; showTarget: boolean }) {
 }
 
 export function CommunityFeed({ scope, target, targetName, title = "이야기", compose = true }: { scope: CommunityScope; target?: string; targetName?: string; title?: string; compose?: boolean }) {
-  const { data, mock, status } = usePlatform();
+  const { data, mock, status, reload: reloadPlatform } = usePlatform();
   const [query, setQuery] = useState(""), [category, setCategory] = useState("전체"), [sort, setSort] = useState("new"), [page, setPage] = useState(1);
   const [search,setSearch]=useState("");
   useEffect(()=>{const timer=setTimeout(()=>setSearch(query.trim()),250);return()=>clearTimeout(timer);},[query]);
@@ -139,14 +139,15 @@ export function CommunityFeed({ scope, target, targetName, title = "이야기", 
   const local = data.posts.filter(p => p.scope === scope && (!target || p.target === target) && (category === "전체" || p.category === category) && `${p.title} ${p.body}`.toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => sort === "popular" ? b.likes - a.likes : Date.parse(b.date) - Date.parse(a.date));
   const items = (mock ? local.slice((page - 1) * SIZE, page * SIZE) : remote.data.items).filter(p => p.scope === scope && (!target || p.target === target));
   const total = mock ? local.length : remote.data.total, pages = Math.max(1, Math.ceil(total / SIZE));
-  const ready = mock ? status === "ready" : remote.status === "ready";
+  const feedStatus = status !== "ready" ? status : mock ? status : remote.status;
+  const ready = feedStatus === "ready";
   return <div className="community-feed" data-scope={scope}>
     {compose && <CommunityComposer key={`${scope}:${target ?? "hub"}`} scope={scope} target={target} targetName={targetName} onSaved={() => { setPage(1); remote.reload(); }} />}
     <section className="panel flush" aria-label={`${scope === "club" ? "구단" : "선수"} 이야기 피드`}>
       <div className="post-browser-title"><h2>{title}{ready && <span className="num">{money(total)}건</span>}</h2></div>
       <div className="panel-head"><Tabs items={["전체", ...data.categories]} value={category} label="피드 주제" onChange={v => { setCategory(v); setPage(1); }} /></div>
       <div className="toolbar post-tools"><label className="input-search"><Search size={16} /><input aria-label="피드 검색" maxLength={100} value={query} placeholder="내용·제목 검색" onChange={e => { setQuery(e.target.value); setPage(1); }} /></label><Select label="피드 정렬" value={sort} onChange={v => { setSort(v); setPage(1); }} options={[{ value: "new", label: "최신순" }, { value: "popular", label: "공감순", hint: "누적 공감" }]} variant="compact" />{(query || category !== "전체") && <button type="button" className="button ghost small" onClick={() => { setQuery(""); setCategory("전체"); setPage(1); }}>초기화</button>}</div>
-      {!ready ? <DataEmpty entity="게시글" status={mock ? status : remote.status} retry={remote.reload} /> : items.length ? <div className="feed-cards">{items.map(p => <FeedCard key={p.id} post={p} showTarget={!target} />)}</div> : <div className="feed-empty"><h3>{query || category !== "전체" ? "조건에 맞는 이야기가 없습니다" : "아직 이야기가 없습니다"}</h3><p>{query || category !== "전체" ? "검색어나 주제를 바꿔보세요." : "첫 이야기를 남겨보세요."}</p></div>}
+      {!ready ? <DataEmpty entity="게시글" status={feedStatus} retry={status === "ready" ? remote.reload : reloadPlatform} /> : items.length ? <div className="feed-cards">{items.map(p => <FeedCard key={p.id} post={p} showTarget={!target} />)}</div> : <div className="feed-empty"><h3>{query || category !== "전체" ? "조건에 맞는 이야기가 없습니다" : "아직 이야기가 없습니다"}</h3><p>{query || category !== "전체" ? "검색어나 주제를 바꿔보세요." : "첫 이야기를 남겨보세요."}</p></div>}
       {ready && pages > 1 && <div className="panel-foot pagination"><span>{money(total)}건 · {page} / {pages}</span><div><button aria-label="이전 피드 페이지" disabled={page === 1} onClick={() => setPage(v => v - 1)}><ChevronLeft size={17} /></button><button aria-label="다음 피드 페이지" disabled={page >= pages} onClick={() => setPage(v => v + 1)}><ChevronRight size={17} /></button></div></div>}
     </section>
   </div>;

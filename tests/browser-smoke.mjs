@@ -58,6 +58,12 @@ try {
   const disconnected=await context.request.put(base+"/api/kickx/watchlist",{headers:{origin:base},data:{playerId:"test-player",watched:true}});
   assert.equal(disconnected.status(),503);
   report.checks.push("Disconnected services and cross-origin writes stay blocked");
+  for (const path of ["/community/players", "/community/clubs"]) {
+    await page.goto(base + path, {waitUntil:"networkidle"});
+    assert.ok(await page.locator(".community-feed").getByRole("heading", {name:"게시글 정보를 준비하고 있습니다",exact:true}).isVisible());
+    assert.equal(await page.locator(".community-feed .loading-state").count(),0);
+  }
+  report.checks.push("Disconnected community feeds show their actual state without indefinite loading");
   for(const endpoint of ["/api/kickx/players?page=0","/api/kickx/fixtures?day=2026-02-30"]) {
     assert.equal((await context.request.get(base+endpoint)).status(),400);
   }
