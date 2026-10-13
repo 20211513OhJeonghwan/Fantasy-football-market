@@ -58,5 +58,13 @@ export async function readPlayerDetail(client: SupabaseClient, id: string): Prom
   player.analysis=analysis.data?.body ?? null;
   const scores=await client.from("performance_results").select("fixture_id,score,status,rule_version,breakdown,warnings").eq("player_id",id).order("calculated_at",{ascending:false}).limit(20);
   if(!migrationMissing(scores.error)){checkDatabase(scores.error);player.scoreDetails=scores.data??[];}
+  const [baseline,priceSteps] = await Promise.all([
+    client.from("player_initial_values").select("detail").eq("player_id",id).maybeSingle(),
+    client.from("player_price_results").select("fixture_id,played_at,price_before,price_after,target_price,form_score,change_percent,window_fixture_ids").eq("player_id",id).order("played_at",{ascending:false}).order("fixture_id").limit(20),
+  ]);
+  if (!migrationMissing(baseline.error) && !migrationMissing(priceSteps.error)) {
+    checkDatabase(baseline.error);checkDatabase(priceSteps.error);
+    player.pricing={baseline:baseline.data?.detail ?? null,recent:priceSteps.data ?? []};
+  }
   return player;
 }

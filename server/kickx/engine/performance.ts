@@ -1,8 +1,9 @@
-/** Pure, versioned prototype. Raw BSD JSON and its unverified zeros are never rewritten. */
-export const RULE_VERSION = "prototype-v1";
+/** Pure match scoring. Raw BSD JSON and unverified zeros are never rewritten. */
+import { SCORING } from "./policy";
+export { RULE_VERSION } from "./policy";
 type Json = Record<string, unknown>;
 export type ScoreInput = { fixtureId: string; playerId: string; teamId: string; status: string; homeTeam: string; awayTeam: string; homeScore: number | null; awayScore: number | null; stats: Json; legacy: Json | null; source: { lineups?: Json | null; incidents?: Json | null } };
-export type ScoreResult = { fixtureId: string; position: string | null; score: number | null; status: "ready" | "provisional" | "blocked" | "not-played"; breakdown: { metric: string; value: number; points: number; evidence: string }[]; warnings: string[] };
+export type ScoreResult = { fixtureId: string; position: string | null; minutes: number | null; score: number | null; status: "ready" | "provisional" | "blocked" | "not-played"; breakdown: { metric: string; value: number; points: number; evidence: string }[]; warnings: string[] };
 const object = (v: unknown): Json => v && typeof v === "object" && !Array.isArray(v) ? v as Json : {};
 const list = (v: unknown): Json[] => Array.isArray(v) ? v.map(object) : [];
 const count = (v: unknown) => typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? v : null;
@@ -11,13 +12,14 @@ const code = (v: unknown) => String(v ?? "").replace(/[^a-z]/gi, "").toLowerCase
 const ownGoal = (e: Json) => e.own_goal === true || e.is_own_goal === true || ["owngoal", "own"].includes(code(e.goal_type ?? e.incident_class ?? e.incidentClass));
 const cardKind = (e: Json) => code(e.card_type ?? e.card ?? e.incident_class ?? e.incidentClass ?? e.detail);
 export function calculatePerformance(input: ScoreInput): ScoreResult {
- const result: ScoreResult = { fixtureId: input.fixtureId, position: null, score: null, status: "blocked", breakdown: [], warnings: [] };
+ const result: ScoreResult = { fixtureId: input.fixtureId, position: null, minutes: null, score: null, status: "blocked", breakdown: [], warnings: [] };
  const stop = (why: string) => { result.warnings.push(why); return result; };
  if (!["FT", "AET", "PEN"].includes(input.status)) return stop("MATCH_NOT_FINISHED");
  if (input.status !== "FT") return stop("EXTRA_TIME_REQUIRES_REVIEW");
  if (![input.homeTeam, input.awayTeam].includes(input.teamId)) return stop("INVALID_TEAM");
  const minutes = count(input.stats.minutes_played);
  if (minutes == null || minutes > 90) return stop("INVALID_MINUTES");
+ result.minutes = minutes;
  const lineups = input.source.lineups;
  if (lineups?.lineup_status !== "confirmed") return stop("CONFIRMED_LINEUP_REQUIRED");
  const sides = Object.values(object(lineups.lineups)).map(object);
@@ -43,7 +45,7 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
  if (red.length > 1) return stop("DUPLICATE_RED_REVIEW");
  const yellow = cards.filter(e => ["yellow", "yellowcard"].includes(cardKind(e))).length;
  const statRed = count(input.stats.red_card), statYellow = count(input.stats.yellow_card);
- // Red replaces the triggering second yellow; an earlier yellow is still -1.
+ // Red replaces the triggering second yellow; the earlier warning remains.
  const secondYellow = red.some(e => ["yellowred", "secondyellow", "secondyellowcard"].includes(cardKind(e)));
  if ((statRed != null && statRed > red.length) || (statYellow != null && statYellow > yellow + (secondYellow ? 1 : 0))) return stop("CARD_TIMELINE_MISMATCH");
  const enters = ordered.filter(e => e.type === "substitution" && id(e.player_in_id) === input.playerId);
@@ -66,19 +68,21 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
   if(count(a.period_second)!=null&&count(b.period_second)!=null&&a.period_second!==b.period_second)return Number(a.period_second)-Number(b.period_second);
   return null;
  };
- if(goals.some(e=>(entry&&compareTime(e,entry)==null)||(!red.length&&exit&&compareTime(e,exit)==null)))return stop("GOAL_BOUNDARY_TIME_AMBIGUOUS");
+ if(goals.some(e=>(entry&&compareTime(e,entry)==null)||(exit&&compareTime(e,exit)==null)))return stop("GOAL_BOUNDARY_TIME_AMBIGUOUS");
  const afterEntry = (e: Json) => !entry || (compareTime(e,entry)??0)>0;
  const beforeExit = (e: Json) => !exit || (compareTime(e,exit)??0)<0;
- // Red-card players retain responsibility for later concessions, consistent with FPL.
- const conceded = goals.filter(e => e.is_home !== (input.teamId === input.homeTeam) && afterEntry(e) && (red.length ? true : beforeExit(e))).length;
+ // Team concessions are charged only during the player's actual participation.
+ const conceded = goals.filter(e => e.is_home !== (input.teamId === input.homeTeam) && afterEntry(e) && beforeExit(e)).length;
  const own = my.filter(e => e.type === "goal" && ownGoal(e)).length;
  const scored = my.filter(e => e.type === "goal" && !ownGoal(e)).length;
  const rawGoals = count(input.stats.goals);
- if (rawGoals != null && rawGoals !== scored) return stop("PLAYER_GOALS_MISMATCH");
+ if (rawGoals != null && rawGoals > 0 && rawGoals !== scored) return stop("PLAYER_GOALS_MISMATCH");
  const add = (metric: string, value: number, points: number, evidence = "incident") => result.breakdown.push({ metric, value, points:points===0?0:points, evidence });
- add("minutes",minutes,minutes>=60 ? 2 : 1,"minutes_played + lineup/substitution");
- add("goals",scored,scored*({GK:10,DF:6,MF:5,FW:4}[result.position as "GK"|"DF"|"MF"|"FW"]));
- add("yellow_cards",yellow,-yellow);add("red_cards",red.length,-3*red.length);add("own_goals",own,-2*own);
+ const position = result.position as keyof typeof SCORING.goals;
+ const exposure = minutes / 90;
+ add("minutes",minutes,SCORING.appearance + SCORING.fullMinutes * exposure,"minutes_played + lineup/substitution");
+ add("goals",scored,scored * SCORING.goals[position]);
+ add("yellow_cards",yellow,SCORING.yellow * yellow);add("red_cards",red.length,SCORING.red * red.length);add("own_goals",own,SCORING.ownGoal * own);
  // BSD's zero defaults remain unknown. Optional metrics contribute only when positively
  // reported (or explicitly verified in a later provider adapter), and are disclosed.
  const positive = (key: string, label: string, weight: number, group=1, raw: Json=input.stats) => {
@@ -86,27 +90,27 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
   if (n == null || n===0) {result.warnings.push(`${label}:UNVERIFIED_OR_MISSING_EXCLUDED`);return;}
   add(label,n,(group===1 ? n : Math.floor(n/group))*weight,key);
  };
- positive("goal_assist","assists",({GK:5,DF:4,MF:3,FW:3}[result.position as "GK"|"DF"|"MF"|"FW"]));
- if (result.position === "MF" || result.position === "FW") positive("shots_on_target","shots_on_target",result.position === "MF" ? .5 : 1);
- if (result.position !== "GK") {positive("key_pass","key_passes",result.position === "MF" ? 1 : .5);positive("accurate_cross","crosses_completed",.5);}
- if (result.position === "MF" || result.position === "DF") {
+ positive("goal_assist","assists",SCORING.assist);
+ if (result.position !== "GK") {
+  positive("shots_on_target","shots_on_target",SCORING.shotOnTarget);
+  positive("key_pass","key_passes",SCORING.keyPass);positive("accurate_cross","crosses_completed",SCORING.cross);
   const attempts=count(input.stats.total_pass),completed=count(input.stats.accurate_pass);
   if (attempts != null && completed != null && completed>attempts) return stop("INVALID_PASS_TOTALS");
-  if(attempts!=null && attempts>=30 && completed!=null && completed>0) add("pass_accuracy",completed/attempts*100,completed/attempts>=.85 ? 1 : 0,"accurate_pass / total_pass; attempts >= 30");
+  if(attempts!=null && attempts>=SCORING.passThreshold && completed!=null && completed>0) add("pass_accuracy",completed/attempts*100,completed/attempts>=SCORING.passAccuracy ? SCORING.passBonus : 0,"accurate_pass / total_pass; attempts >= 30");
   else result.warnings.push("pass_accuracy:UNVERIFIED_OR_THRESHOLD_NOT_MET");
-  const tackles=count(input.stats.won_tackle),interceptions=count(input.stats.interception);
-  if(tackles && interceptions) add("defensive_actions",tackles+interceptions,Math.floor((tackles+interceptions)/3)*(result.position==='DF'?1:.5),"won_tackle + interception, per 3");
-  else if(tackles || interceptions) {add("defensive_actions",(tackles ?? 0)+(interceptions ?? 0),Math.floor(((tackles ?? 0)+(interceptions ?? 0))/3)*(result.position==='DF'?1:.5),"positive reported counters only");result.warnings.push("defensive_actions:PARTIAL_COUNTERS");}
-  else result.warnings.push("defensive_actions:UNVERIFIED_OR_MISSING_EXCLUDED");
+  positive("won_tackle","tackles_won",SCORING.tackle);
+  positive("interception","interceptions",SCORING.interception);
  }
- if (result.position !== "FW") add("clean_sheet",conceded===0 && minutes>=60 && !red.length ? 1 : 0,conceded===0 && minutes>=60 && !red.length ? result.position==='MF'?1:4 : 0,"lineup + goal timeline; 60 minutes; no dismissal");
- if(result.position==='GK' || result.position==='DF') add("conceded",conceded,-Math.floor(conceded/2),"goals during participation (after dismissal included)");
- if(result.position==='GK'){positive("saves","saves",1,3);positive("penalty_save","penalty_saves",5,1,input.legacy ?? {});}
- result.score=result.breakdown.reduce((sum,x)=>sum+x.points,0);
+ const myScore = input.teamId === input.homeTeam ? input.homeScore : input.awayScore;
+ const opponentScore = input.teamId === input.homeTeam ? input.awayScore : input.homeScore;
+ if (position !== "FW") add("clean_sheet",opponentScore===0 && !red.length ? 1 : 0,opponentScore===0 && !red.length ? SCORING.cleanSheet[position] * exposure : 0,"team full-time score; proportional minutes; no dismissal");
+ add("team_win",myScore>opponentScore ? 1 : 0,myScore>opponentScore ? SCORING.teamWin * exposure : 0,"team full-time score; proportional minutes");
+ if(position==='GK' || position==='DF') add("conceded",conceded,SCORING.conceded * conceded,"goals during participation only");
+ if(position==='GK'){positive("saves","saves",SCORING.save);positive("penalty_save","penalty_saves",SCORING.penaltySave,1,input.legacy ?? {});}
+ // Round each displayed contribution so its visible sum equals the stored total.
+ result.breakdown = result.breakdown.map(b => ({...b,points:Math.round(b.points * 100) / 100}));
+ result.score=Math.round(result.breakdown.reduce((sum,x)=>sum+x.points,0) * 100) / 100;
  result.status="provisional";
- result.warnings.push("PROTOTYPE_INCIDENT_COMPLETENESS_ASSUMPTION");
+ result.warnings.push("BSD_OPTIONAL_METRICS_PROVISIONAL");
  return result;
-}
-export function priceFromScores(scores: ScoreResult[], initial=100000) {
- return scores.reduce((price,r) => r.score == null || !["ready","provisional"].includes(r.status) ? price : Math.max(10000,Math.min(1000000,Math.round(price*(1+Math.max(-5,Math.min(5,r.score-4))/100)))),initial);
 }

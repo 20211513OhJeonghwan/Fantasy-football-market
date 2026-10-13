@@ -1,4 +1,5 @@
 begin;
+update public.kickx_policy set version='prototype-v1';
 insert into public.leagues(id,name) values('bsd-900001','Test league');
 insert into public.teams(id,name,provider,league_id) values('bsd-900001','Test FC','bsd','bsd-900001'),('bsd-900002','Away FC','bsd','bsd-900001');
 insert into public.players(id,name,provider,birth_date,team_id,position) values

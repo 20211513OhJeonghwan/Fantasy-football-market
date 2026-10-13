@@ -272,6 +272,22 @@ try {
   }
   report.checks.push('Prototype team, squad, article and score rules fit desktop and mobile');
 
+  // New rules render only for an active v2 DB policy; display persisted pricing evidence.
+  state.policy={version:'form-v2',initialPoints:1300000,initialPrice:100000,sellFeeBps:200,quoteSeconds:60};
+  state.players[0].pricing={baseline:{source:'previous-season',season:2025,gameCount:10,meanScore:80,seedScore:70,price:140000,warnings:[]},recent:[{fixture_id:'bsd-9301',played_at:'2026-08-02T12:00:00Z',price_before:140000,price_after:151200,target_price:173333,form_score:86.666667,change_percent:8,window_fixture_ids:['bsd-9301','bsd-9209','bsd-9208','bsd-9207','bsd-9206']}]};
+  for(const width of [1440,390]){
+    await mockPage.setViewportSize({width,height:900});
+    await mockPage.goto(base+'/rules',{waitUntil:'networkidle'});
+    await mockPage.getByText('FORM V2',{exact:true}).waitFor();
+    assert.match(await mockPage.locator('.rules-equation').innerText(),/65.5/);
+    assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`v2 rules overflow at ${width}`);
+    await mockPage.screenshot({path:`test-artifacts/market-v2-rules-${width}.png`,fullPage:true});
+    await mockPage.goto(base+'/players/test-player',{waitUntil:'networkidle'});
+    await mockPage.getByRole('heading',{name:'선수 가치 산정 근거',exact:true}).waitFor();
+    assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`v2 evidence overflow at ${width}`);
+    await mockPage.screenshot({path:`test-artifacts/market-v2-detail-${width}.png`,fullPage:true});
+  }
+  report.checks.push('Active v2 rules and persisted initial/last-five pricing evidence fit desktop and mobile');
   await mock.close();
   assert.deepEqual(errors,[],"Browser JavaScript errors");
   report.checks.push("No browser JavaScript errors");

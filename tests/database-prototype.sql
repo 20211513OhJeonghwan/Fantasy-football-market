@@ -1,5 +1,6 @@
 -- Disposable transaction only: economic invariants, RLS, historical rankings and correction replay.
 begin;
+update public.kickx_policy set version='prototype-v1';
 insert into auth.users values ('00000000-0000-0000-0000-000000000001'),('00000000-0000-0000-0000-000000000002'),('00000000-0000-0000-0000-000000000003');
 insert into public.teams(id,name) values('bsd-1','Home'),('bsd-2','Away');
 insert into public.profiles(id,nickname,team_id) values('00000000-0000-0000-0000-000000000001','Member','bsd-1'),('00000000-0000-0000-0000-000000000002','Admin','bsd-2'),('00000000-0000-0000-0000-000000000003','Other','bsd-2');

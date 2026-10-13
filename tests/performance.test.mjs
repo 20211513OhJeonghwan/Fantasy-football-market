@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loadTs} from './load-ts.mjs';
-const {calculatePerformance:calc,priceFromScores:price}=loadTs('../server/kickx/engine/performance.ts');
+const {calculatePerformance:calc,priceFromScores:price}=loadTs('../server/kickx/engine/legacy-performance.ts');
 function match(position='D'){
  return {fixtureId:'bsd-100',playerId:'bsd-2',teamId:'bsd-1',status:'FT',homeTeam:'bsd-1',awayTeam:'bsd-2',homeScore:0,awayScore:0,stats:{minutes_played:90,goals:0},legacy:null,source:{lineups:{lineup_status:'confirmed',lineups:{home:{team_id:1,players:Array.from({length:11},(_,i)=>({id:i+1,position:i===1?position:'D'})),substitutes:[{id:30,position}]},away:{team_id:2,players:Array.from({length:11},(_,i)=>({id:i+12,position:'D'}))}}},incidents:{incidents:[]}}};
 }
