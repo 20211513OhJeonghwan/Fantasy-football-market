@@ -380,7 +380,7 @@ export function DataEmpty({
   );
 }
 export function DataNotice({ status, reload }: { status: DataStatus; reload: () => void }) {
-  if (status === "ready" || status === "loading" || status === "not-configured") return null;
+  if (status === "ready" || status === "loading") return null;
   const message =
     status === "error"
       ? "데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
@@ -402,9 +402,18 @@ export function DataNotice({ status, reload }: { status: DataStatus; reload: () 
     </div>
   );
 }
-/** Kept for call sites; signed-out states are handled by each screen's empty state. */
 export function MemberNotice() {
-  return null;
+  const { data, status } = usePlatform();
+  if (status !== "ready" || data.session) return null;
+  return (
+    <div className="data-notice">
+      <Info size={16} />
+      <span>로그인 후 내 정보를 확인할 수 있습니다.</span>
+      <Link className="text-link" href="/login">
+        로그인 <ArrowRight size={14} />
+      </Link>
+    </div>
+  );
 }
 export function DisabledAction({ children, className = "button secondary" }: { children: ReactNode; className?: string }) {
   return (

@@ -75,9 +75,9 @@ label small { font-weight: 500; color: var(--text-3); font-size: var(--fs-captio
 .button:hover:not(:disabled) { background: var(--yellow-soft); }
 .button:active:not(:disabled) { transform: translateY(1px); }
 .button.primary { background: var(--ink); color: var(--text-inverse); }
-.button.primary:hover:not(:disabled) { background: var(--ink-2); box-shadow: var(--shadow-hard); transform: translateY(-2px); }
+.button.primary:hover:not(:disabled) { background: var(--ink-2); box-shadow: 3px 3px 0 var(--yellow); transform: translate(-1px, -1px); }
 .button.accent { background: var(--yellow); }
-.button.accent:hover:not(:disabled) { background: var(--yellow-strong); box-shadow: var(--shadow-hard); transform: translateY(-2px); }
+.button.accent:hover:not(:disabled) { background: var(--yellow-strong); box-shadow: 3px 3px 0 var(--ink); transform: translate(-1px, -1px); }
 .button.secondary { background: var(--surface); }
 .button.ghost { border-color: transparent; background: transparent; padding: 0 10px; }
 .button.ghost:hover:not(:disabled) { background: var(--surface-3); }

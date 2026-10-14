@@ -1,63 +1,4 @@
-/* Refinement layer (2026-10-14): softer frames, rounded surfaces and calmer type on top of Yellow Playbook.
-   Loaded last so it can tune shared components without rewriting every page rule. */
-
-/* Surfaces */
-.panel, .card, .stat-grid, .article, .comment-form, .rules-section, .score-panel, .proto-admin,
-.lounge-head, .explorer, .post-browser, .feed-composer, .community-entry-card, .match-row, .roster-card,
-.club-list a, .lounge-card, .my-lounge, .my-lounge-players, .portfolio-hero, .podium-card, .my-rank,
-.admin-quick-card, .squad-board, .write-form, .detail-price, .market-hero, .rules-hero, .team-section,
-.attached-trade, .feed-trade-card, .post-trade, .feed-comments, .score-notes, .score-table, .review-block.quote p {
-  border-radius: var(--radius-3);
-}
-.panel, .card { box-shadow: var(--shadow-1); }
-.panel.frame, .card.frame, .stat-grid, .article, .rules-section, .score-panel { border-color: var(--line-2); }
-.stat-grid { overflow: hidden; box-shadow: var(--shadow-1); }
-.match-row, .roster-card, .club-list a, .lounge-card, .my-lounge { overflow: hidden; }
-.match-row::before { border-radius: var(--radius-3) 0 0 var(--radius-3); }
-.match-row::after { border-radius: 0 var(--radius-3) var(--radius-3) 0; }
-.feed-trade-card, .post-trade, .attached-trade { border-width: 1px; border-color: var(--line-2); }
-.my-lounge-players, .comment-target, .feed-comments { border-radius: var(--radius-2); }
-
-/* Headings: lighter rule, calmer weight */
-.page-heading { border-bottom: 1px solid var(--line-2); padding-bottom: var(--s-5); }
-.page-heading h1 { font-weight: 800; letter-spacing: -0.04em; }
-.section-title h2, .panel-head h2 { letter-spacing: -0.03em; }
-.eyebrow { letter-spacing: 0.12em; color: var(--text-3); }
-.eyebrow::before { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow-strong); box-shadow: none; transform: none; }
-
-/* Controls */
-.button { border-width: 1px; border-radius: 8px; font-weight: 700; }
-.button.secondary, .button:not(.primary):not(.accent):not(.danger) { border-color: var(--line-2); }
-.button.secondary:hover:not(:disabled), .button:not(.primary):not(.accent):not(.danger):hover:not(:disabled) { border-color: var(--ink); background: var(--surface); }
-.button.primary:hover:not(:disabled), .button.accent:hover:not(:disabled) { box-shadow: var(--shadow-hard); transform: translateY(-1px); }
-input, select, textarea { border-width: 1px; border-radius: 8px; }
-.kx-select-trigger, .input-search { border-radius: 8px; }
-.icon-button { border-radius: 8px; }
-.tag, .category-tag, .status-pill, .trade-type, .position, .league-mark, .result-tag, .score-status { border-radius: 6px; }
-.score-chip { border-radius: 8px; }
-.pagination button { border-radius: 8px; border-width: 1px; }
-
-/* Tables */
-.data-table thead th { background: transparent; border-bottom: 1px solid var(--line-2); color: var(--text-3); font-weight: 700; }
-.data-table tbody tr:hover { background: var(--surface-2); }
-
-/* Tabs and segments */
-.segment, .tabs.segment { border-radius: 10px; }
-
-/* Decorative lettering stays out of the way */
-.community-entry-card::after, .rules-hero::after, .portfolio-hero::after { display: none; }
-.lounge-hero-code { opacity: 0.55; }
-.detail-hero-number { opacity: 0.6; }
-
-/* Hover lift without hard offset */
-.hover-lift:hover { border-color: var(--line-2); }
-
-/* Modal */
-.modal { border-radius: 16px; }
-.tabs.segment { border: 1px solid var(--line-2); border-radius: 10px; padding: 3px; background: var(--surface-2); }
-.tabs.segment button { border-radius: 7px; font-weight: 700; }
-.tabs.segment button.active { background: var(--ink); color: #fff; box-shadow: var(--shadow-1); }
-
+/* Community feed styling (Toss-style reading list). Loaded after pages.css. */
 /* ================= COMMUNITY · feed (Toss-style reading list) ================= */
 .community-switch { border: 1px solid var(--line-2); border-radius: 12px; padding: 3px; background: var(--surface); gap: 2px; }
 .community-switch a { height: 38px; border-radius: 9px; font-weight: 700; }
@@ -148,21 +89,5 @@ input, select, textarea { border-width: 1px; border-radius: 8px; }
   .community-feed .panel-head .tabs { flex-wrap: nowrap; }
   .feed-card-links { width: auto; margin-left: auto; }
 }
-
-/* ================= Page chrome (home, rank, auth, rules) ================= */
-.home-search, .dash-panel, .movers-grid, .dash-watch-card, .google-button, .profile-card, .pipeline, .rules-policy,
-.rules-term, .rules-formula, .rules-price, .write-scope button, .like-button, .home-guide, .admin-hero, .detail-hero,
-.lounge-hero, .lounge-hero-mark, .pitch, .squad-footer, .bench-best, .order-panel, .podium-card, .my-rank, .portfolio-hero {
-  border-radius: var(--radius-3);
-}
-.home-search, .dash-panel, .movers-grid, .podium-card, .my-rank, .squad-board, .detail-price, .profile-card, .order-panel {
-  border-color: var(--line-2); box-shadow: var(--shadow-1);
-}
-.movers-grid, .home-guide, .admin-hero, .detail-hero, .pitch, .dash-watch-card { overflow: hidden; }
-.match-score strong { border-radius: 8px; }
-.dash-watch-card:hover, .podium-card:hover { box-shadow: var(--shadow-hard); }
-.rules-step { border-radius: 10px; border-color: var(--ink); }
-.podium-card.place-1 { box-shadow: 0 18px 40px -20px rgba(17, 17, 16, 0.55); }
-.market-hero { border-radius: 18px; overflow: hidden; }
 .lounge-head { overflow: hidden; }
 .lounge-head::before { border-radius: 0; }

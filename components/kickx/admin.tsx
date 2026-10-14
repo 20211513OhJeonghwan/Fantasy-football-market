@@ -89,6 +89,7 @@ export function AdminScreen() {
       <section className="panel flush">
         <div className="panel-head"><h2>관리자 처리 이력</h2></div>
         {data.audit.length ? <ol className="audit-list">{data.audit.map(a => { const [action, target, ...rest] = a.description.split(" · "); return <li key={a.id}><FileClock size={15} /><div><span><b>{AUDIT_LABEL[action] ?? action}</b>{target && <code>{target}</code>}</span>{rest.length > 0 && <small className="audit-detail">{rest.join(" · ")}</small>}<time className="num">{dateText(a.date)}</time></div></li>; })}</ol> : <DataEmpty entity="운영 이력" status={status} rows={3} />}
+        {data.audit.length > 0 && <p className="admin-scope-note inset">최근 처리 이력 최대 100건입니다.</p>}
       </section>
     </AdminFrame>
   );
@@ -113,6 +114,7 @@ export function TradesAdmin() {
         <StatCard label="매입 합계" value={money(data.trades.length ? data.trades.filter((t) => t.type === "buy").reduce((s, t) => s + t.net, 0) : null)} unit="P" hint="불러온 거래 기준" />
         <StatCard label="수수료 합계" value={money(data.trades.length ? data.trades.reduce((s, t) => s + t.fee, 0) : null)} unit="P" tone="yellow" hint="불러온 거래 기준" />
       </div>
+      <p className="admin-scope-note">이 화면은 최근 거래 최대 200건만 불러와 검색합니다. 전체 이력은 DB에 보존되며, 기간 검색·서버 페이지 이동은 백엔드 보완 예정입니다.</p>
       <section className="panel flush">
         <div className="panel-head">
           <Tabs items={["전체", "매입", "매각"]} value={tab} onChange={setTab} variant="segment" label="거래 유형" />
@@ -188,6 +190,7 @@ export function CommunityAdmin() {
           <Tabs items={["전체", "접수", "숨김", "기각", "복원"]} value={tab} onChange={setTab} variant="segment" label="처리 상태" />
           <span className="fine-print num">검토 대기 {money(data.summary?.pendingReports ?? data.reports.filter((r) => r.status === "접수").length)}건</span>
         </div>
+        <p className="admin-scope-note inset">최근 신고 최대 200건을 표시합니다. 신고가 없는 게시물 전체 탐색은 아직 제공되지 않습니다.</p>
         <div className="table-scroll">
           <table className="data-table">
             <thead>
