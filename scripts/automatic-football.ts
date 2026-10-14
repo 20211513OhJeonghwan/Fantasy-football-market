@@ -4,6 +4,7 @@ import { calculatePlayer } from '../server/kickx/engine/service';
 import { runAutomaticFootball, errorCode } from './lib/automatic-football.mjs';
 import { nameImportFetch } from './lib/korean-catalog.mjs';
 import { mapPlayerNames } from './lib/player-names.mjs';
+import { fillMissingKoreanNames } from './lib/missing-korean-names.mjs';
 
 loadEnvConfig(process.cwd());
 async function main() {
@@ -14,7 +15,12 @@ async function main() {
   const db = createClient(url, key, { global: { fetch: nameImportFetch(key) }, auth: { persistSession: false, autoRefreshToken: false } });
   await runAutomaticFootball(db, bsd, {
     calculate: (id: string) => calculatePlayer(db, id, null),
-    mapNames: () => mapPlayerNames(db, { limit: 100 }),
+    mapNames: async () => {
+      // Fill blanks without an external provider first, then improve provisional names.
+      const fallback = await fillMissingKoreanNames(db, { apply: true, limit: 500 });
+      const verified = await mapPlayerNames(db, { limit: 100 });
+      return { fallback, verified };
+    },
     emit: (value: unknown) => console.log(JSON.stringify(value)),
   });
 }
