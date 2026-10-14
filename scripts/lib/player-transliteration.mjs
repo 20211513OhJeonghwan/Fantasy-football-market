@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 const catalog = JSON.parse(readFileSync(new URL('../../data/localization/players.ko.json', import.meta.url), 'utf8'));
 export const hasKoreanName = value => typeof value === 'string' && /[가-힣]/u.test(value);
-const normalize = value => String(value).normalize('NFKD').replace(/\p{M}/gu, '').replace(/ł/gi, 'l').replace(/ø/gi, 'o').replace(/ß/g, 'ss').replace(/æ/gi, 'ae').replace(/œ/gi, 'oe').toLowerCase();
+const normalize = value => String(value).normalize('NFKD').replace(/\p{M}/gu, '').replace(/ł/gi, 'l').replace(/ø/gi, 'o').replace(/ı/g, 'i').replace(/[đð]/gi, 'd').replace(/þ/gi, 'th').replace(/ß/g, 'ss').replace(/æ/gi, 'ae').replace(/œ/gi, 'oe').toLowerCase();
 const words = value => normalize(value).match(/[a-z]+(?:['’-][a-z]+)*/g) ?? [];
 const wholeNames = new Map(), variants = new Map();
 // Reuse pronunciations, not player identities. Every generated result remains a
@@ -25,8 +25,8 @@ const lexicon = new Map([...variants].flatMap(([word, options]) => {
 }));
 for (const [name,label] of [['Son Heung-min','손흥민'],['Heung-min Son','손흥민'],['Kim Min-jae','김민재'],['Min-jae Kim','김민재'],['Lee Kang-in','이강인'],['Kang-in Lee','이강인']]) wholeNames.set(normalize(name),label);
 const initials = ['에이','비','시','디','이','에프','지','에이치','아이','제이','케이','엘','엠','엔','오','피','큐','알','에스','티','유','브이','더블유','엑스','와이','지'];
-const onsets = { b:7,c:15,d:3,f:17,g:0,h:18,j:12,k:15,l:5,m:6,n:2,p:17,r:5,s:9,t:16,v:7,z:12,ch:14,sh:9,th:9,ng:11,ny:2,kw:15,ts:14 };
-const bare = { b:'브',c:'크',d:'드',f:'프',g:'그',h:'흐',j:'지',k:'크',l:'르',m:'므',n:'느',p:'프',r:'르',s:'스',t:'트',v:'브',z:'즈',ch:'치',sh:'시',th:'스',ng:'응',ny:'니',kw:'쿠',ts:'츠' };
+const onsets = { b:7,c:15,d:3,f:17,g:0,h:18,j:12,k:15,l:5,m:6,n:2,p:17,q:15,r:5,s:9,t:16,v:7,w:11,z:12,ch:14,sh:9,th:9,ng:11,ny:2,kw:15,ts:14 };
+const bare = { b:'브',c:'크',d:'드',f:'프',g:'그',h:'흐',j:'지',k:'크',l:'르',m:'므',n:'느',p:'프',q:'크',r:'르',s:'스',t:'트',v:'브',w:'우',z:'즈',ch:'치',sh:'시',th:'스',ng:'응',ny:'니',kw:'쿠',ts:'츠' };
 const vowels = { a:0,e:5,i:20,o:8,u:13,y:20,ai:1,ae:1,ay:7,ee:20,ei:7,ey:7,ie:20,oo:13,ou:13,oi:11,oy:11,au:8,ow:0,ya:2,ye:7,yo:12,yu:17,wa:9,we:10,wi:16,wo:14 };
 const vowelAt = value => [value.slice(0,2),value[0]].find(k => Object.hasOwn(vowels,k));
 function syllable(onset, vowel, coda=0) { return String.fromCharCode(0xac00 + (onset * 21 + vowel) * 28 + coda); }

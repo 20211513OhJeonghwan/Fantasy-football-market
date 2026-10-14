@@ -8,6 +8,9 @@ test('pronunciation drafts work without DOB, support accents/initials and reject
   assert.equal(transliteratePlayerName({name:'Lucas Hernández'}),'루카스 에르난데스');
   assert.equal(transliteratePlayerName({name:'J. Zevan'}).startsWith('제이 '),true);
   assert.match(transliteratePlayerName({name:'Zevan Molvex'}),/^[가-힣]+ [가-힣]+$/u);
+  for (const name of ['Osman Atılgan','Vukašin Đurđević','Jarosław Kubicki','Semih Kılıçsoy','Mateusz Pruchniewski','Isak Dahlqvist','Tyreeq Bakinson','Shawn Blum','Matthew Crowther']) {
+    assert.match(transliteratePlayerName({name}),/^[가-힣 ]+$/u,name);
+  }
   assert.equal(transliteratePlayerName({name:'이강인'}),'이강인');
   assert.equal(transliteratePlayerName({name:'李某某'}),null);
   assert.equal(transliteratePlayerName({name:'<unknown>'}),null);
