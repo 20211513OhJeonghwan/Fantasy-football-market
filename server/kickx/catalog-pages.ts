@@ -45,7 +45,7 @@ export async function readPlayerDetail(client: SupabaseClient, id: string): Prom
   const since=new Date(Date.now()-31*86400000).toISOString();
   const [history,records,analysis]=await Promise.all([
     client.from("price_history").select("recorded_at,value").eq("player_id",id).gte("recorded_at",since).order("recorded_at",{ascending:false}).limit(1000),
-    client.from("player_match_records").select("id,played_at,opponent,result,minutes,goals,assists,performance").eq("player_id",id).order("played_at",{ascending:false}).limit(20),
+    client.from("player_match_records").select("id,fixture_id,played_at,opponent,result,minutes,goals,assists,performance").eq("player_id",id).order("played_at",{ascending:false}).limit(20),
     client.from("player_analyses").select("body").eq("id",id).maybeSingle(),
   ]);
   for(const result of [history,records,analysis]) if(result.error) throw result.error;
@@ -53,9 +53,13 @@ export async function readPlayerDetail(client: SupabaseClient, id: string): Prom
   const teamNames = opponents.length ? await client.from("teams").select("*").in("name",opponents) : {data:[],error:null};
   if (teamNames.error) throw teamNames.error;
   const localized = new Map((teamNames.data ?? []).map(row => [row.name,row.name_ko || row.name]));
+  const fixtureIds = [...new Set((records.data ?? []).map(row => row.fixture_id).filter(Boolean))];
+  const competitions = fixtureIds.length ? await client.from("fixtures").select("id,league_id").in("id",fixtureIds) : {data:[],error:null};
+  if (competitions.error) throw competitions.error;
+  const leagueOf = new Map((competitions.data ?? []).map(row => [row.id,row.league_id]));
   const player=mapPlayer(data,data);
   player.history=(history.data||[]).reverse().map(row=>({at:row.recorded_at,value:Number(row.value)}));
-  player.records=(records.data||[]).map(row=>({id:row.id,playedAt:row.played_at,opponent:localized.get(row.opponent) || row.opponent,result:row.result,minutes:row.minutes,goals:row.goals,assists:row.assists,performance:row.performance == null ? null : Number(row.performance)}));
+  player.records=(records.data||[]).map(row=>({id:row.id,fixtureId:row.fixture_id ?? null,leagueId:leagueOf.get(row.fixture_id) ?? null,playedAt:row.played_at,opponent:localized.get(row.opponent) || row.opponent,result:row.result,minutes:row.minutes,goals:row.goals,assists:row.assists,performance:row.performance == null ? null : Number(row.performance)}));
   player.analysis=analysis.data?.body ?? null;
   const scores=await client.from("performance_results").select("fixture_id,score,status,rule_version,breakdown,warnings").eq("player_id",id).order("calculated_at",{ascending:false}).limit(20);
   if(!migrationMissing(scores.error)){checkDatabase(scores.error);player.scoreDetails=scores.data??[];}

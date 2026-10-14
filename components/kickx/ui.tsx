@@ -187,7 +187,7 @@ export function TeamBadge({ id, size = "normal" }: { id: string | null; size?: "
 export function LeagueMark({ league, size = "md" }: { league: { name: string } | null | undefined; size?: "sm" | "md" | "lg" }) {
   const mark = leagueIdentity(league);
   if (!mark) return null;
-  return <span className={`league-mark ${size}`} style={{ "--league": mark.color, "--league-ink": mark.ink } as CSSProperties}>{mark.short}</span>;
+  return <span className={`league-mark ${size}`} title={league?.name} style={{ "--league": mark.color, "--league-ink": mark.ink } as CSSProperties}>{mark.short}</span>;
 }
 /** Player photo on a club-coloured stage. Falls back to an illustrated silhouette (never presented as a real photo). */
 export function PlayerPortrait({

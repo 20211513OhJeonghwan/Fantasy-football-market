@@ -417,7 +417,12 @@ export function PlayerDetail() {
                     <tbody>
                       {p.records.map((r) => (
                         <tr key={r.id}>
-                          <td><div className="two-line"><strong>vs {r.opponent}</strong><small>{dateText(r.playedAt, false)}</small></div></td>
+                          <td>
+                            <div className="record-match">
+                              {getLeague(r.leagueId) ? <LeagueMark league={getLeague(r.leagueId)} size="sm" /> : <span className="league-mark sm unknown" title="대회 정보 없음">—</span>}
+                              <div className="two-line"><strong>vs {r.opponent}</strong><small>{dateText(r.playedAt, false)}</small></div>
+                            </div>
+                          </td>
                           <td><span className={`result-tag ${r.result?.includes("승") ? "win" : r.result?.includes("패") ? "loss" : ""}`}>{r.result || "—"}</span></td>
                           <td className="numeric">{r.minutes == null ? "—" : r.minutes > 0 ? `${money(r.minutes)}′` : <span className="muted">미출전</span>}</td>
                           <td className="numeric">{money(r.goals)}</td>

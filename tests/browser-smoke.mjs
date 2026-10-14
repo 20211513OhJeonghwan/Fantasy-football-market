@@ -345,7 +345,8 @@ try {
     await mockPage.setViewportSize({width,height:900});
     await mockPage.goto(base+'/fixtures',{waitUntil:'networkidle'});
     await mockPage.getByText('승부차기 5 : 4',{exact:true}).waitFor();
-    await mockPage.getByText('일부 반영 · 기록 확인 중',{exact:true}).waitFor();
+    const badge=mockPage.locator('.reflect-badge').filter({hasText:'일부 반영'});await badge.waitFor();
+    await badge.hover();await mockPage.getByRole('tooltip').filter({hasText:'일부 선수만 점수가 계산되었습니다.'}).waitFor();
     assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`cup fixtures overflow at ${width}`);
     await mockPage.screenshot({path:`test-artifacts/club-fixtures-${width}.png`,fullPage:true});
     await mockPage.goto(base+'/rules',{waitUntil:'networkidle'});

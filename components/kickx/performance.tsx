@@ -13,7 +13,7 @@ export function PerformanceDetails({ player }: { player: Player }) {
   const { data, getTeam } = usePlatform();
   const rows = player.scoreDetails ?? [];
   function match(row: ScoreRow) {
-    const record = player.records.find((r) => r.id === row.fixture_id);
+    const record = player.records.find((r) => r.fixtureId === row.fixture_id || r.id === row.fixture_id);
     if (record) return { title: `vs ${record.opponent}`, date: record.playedAt };
     const fixture = data.fixtures.find((f) => f.id === row.fixture_id);
     // The stored result carries only the fixture id; without a matching record the match name is unknown here.

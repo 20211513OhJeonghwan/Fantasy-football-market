@@ -12,6 +12,9 @@ export type Team = {
 export type League = { id: string; name: string };
 export type PlayerRecord = {
   id: string;
+  /** Fixture and competition of the record when the server provides them. */
+  fixtureId?: string | null;
+  leagueId?: string | null;
   playedAt: string;
   opponent: string;
   result: string | null;

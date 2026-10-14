@@ -198,6 +198,17 @@ export function luminance(hex: string) {
 
 /** League marks for headers and filters (presentation only). */
 const LEAGUES: [RegExp, { short: string; color: string; ink: string; country: string }][] = [
+  // Club competitions first: their names can contain "리그" and must not fall through to a domestic league.
+  [/champions ?league|챔피언스 ?리그/i, { short: "UCL", color: "#0B1F5C", ink: "#FFFFFF", country: "유럽" }],
+  [/europa ?league|유로파/i, { short: "UEL", color: "#F28A00", ink: "#111110", country: "유럽" }],
+  [/conference ?league|컨퍼런스/i, { short: "UECL", color: "#17A85A", ink: "#FFFFFF", country: "유럽" }],
+  [/uefa ?super ?cup|uefa ?슈퍼컵/i, { short: "USC", color: "#1D3E8F", ink: "#FFFFFF", country: "유럽" }],
+  [/fa ?cup|fa ?컵/i, { short: "FA CUP", color: "#C8102E", ink: "#FFFFFF", country: "잉글랜드" }],
+  [/carabao|efl ?cup|league ?cup|카라바오/i, { short: "EFL CUP", color: "#00A651", ink: "#FFFFFF", country: "잉글랜드" }],
+  [/copa del rey|코파 ?델 ?레이/i, { short: "COPA", color: "#8C1D2B", ink: "#FFD200", country: "스페인" }],
+  [/coppa italia|코파 ?이탈리아/i, { short: "COPPA", color: "#008C45", ink: "#FFFFFF", country: "이탈리아" }],
+  [/dfb|포칼/i, { short: "DFB", color: "#111110", ink: "#FFD200", country: "독일" }],
+  [/coupe de france|쿠프 ?드 ?프랑스/i, { short: "CDF", color: "#1F3B8C", ink: "#FFFFFF", country: "프랑스" }],
   [/premier|프리미어/i, { short: "EPL", color: "#3D195B", ink: "#FFFFFF", country: "잉글랜드" }],
   [/la ?liga|laliga|라리가/i, { short: "LALIGA", color: "#FF4B44", ink: "#FFFFFF", country: "스페인" }],
   [/serie ?a|세리에/i, { short: "SERIE A", color: "#0A2C6E", ink: "#FFFFFF", country: "이탈리아" }],

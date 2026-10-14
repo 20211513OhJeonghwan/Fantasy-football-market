@@ -225,6 +225,8 @@ function records(id: string, teamId: string, performance: number, position: Play
     const minutes = random() > 0.15 ? 90 - Math.floor(random() * 3) * 15 : 0;
     return {
       id: `${id}-r${i}`,
+      fixtureId: `${id}-r${i}`,
+      leagueId: teams.find(t => t.id === teamId)?.leagueId ?? null,
       playedAt: new Date(now - (i * 6 + 2) * DAY).toISOString(),
       opponent: opponent.name,
       result: `${scored}–${conceded} ${scored > conceded ? "승" : scored === conceded ? "무" : "패"}`,
@@ -300,6 +302,8 @@ function fixtures(now: number): Fixture[] {
     return {
       id: `fx-${i}`, leagueId: teams.find(t => t.id === home)?.leagueId ?? null,
       home, away, startsAt: kickoff.toISOString(), status, homeScore, awayScore,
+      // Example scoring states for finished/live matches (mock only).
+      reflectionStatus: status === "FT" ? (["reflected", "partial", "withheld", "pending"] as const)[i % 4] : status === "NS" ? null : "pending",
     };
   });
 }

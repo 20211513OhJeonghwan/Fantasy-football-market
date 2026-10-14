@@ -2,7 +2,7 @@
 import { Select } from "./select";
 import { useLeagueOptions } from "./options";
 import Link from "next/link";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useId, useMemo, useState, type CSSProperties } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, RotateCcw, Search } from "lucide-react";
 import { usePlatform } from "./provider";
 import { useCatalogPage } from "./catalog";
@@ -16,6 +16,24 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 /** Weekday for a KST calendar day string (YYYY-MM-DD). */
 const weekday = (day: string) => { const d = new Date(day + "T00:00:00Z"); return Number.isNaN(d.getTime()) ? "" : WEEKDAYS[d.getUTCDay()]; };
 const STATES: [string, string][] = [["all", "전체"], ["live", "진행 중"], ["scheduled", "예정"], ["finished", "종료"], ["other", "연기·기타"]];
+const REFLECTION: Record<string, { label: string; tone: string; detail: string }> = {
+  pending: { label: "계산 대기", tone: "wait", detail: "경기 기록을 수집하는 중입니다. 수집이 끝나면 선수 점수와 가치가 계산됩니다." },
+  withheld: { label: "계산 보류", tone: "hold", detail: "기록 확인이 필요해 점수 계산을 보류했습니다. 확인 전까지 선수 가치에 반영되지 않습니다." },
+  partial: { label: "일부 반영", tone: "part", detail: "일부 선수만 점수가 계산되었습니다. 나머지 선수는 기록을 확인하고 있습니다." },
+  reflected: { label: "반영 완료", tone: "done", detail: "이 경기의 선수 점수 계산이 완료되었습니다." },
+};
+/** Corner badge for the match's scoring state; the full explanation shows on hover or keyboard focus. */
+function ReflectionBadge({ status }: { status?: string | null }) {
+  const id = useId();
+  const state = status ? REFLECTION[status] : undefined;
+  if (!state) return null;
+  return (
+    <span className={`reflect-badge ${state.tone}`} tabIndex={0} aria-describedby={id}>
+      <i aria-hidden="true" />{state.label}
+      <span role="tooltip" id={id} className="reflect-tip">{state.detail}</span>
+    </span>
+  );
+}
 /** One match card: club-colour edges, score block and links to each team page. */
 export function MatchRow({ fixture, showDate = false }: { fixture: Fixture; showDate?: boolean }) {
   const { getTeam, getLeague } = usePlatform();
@@ -39,8 +57,8 @@ export function MatchRow({ fixture, showDate = false }: { fixture: Fixture; show
         <strong className="num">{scored ? `${fixture.homeScore} : ${fixture.awayScore}` : "VS"}</strong>
         {fixture.penaltiesHome!=null && fixture.penaltiesAway!=null && <small>승부차기 {fixture.penaltiesHome} : {fixture.penaltiesAway}</small>}
         <span className={`match-status ${group}`}>{fixtureStatus(fixture.status)}</span>
-        {fixture.reflectionStatus && <small>{({pending:'기록 수집·계산 대기',withheld:'기록 확인 · 계산 보류',partial:'일부 반영 · 기록 확인 중',reflected:'점수 계산 완료'} as Record<string,string>)[fixture.reflectionStatus]}</small>}
       </div>
+      <ReflectionBadge status={fixture.reflectionStatus} />
       <Link href={"/teams/" + fixture.away} className={`match-team ${homeWin ? "lost" : ""}`}>
         <TeamBadge id={fixture.away} />
         <span>{getTeam(fixture.away)?.name || "구단 정보 없음"}</span>
