@@ -1,7 +1,8 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import nextEnv from "@next/env";
 import { createClient } from "@supabase/supabase-js";
 import { validateKoreanCatalog, planKoreanPlayers, readAllNames, insertMissingPlayerNames, nameImportFetch } from "./lib/korean-catalog.mjs";
+import { fillMissingKoreanNames } from "./lib/missing-korean-names.mjs";
 
 nextEnv.loadEnvConfig(process.cwd());
 const apply = process.argv.includes("--apply");
@@ -32,6 +33,13 @@ try {
     const currentIds = new Set(current.filter(row => row.provider === "bsd").map(row => row.id));
     console.log(JSON.stringify({ bsdPlayers: currentIds.size,
       koreanPlayerNames: after.filter(row => currentIds.has(row.player_id) && /[가-힣]/u.test(row.display_name)).length }));
+  }
+  const coverage = await fillMissingKoreanNames(client, { apply, emit: value => console.log(JSON.stringify(value)) });
+  const report = process.argv.find(value => value.startsWith('--report='))?.slice('--report='.length);
+  if (report) await writeFile(report, JSON.stringify(coverage, null, 2) + '\n');
+  if (apply && (coverage.after.missing || coverage.after.columnSyncPending)) {
+    console.error(JSON.stringify({ error: 'KOREAN_NAMES_REMAIN_MISSING', missing: coverage.after.missing, columnSyncPending: coverage.after.columnSyncPending }));
+    process.exitCode = 1;
   }
 } catch (error) {
   // Do not print client configuration, service credentials or provider payloads.
