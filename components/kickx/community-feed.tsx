@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { clubIdentity } from "@/lib/kickx/club-identity";
-import { ChevronLeft, ChevronRight, Heart, LoaderCircle, Lock, MessageCircle, Paperclip, Pencil, Search, Send, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, LoaderCircle, Lock, MessageCircle, Pencil, Search, Send, X } from "lucide-react";
 import type { Player, Post } from "@/lib/kickx/types";
 import { dateText, money, relativeTime } from "@/lib/kickx/data";
 import { apiRequest } from "@/lib/kickx/client";
@@ -12,7 +12,7 @@ import { usePlatform, useResource } from "./provider";
 import { useCatalogPage, useCatalogPlayer } from "./catalog";
 import { usePost } from "./community-detail";
 import { Select } from "./select";
-import { ClubCrest, DataEmpty, PlayerPortrait, Tabs } from "./ui";
+import { Change, ClubCrest, DataEmpty, PlayerPortrait, Tabs } from "./ui";
 
 const SIZE = 20;
 const emptyFeed = () => ({ items: [] as Post[], total: 0, page: 1, size: SIZE });
@@ -77,7 +77,7 @@ export function CommunityComposer(props: { scope: CommunityScope; target?: strin
   const fan = props.scope === "player" || !!data.session?.profile?.team && (!props.target || data.session.profile.team === props.target);
   const canWrite = !!data.session?.profile && fan;
   return <section className="feed-composer panel" aria-label={`${props.scope === "club" ? "구단" : "선수"} 빠른 글쓰기`}>
-    {status !== "ready" ? <DataEmpty entity="커뮤니티" status={status} retry={reloadPlatform} rows={1} /> : !canWrite ? <div className="feed-composer-locked"><Lock size={16} aria-hidden="true" /><p>{!data.session ? "로그인하고 이야기를 나눠보세요." : !data.session.profile ? "프로필을 설정하면 이야기를 작성할 수 있습니다." : "구단 이야기는 해당 구단의 응원 팬만 작성할 수 있습니다."}</p><Link className="button secondary small" href={!data.session ? "/login" : "/mypage"}>{!data.session ? "로그인" : "프로필 설정"}</Link></div> : open ? <ComposerForm {...props} onSaved={() => { setOpen(false); props.onSaved(); }} onClose={() => setOpen(false)} /> : <button className="feed-composer-open" onClick={() => setOpen(true)}><span className="rank-avatar" aria-hidden="true">{data.session?.profile?.nickname.slice(0, 1) ?? "?"}</span><span className="feed-composer-prompt">{props.target && props.targetName ? `${props.targetName}에 대한 이야기를 남겨보세요` : props.scope === "club" ? "응원 구단에 대한 이야기를 남겨보세요" : "선수에 대한 생각을 나눠보세요"}</span><span className="feed-composer-cta"><Pencil size={14} />글쓰기</span></button>}
+    {status !== "ready" ? <DataEmpty entity="커뮤니티" status={status} retry={reloadPlatform} rows={1} /> : !canWrite ? <div className="feed-composer-locked"><Lock size={16} aria-hidden="true" /><p>{!data.session ? "로그인하고 이야기를 나눠보세요." : !data.session.profile ? "프로필을 설정하면 이야기를 작성할 수 있습니다." : "구단 이야기는 해당 구단의 응원 팬만 작성할 수 있습니다."}</p><Link className="button secondary small" href={!data.session ? "/login" : "/mypage"}>{!data.session ? "로그인" : "프로필 설정"}</Link></div> : open ? <ComposerForm {...props} onSaved={() => { setOpen(false); props.onSaved(); }} onClose={() => setOpen(false)} /> : <button className="feed-composer-open" onClick={() => setOpen(true)}><span className="rank-avatar" aria-hidden="true">{data.session?.profile?.nickname.slice(0, 1) ?? "?"}</span><span className="feed-composer-prompt">{props.target && props.targetName ? `${props.targetName}에 대한 이야기를 남겨보세요` : props.scope === "club" ? "응원 구단에 대한 이야기를 남겨보세요" : "선수에 대한 생각을 나눠보세요"}</span><span className="feed-composer-cta"><Pencil size={15} /></span></button>}
   </section>;
 }
 
@@ -113,35 +113,37 @@ function FeedCard({ post, showTarget }: { post: Post; showTarget: boolean }) {
     finally { lock.current = false; setBusy(false); }
   }
   const long = [...post.body].length > 400;
+  const chipTeam = getTeam(post.scope === "club" ? post.target : player?.team);
   return <article className="community-feed-card" data-scope={post.scope} aria-label={`${post.author}의 ${post.scope === "club" ? "구단" : "선수"} 이야기`}>
+    <span className="feed-avatar" aria-hidden="true">{post.author.slice(0, 1)}</span>
+    <div className="feed-main">
     <header className="feed-card-header">
-      {showTarget ? (
-        <Link className="feed-card-target" href={lounge} style={{ "--club": clubIdentity(getTeam(post.scope === "club" ? post.target : player?.team))?.primary } as CSSProperties}>
-          {player ? <PlayerPortrait player={player} size="sm" /> : <ClubCrest id={post.scope === "club" ? post.target : null} size="small" />}
-          <span>{name}</span>
-          <ChevronRight size={14} aria-hidden="true" />
-        </Link>
-      ) : <span className="feed-card-scope">{post.scope === "club" ? "구단 이야기" : "선수 이야기"}</span>}
-      <span className="category-tag">{post.category}</span>
+      <strong className="feed-author">{post.author}</strong>
+      <time dateTime={post.date} title={dateText(post.date)}>{relativeTime(post.date)}</time>
+      <span className="feed-category">{post.category}</span>
     </header>
-    <div className="feed-card-author"><span className="rank-avatar" aria-hidden="true">{post.author.slice(0, 1)}</span><strong>{post.author}</strong><time dateTime={post.date} title={dateText(post.date)}>{relativeTime(post.date)}</time></div>
+    {showTarget && (
+      <Link className="feed-card-target" href={lounge} style={{ "--club": clubIdentity(chipTeam)?.primary } as CSSProperties}>
+        {player ? <PlayerPortrait player={player} size="sm" /> : <ClubCrest id={post.scope === "club" ? post.target : null} size="small" />}
+        <span>{name}</span>
+        {player?.change != null && <Change value={player.change} />}
+      </Link>
+    )}
     {heading && <h3><Link href={`/community/posts/${post.id}`}>{heading}</Link></h3>}
-    <p className={`feed-card-body ${long && !expanded ? "clamped" : ""}`}>{expanded || !long ? post.body : [...post.body].slice(0, 400).join("") + "…"}</p>
+    <p className="feed-card-body">{expanded || !long ? post.body : [...post.body].slice(0, 400).join("") + "…"}</p>
     {long && <button type="button" className="feed-more" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>{expanded ? "접기" : "더 보기"}</button>}
     {post.transaction && <div className="feed-trade-card">
-      <Paperclip size={15} aria-hidden="true" />
       <span className={`trade-type ${post.transaction.type}`}>{post.transaction.type === "buy" ? "매입" : "매각"}</span>
       <strong>{post.transaction.playerName}</strong>
       <span className="num">{money(post.transaction.price)} P</span>
-      <time dateTime={post.transaction.date}>체결 {dateText(post.transaction.date)}</time>
-      <small>작성자의 실제 체결 기록</small>
+      <time dateTime={post.transaction.date}>{dateText(post.transaction.date)} 체결</time>
     </div>}
     <div className="feed-card-actions">
-      <button type="button" className={`feed-action ${reaction.liked ? "on" : ""}`} aria-label={`피드 공감 ${reaction.likes}`} aria-pressed={reaction.liked} disabled={!data.session || busy} title={data.session ? undefined : "로그인 후 공감할 수 있습니다."} onClick={() => void like()}><Heart size={17} fill={reaction.liked ? "currentColor" : "none"} />공감 <b className="num">{money(reaction.likes)}</b></button>
-      <button type="button" className={`feed-action ${commentsOpen ? "open" : ""}`} aria-expanded={commentsOpen} onClick={() => setCommentsOpen(v => !v)}><MessageCircle size={17} />댓글 <b className="num">{money(reaction.comments)}</b></button>
+      <button type="button" className={`feed-action ${reaction.liked ? "on" : ""}`} aria-label={`피드 공감 ${reaction.likes}`} aria-pressed={reaction.liked} disabled={!data.session || busy} title={data.session ? undefined : "로그인 후 공감할 수 있습니다."} onClick={() => void like()}><Heart size={18} fill={reaction.liked ? "currentColor" : "none"} /><b className="num">{money(reaction.likes)}</b></button>
+      <button type="button" className={`feed-action ${commentsOpen ? "open" : ""}`} aria-label={`댓글 ${reaction.comments}`} aria-expanded={commentsOpen} onClick={() => setCommentsOpen(v => !v)}><MessageCircle size={18} /><b className="num">{money(reaction.comments)}</b></button>
       <span className="feed-card-links">
         {post.scope === "player" && <Link href={`/players/${encodeURIComponent(post.target)}`}>선수 정보</Link>}
-        <Link href={`/community/posts/${post.id}`}>상세·신고</Link>
+        <Link href={`/community/posts/${post.id}`}>상세</Link>
       </span>
     </div>
     {error && <p className="field-error" role="alert">{error}</p>}
@@ -150,6 +152,7 @@ function FeedCard({ post, showTarget }: { post: Post; showTarget: boolean }) {
       {!!data.session?.profile && fan ? <form onSubmit={comment}><label className="sr-only" htmlFor={`feed-comment-${post.id}`}>피드 댓글 내용</label><textarea id={`feed-comment-${post.id}`} rows={2} maxLength={1000} value={body} disabled={busy} placeholder="의견을 남겨보세요" onChange={e => { request.current = ""; setBody(e.target.value); }} /><button className="button primary small" disabled={busy || !body.trim()}>{busy ? <LoaderCircle size={14} className="kx-spin" /> : <Send size={14} />}댓글 등록</button></form> : <p className="feed-comments-lock">{post.scope === "club" && data.session?.profile ? "해당 구단 응원 팬만 댓글을 작성할 수 있습니다." : "로그인하고 프로필을 설정하면 댓글을 작성할 수 있습니다."}</p>}
       <Link className="text-link" href={`/community/posts/${post.id}`}>댓글 전체 보기 · 답글 작성 <ChevronRight size={14} /></Link>
     </section>}
+    </div>
   </article>;
 }
 

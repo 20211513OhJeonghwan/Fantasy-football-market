@@ -47,7 +47,7 @@
   transition: box-shadow var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
 }
 .account-login { gap: var(--s-6); padding: 0 var(--s-6); }
-.account-login:hover, .account-trigger:hover, .account-trigger[aria-expanded="true"] { transform: translate(-2px, -2px); box-shadow: var(--shadow-hard); }
+.account-login:hover, .account-trigger:hover, .account-trigger[aria-expanded="true"] { transform: translateY(-2px); box-shadow: var(--shadow-hard); }
 .account-trigger { padding: 0 var(--s-3) 0 8px; min-width: 210px; text-align: left; }
 .account-avatar { display: grid; place-items: center; width: 38px; height: 38px; flex: none; background: var(--ink); color: var(--yellow); font-weight: 900; font-size: 16px; border-radius: 50%; }
 .account-text { display: grid; flex: 1; line-height: 1.25; min-width: 0; }

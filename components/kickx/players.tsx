@@ -379,11 +379,6 @@ export function PlayerDetail() {
         <StatCard label="출전 시간" value={money(p.minutes)} unit="분" />
         <StatCard label="거래량" value={money(p.volume)} unit="건" />
       </div>
-      <ul className="value-legend" aria-label="숫자의 의미">
-        <li><b>현재 가치</b>마지막으로 발행된 거래 기준 가격입니다.</li>
-        <li><b>변동률</b>직전 발행 대비 변화입니다. 여러 경기가 한 번에 반영되면 한 경기 변화보다 클 수 있습니다.</li>
-        <li><b>Performance</b>경기 1건의 저장 점수입니다. 가격·손익과는 다른 숫자입니다. <Link className="text-link" href="/rules">점수표</Link></li>
-      </ul>
       <div className="detail-layout">
         <div className="detail-main">
           <section className="panel">

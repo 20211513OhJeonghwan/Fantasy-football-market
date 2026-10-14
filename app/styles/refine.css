@@ -1,0 +1,168 @@
+/* Refinement layer (2026-10-14): softer frames, rounded surfaces and calmer type on top of Yellow Playbook.
+   Loaded last so it can tune shared components without rewriting every page rule. */
+
+/* Surfaces */
+.panel, .card, .stat-grid, .article, .comment-form, .rules-section, .score-panel, .proto-admin,
+.lounge-head, .explorer, .post-browser, .feed-composer, .community-entry-card, .match-row, .roster-card,
+.club-list a, .lounge-card, .my-lounge, .my-lounge-players, .portfolio-hero, .podium-card, .my-rank,
+.admin-quick-card, .squad-board, .write-form, .detail-price, .market-hero, .rules-hero, .team-section,
+.attached-trade, .feed-trade-card, .post-trade, .feed-comments, .score-notes, .score-table, .review-block.quote p {
+  border-radius: var(--radius-3);
+}
+.panel, .card { box-shadow: var(--shadow-1); }
+.panel.frame, .card.frame, .stat-grid, .article, .rules-section, .score-panel { border-color: var(--line-2); }
+.stat-grid { overflow: hidden; box-shadow: var(--shadow-1); }
+.match-row, .roster-card, .club-list a, .lounge-card, .my-lounge { overflow: hidden; }
+.match-row::before { border-radius: var(--radius-3) 0 0 var(--radius-3); }
+.match-row::after { border-radius: 0 var(--radius-3) var(--radius-3) 0; }
+.feed-trade-card, .post-trade, .attached-trade { border-width: 1px; border-color: var(--line-2); }
+.my-lounge-players, .comment-target, .feed-comments { border-radius: var(--radius-2); }
+
+/* Headings: lighter rule, calmer weight */
+.page-heading { border-bottom: 1px solid var(--line-2); padding-bottom: var(--s-5); }
+.page-heading h1 { font-weight: 800; letter-spacing: -0.04em; }
+.section-title h2, .panel-head h2 { letter-spacing: -0.03em; }
+.eyebrow { letter-spacing: 0.12em; color: var(--text-3); }
+.eyebrow::before { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow-strong); box-shadow: none; transform: none; }
+
+/* Controls */
+.button { border-width: 1px; border-radius: 8px; font-weight: 700; }
+.button.secondary, .button:not(.primary):not(.accent):not(.danger) { border-color: var(--line-2); }
+.button.secondary:hover:not(:disabled), .button:not(.primary):not(.accent):not(.danger):hover:not(:disabled) { border-color: var(--ink); background: var(--surface); }
+.button.primary:hover:not(:disabled), .button.accent:hover:not(:disabled) { box-shadow: var(--shadow-hard); transform: translateY(-1px); }
+input, select, textarea { border-width: 1px; border-radius: 8px; }
+.kx-select-trigger, .input-search { border-radius: 8px; }
+.icon-button { border-radius: 8px; }
+.tag, .category-tag, .status-pill, .trade-type, .position, .league-mark, .result-tag, .score-status { border-radius: 6px; }
+.score-chip { border-radius: 8px; }
+.pagination button { border-radius: 8px; border-width: 1px; }
+
+/* Tables */
+.data-table thead th { background: transparent; border-bottom: 1px solid var(--line-2); color: var(--text-3); font-weight: 700; }
+.data-table tbody tr:hover { background: var(--surface-2); }
+
+/* Tabs and segments */
+.segment, .tabs.segment { border-radius: 10px; }
+
+/* Decorative lettering stays out of the way */
+.community-entry-card::after, .rules-hero::after, .portfolio-hero::after { display: none; }
+.lounge-hero-code { opacity: 0.55; }
+.detail-hero-number { opacity: 0.6; }
+
+/* Hover lift without hard offset */
+.hover-lift:hover { border-color: var(--line-2); }
+
+/* Modal */
+.modal { border-radius: 16px; }
+.tabs.segment { border: 1px solid var(--line-2); border-radius: 10px; padding: 3px; background: var(--surface-2); }
+.tabs.segment button { border-radius: 7px; font-weight: 700; }
+.tabs.segment button.active { background: var(--ink); color: #fff; box-shadow: var(--shadow-1); }
+
+/* ================= COMMUNITY · feed (Toss-style reading list) ================= */
+.community-switch { border: 1px solid var(--line-2); border-radius: 12px; padding: 3px; background: var(--surface); gap: 2px; }
+.community-switch a { height: 38px; border-radius: 9px; font-weight: 700; }
+.community-switch a + a { border-left: 0; }
+.community-switch a[aria-current="page"] { background: var(--ink); color: #fff; }
+
+.community-feed { gap: var(--s-3); }
+.community-feed > .panel.flush { border: 0; border-radius: 18px; box-shadow: 0 1px 2px rgba(17, 17, 16, 0.04), 0 4px 18px -8px rgba(17, 17, 16, 0.08); }
+.community-feed .post-browser-title { padding: var(--s-6) var(--s-6) var(--s-2); }
+.community-feed .post-browser-title h2 { font-size: 20px; font-weight: 800; }
+.community-feed .panel-head { padding: var(--s-2) var(--s-6) var(--s-3); border-bottom: 0; }
+.community-feed .panel-head .tabs { gap: 6px; border: 0; overflow-x: auto; scrollbar-width: none; }
+.community-feed .panel-head .tabs button { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-size: var(--fs-small); font-weight: 700; border: 0; box-shadow: none; }
+.community-feed .panel-head .tabs button::after { display: none; }
+.community-feed .panel-head .tabs button.active { background: var(--ink); color: #fff; }
+.community-feed .post-tools { padding: 0 var(--s-6) var(--s-4); border-bottom: 1px solid var(--line); }
+.community-feed .post-tools .input-search { background: var(--surface-2); border-color: transparent; }
+
+/* Composer */
+.feed-composer { border: 0; border-radius: 18px; box-shadow: 0 1px 2px rgba(17, 17, 16, 0.04), 0 4px 18px -8px rgba(17, 17, 16, 0.08); overflow: hidden; }
+.feed-composer-open { padding: var(--s-4) var(--s-5); gap: var(--s-3); }
+.feed-composer-open:hover { background: var(--surface); }
+.feed-composer-open .rank-avatar { width: 40px; height: 40px; background: var(--yellow); color: var(--ink); }
+.feed-composer-prompt { border: 0; border-radius: 12px; padding: 12px 16px; background: var(--surface-2); color: var(--text-3); font-weight: 500; transition: background var(--t-fast) var(--ease); }
+.feed-composer-open:hover .feed-composer-prompt { background: var(--surface-3); color: var(--text-2); }
+.feed-composer-cta { width: 40px; height: 40px; padding: 0; justify-content: center; border-radius: 50%; background: var(--ink); color: var(--yellow); }
+.feed-composer-form { box-shadow: none; }
+.feed-composer-form textarea, .feed-comments textarea { border: 1px solid var(--line-2); border-radius: 12px; background: var(--surface-2); }
+.feed-composer-form textarea:focus, .feed-comments textarea:focus { background: var(--surface); border-color: var(--ink); box-shadow: 0 0 0 3px rgba(255, 226, 58, 0.55); }
+.feed-composer-advanced { border: 0; border-radius: 12px; }
+.feed-composer-foot { border-top: 0; padding-top: 0; }
+.feed-composer-foot .button { border-radius: 999px; padding: 0 18px; }
+.feed-composer-locked { border-radius: 0; background: var(--surface); }
+
+/* Post row: avatar column + reading column */
+.community-feed-card { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; padding: var(--s-5) var(--s-6); border-bottom: 1px solid var(--line); border-radius: 0; }
+.community-feed-card:hover { background: #fbfbf9; }
+.feed-avatar { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--surface-3); color: var(--ink-2); font-size: 15px; font-weight: 800; }
+.feed-main { min-width: 0; display: grid; justify-items: start; }
+.feed-main > * { max-width: 100%; }
+.community-feed-card .feed-card-header { display: flex; align-items: baseline; justify-content: flex-start; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+.feed-author { font-size: 15px; font-weight: 700; color: var(--ink); }
+.feed-card-header time, .feed-category { font-size: var(--fs-small); color: var(--text-3); }
+.feed-category::before, .feed-card-header time::before { content: "·"; margin-right: 6px; }
+.community-feed-card .feed-card-target { height: 30px; padding: 0 12px 0 4px; margin-bottom: 8px; border: 0; border-radius: 999px; background: var(--surface-2); font-size: var(--fs-small); font-weight: 700; }
+.community-feed-card .feed-card-target::before { display: none; }
+.community-feed-card .feed-card-target:hover { background: var(--surface-3); }
+.community-feed-card .feed-card-target .portrait, .community-feed-card .feed-card-target .crest { margin-left: 0; }
+.community-feed-card .feed-card-target .portrait { --w: 24px; --h: 24px; border-radius: 50%; }
+.community-feed-card .feed-card-target .change { font-size: 12px; }
+.community-feed-card h3 { margin-bottom: 4px; font-size: 16px; font-weight: 800; }
+.community-feed-card .feed-card-body { font-size: 15.5px; line-height: 1.7; color: var(--ink-2); }
+.feed-more { text-decoration: none; color: var(--text-3); font-weight: 700; }
+.community-feed-card .feed-trade-card { margin-top: 10px; padding: 10px 14px; border: 0; border-radius: 12px; background: var(--surface-2); }
+.community-feed-card .feed-card-actions { width: 100%; gap: 18px; margin-top: 12px; }
+.community-feed-card .feed-action { min-height: 32px; padding: 0; border: 0; background: none; gap: 6px; color: var(--text-3); }
+.community-feed-card .feed-action b { color: inherit; font-weight: 700; }
+.community-feed-card .feed-action:hover:not(:disabled) { color: var(--ink); border: 0; }
+.community-feed-card .feed-action.on { background: none; color: #f04452; }
+.community-feed-card .feed-action.on svg { color: #f04452; }
+.community-feed-card .feed-action.open { background: none; color: var(--ink); }
+.community-feed-card .feed-comments { width: 100%; border-left: 0; border-radius: 14px; padding: var(--s-4); }
+.community-feed-card .feed-comments li .rank-avatar { background: var(--surface); color: var(--ink-2); border: 1px solid var(--line-2); }
+.feed-empty { padding: var(--s-12) var(--s-6); }
+
+/* Hub chrome around the feed */
+.my-lounge, .my-lounge-players { border: 0; box-shadow: 0 1px 2px rgba(17, 17, 16, 0.04), 0 4px 18px -8px rgba(17, 17, 16, 0.08); }
+.my-lounge::before { width: 4px; }
+.my-lounge-players { background: var(--surface); color: var(--ink); }
+.my-lounge-players > small { color: var(--text-3); }
+.my-lounge-players p { color: var(--text-3); }
+.my-lounge-players .lounge-chip { background: var(--surface-2); border-radius: 999px; color: var(--ink); }
+.my-lounge-players .lounge-chip .portrait { border-radius: 50%; }
+.hub-aside .side-panel { border: 0; border-radius: 18px; box-shadow: 0 1px 2px rgba(17, 17, 16, 0.04), 0 4px 18px -8px rgba(17, 17, 16, 0.08); }
+.popular-list li > span { color: var(--text-3); }
+.explorer { border: 0; border-radius: 18px; box-shadow: 0 1px 2px rgba(17, 17, 16, 0.04), 0 4px 18px -8px rgba(17, 17, 16, 0.08); }
+.explorer-head { border-bottom: 1px solid var(--line); }
+.club-list a, .explorer .lounge-card { border-color: var(--line); border-radius: 12px; }
+.lounge-head { border: 0; border-radius: 18px; box-shadow: 0 1px 2px rgba(17, 17, 16, 0.04), 0 4px 18px -8px rgba(17, 17, 16, 0.08); }
+.lounge-head::before { border-radius: 18px 0 0 18px; }
+.lounge-head-stats { border-radius: 12px; overflow: hidden; }
+.community-entry-card { border: 0; border-radius: 22px; }
+
+@media (max-width: 640px) {
+  .community-feed-card { grid-template-columns: 34px minmax(0, 1fr); gap: 10px; padding: var(--s-4); }
+  .feed-avatar { width: 34px; height: 34px; font-size: 13px; }
+  .community-feed .panel-head, .community-feed .post-tools, .community-feed .post-browser-title { padding-left: var(--s-4); padding-right: var(--s-4); }
+  .community-feed .panel-head .tabs { flex-wrap: nowrap; }
+  .feed-card-links { width: auto; margin-left: auto; }
+}
+
+/* ================= Page chrome (home, rank, auth, rules) ================= */
+.home-search, .dash-panel, .movers-grid, .dash-watch-card, .google-button, .profile-card, .pipeline, .rules-policy,
+.rules-term, .rules-formula, .rules-price, .write-scope button, .like-button, .home-guide, .admin-hero, .detail-hero,
+.lounge-hero, .lounge-hero-mark, .pitch, .squad-footer, .bench-best, .order-panel, .podium-card, .my-rank, .portfolio-hero {
+  border-radius: var(--radius-3);
+}
+.home-search, .dash-panel, .movers-grid, .podium-card, .my-rank, .squad-board, .detail-price, .profile-card, .order-panel {
+  border-color: var(--line-2); box-shadow: var(--shadow-1);
+}
+.movers-grid, .home-guide, .admin-hero, .detail-hero, .pitch, .dash-watch-card { overflow: hidden; }
+.match-score strong { border-radius: 8px; }
+.dash-watch-card:hover, .podium-card:hover { box-shadow: var(--shadow-hard); }
+.rules-step { border-radius: 10px; border-color: var(--ink); }
+.podium-card.place-1 { box-shadow: 0 18px 40px -20px rgba(17, 17, 16, 0.55); }
+.market-hero { border-radius: 18px; overflow: hidden; }
+.lounge-head { overflow: hidden; }
+.lounge-head::before { border-radius: 0; }

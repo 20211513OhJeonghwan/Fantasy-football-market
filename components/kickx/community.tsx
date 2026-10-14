@@ -4,7 +4,7 @@ import { simple, useTeamOptions } from "./options";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { ArrowRight, ChevronLeft, ChevronRight, LoaderCircle, Lock, LogIn, MessageCircle, Paperclip, Pencil, Search, UserRound, Users } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, LoaderCircle, Lock, MessageCircle, Paperclip, Pencil, Search, UserRound, Users } from "lucide-react";
 import { dateText, money, score } from "@/lib/kickx/data";
 import type { Post, Player } from "@/lib/kickx/types";
 import { clubIdentity } from "@/lib/kickx/club-identity";
@@ -188,31 +188,11 @@ export function CommunityHub({ kind }: { kind: "club" | "player" }) {
         <CommunityFeed key={kind} scope={kind} title={kind === "club" ? "구단 이야기" : "선수 이야기"} />
         <aside className="hub-aside">
           <PopularPosts posts={posts} scope={kind} />
-          <div className="community-guide">
-            <MessageCircle size={20} />
-            <h3>함께 지키는 라운지 규칙</h3>
-            <p>근거 있는 의견과 서로 다른 응원에 대한 존중을 지켜 주세요. 거래 첨부는 본인 거래만 가능합니다.</p>
-          </div>
         </aside>
       </div>
       {kind === "club" ? <ClubExplorer count={count} /> : <PlayerExplorer count={count} />}
     </>
   );
-}
-/** What the visitor can do in this lounge, and the next step when they cannot write. */
-function WriteAccess({ scope, target, name, found }: { scope: "club" | "player"; target: string; name?: string; found: boolean }) {
-  const { data, status, getTeam } = usePlatform();
-  if (status !== "ready" || !found) return null;
-  const write = `/community/write?scope=${scope}&target=${encodeURIComponent(target)}`;
-  const myTeam = getTeam(data.session?.profile?.team);
-  const [icon, text, action] = !data.session
-    ? [<LogIn key="i" size={16} />, "로그인하면 글과 댓글을 쓸 수 있습니다. 읽기는 누구나 가능합니다.", <Link key="a" className="button primary small" href="/login">로그인</Link>]
-    : !data.session.profile
-      ? [<UserRound key="i" size={16} />, "닉네임과 응원 구단을 정하면 커뮤니티에 참여할 수 있습니다.", <Link key="a" className="button primary small" href="/mypage">프로필 설정</Link>]
-      : scope === "club" && data.session.profile.team !== target
-        ? [<Lock key="i" size={16} />, <>이 라운지의 글·댓글은 <b>{name}</b> 응원 팬만 쓸 수 있습니다.{myTeam ? <> 현재 응원 구단은 <b>{myTeam.name}</b>입니다.</> : " 아직 응원 구단이 없습니다."}</>, <Link key="a" className="button secondary small" href={myTeam ? `/community/clubs/${myTeam.id}` : "/mypage"}>{myTeam ? "내 구단 라운지" : "응원 구단 설정"}</Link>]
-        : [<Pencil key="i" size={16} />, "이 라운지에 글을 쓸 수 있습니다. 이용 제한 중인 계정은 저장 시 안내됩니다.", <Link key="a" className="button primary small" href={write}><Pencil size={14} />글쓰기</Link>];
-  return <div className="write-access" role="note">{icon}<span>{text}</span>{action}</div>;
 }
 export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
   const params = useParams();
@@ -259,7 +239,6 @@ export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
           {player && <Link className="text-link" href={`/players/${player.id}`}>선수 상세 <ArrowRight size={14} /></Link>}
         </div>
       </header>
-      <WriteAccess scope={scope} target={target} name={name} found={found} />
       <MemberNotice />
       <div className="hub-layout">
         {found ? <CommunityFeed key={`${scope}:${target}`} scope={scope} target={target} targetName={name} title="라운지 이야기" /> : <DataEmpty entity="라운지" status={scope === "player" ? detail.status : status} />}

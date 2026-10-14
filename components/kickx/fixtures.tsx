@@ -111,7 +111,6 @@ export function FixturesScreen() {
         </div>
         <p className="fixture-summary" role="status">
           {status === "ready" ? <><b className="num">{total}</b>경기</> : "경기 정보를 준비하고 있습니다."}
-          <span>진행 상태는 마지막 수집 기록을 기준으로 표시합니다.</span>
         </p>
         {[...groups].map(([date, fixtures]) => (
           <section className="match-day" key={date}>
