@@ -56,7 +56,7 @@ async function checkFixtures(db,api,contexts,scope,now,deadline,summary) {
       await apply(db,{batch});summary.checked++;
       const status=normalizeStatus(detail);
       if(FINAL.has(status)) checked(await db.from('realtime_fixture_tasks').upsert({fixture_id:fixture.id,payload:{context:{...context,scopeTeamIds:scope},eventId:detail.id,phase:'stats',detail},priority:Date.parse(now)-Date.parse(fixture.starts_at)<6*3600000?0:10,retry_at:now,error_code:null}));
-      const delay=fixturePollDelay({...fixture,status},now);
+      const delay=fixturePollDelay({...fixture,starts_at:batch.fixtures[0].starts_at,status},now);
       checked(await db.from('realtime_fixture_checks').upsert({fixture_id:fixture.id,checked_at:now,retry_at:add(now,delay)}));
     } catch(e) {
       if(/BUDGET|QUOTA|RATE_LIMIT/.test(errorCode(e)))throw e;
@@ -131,6 +131,7 @@ export async function runRealtimeFootball(db,key,{calculate,claim,emit=()=>{},du
     await calculatePending(db,calculate,deadline-2000,summary);
     if(summary.calculated && Date.now()<deadline-1000)checked(await db.rpc('kickx_auto_refresh_rankings'));
   } catch(e){failure??=errorCode(e);}
+  if(summary.failed>0)failure??='MATCH_RETRY';
   summary.requests=api.requests;
   checked(await db.rpc('kickx_realtime_finish',{p_token:lease.token,p_summary:summary,p_error:failure}));
   emit({stage:'realtime',...summary,error:failure});
