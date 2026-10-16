@@ -287,7 +287,7 @@ export function HomeScreen() {
             </button>
           )}
           {total > 50 && limit === 50 && <Link className="board-more" href="/players">전체 선수 탐색 <ArrowRight size={16} /></Link>}
-          {total > 0 && <p className="board-foot">최근 갱신 {dateText(data.updatedAt)} · 가치와 Performance는 KICK-X 내부 지표입니다.</p>}
+          {total > 0 && <p className="board-foot">가격 적용 {dateText(data.updatedAt)} · 가치와 Performance는 KICK-X 내부 지표입니다.</p>}
         </section>
         <aside className="home-side" aria-label="나의 축구 대시보드">
           <AssetsPanel />

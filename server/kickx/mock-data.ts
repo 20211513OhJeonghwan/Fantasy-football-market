@@ -151,55 +151,55 @@ const teams: Team[] = [
   club("rcl", "랑스", "RC Lens", "ligue1"),
 ];
 
-type Seed = [id: string, name: string, english: string, short: string, team: string, position: Player["position"], number: number, country: string, age: number, price: number, change: number, performance: number];
+type Seed = [id: string, name: string, english: string, short: string, team: string, position: Player["position"], country: string, age: number, price: number, change: number, performance: number];
 const seeds: Seed[] = [
-  ["haaland", "엘링 홀란", "Erling Haaland", "홀란", "mci", "FW", 9, "노르웨이", 26, 168_400, 6.4, 91],
-  ["rodri", "로드리", "Rodri", "로드리", "mci", "MF", 16, "스페인", 30, 121_300, -1.2, 78],
-  ["foden", "필 포든", "Phil Foden", "포든", "mci", "MF", 47, "잉글랜드", 26, 104_800, 2.1, 74],
-  ["dias", "후벵 디아스", "Rúben Dias", "디아스", "mci", "DF", 3, "포르투갈", 29, 82_600, 0.4, 71],
-  ["saka", "부카요 사카", "Bukayo Saka", "사카", "ars", "FW", 7, "잉글랜드", 25, 142_900, 8.7, 88],
-  ["odegaard", "마르틴 외데고르", "Martin Ødegaard", "외데고르", "ars", "MF", 8, "노르웨이", 27, 109_500, -2.8, 69],
-  ["rice", "데클란 라이스", "Declan Rice", "라이스", "ars", "MF", 41, "잉글랜드", 27, 116_200, 3.3, 82],
-  ["saliba", "윌리엄 살리바", "William Saliba", "살리바", "ars", "DF", 2, "프랑스", 25, 96_700, 1.9, 80],
-  ["raya", "다비드 라야", "David Raya", "라야", "ars", "GK", 22, "스페인", 30, 54_300, 0.8, 76],
-  ["salah", "모하메드 살라", "Mohamed Salah", "살라", "liv", "FW", 11, "이집트", 34, 118_600, -4.6, 72],
-  ["wirtz", "플로리안 비르츠", "Florian Wirtz", "비르츠", "liv", "MF", 7, "독일", 23, 131_800, 11.2, 90],
-  ["vandijk", "버질 반 다이크", "Virgil van Dijk", "반 다이크", "liv", "DF", 4, "네덜란드", 35, 71_400, -0.6, 77],
-  ["alisson", "알리송", "Alisson Becker", "알리송", "liv", "GK", 1, "브라질", 33, 49_800, 0, 70],
-  ["maddison", "제임스 매디슨", "James Maddison", "매디슨", "tot", "MF", 10, "잉글랜드", 29, 63_900, -3.1, 61],
-  ["vandeven", "미키 반 더 벤", "Micky van de Ven", "반 더 벤", "tot", "DF", 37, "네덜란드", 25, 68_200, 4.4, 79],
-  ["vicario", "굴리엘모 비카리오", "Guglielmo Vicario", "비카리오", "tot", "GK", 1, "이탈리아", 29, 38_400, -1.9, 63],
-  ["mbappe", "킬리안 음바페", "Kylian Mbappé", "음바페", "rma", "FW", 9, "프랑스", 27, 178_200, 4.9, 93],
-  ["vinicius", "비니시우스 주니오르", "Vinícius Júnior", "비니시우스", "rma", "FW", 7, "브라질", 26, 151_700, -5.4, 75],
-  ["bellingham", "주드 벨링엄", "Jude Bellingham", "벨링엄", "rma", "MF", 5, "잉글랜드", 23, 158_900, 2.6, 86],
-  ["valverde", "페데리코 발베르데", "Federico Valverde", "발베르데", "rma", "MF", 8, "우루과이", 28, 112_400, 1.1, 79],
-  ["courtois", "티보 쿠르투아", "Thibaut Courtois", "쿠르투아", "rma", "GK", 1, "벨기에", 34, 52_600, 2.4, 84],
-  ["yamal", "라민 야말", "Lamine Yamal", "야말", "fcb", "FW", 10, "스페인", 19, 172_300, 9.8, 92],
-  ["pedri", "페드리", "Pedri", "페드리", "fcb", "MF", 8, "스페인", 23, 127_500, 3.7, 85],
-  ["raphinha", "하피냐", "Raphinha", "하피냐", "fcb", "FW", 11, "브라질", 29, 109_900, -2.2, 73],
-  ["kounde", "쥘 쿤데", "Jules Koundé", "쿤데", "fcb", "DF", 23, "프랑스", 27, 74_800, 0.9, 74],
-  ["griezmann", "앙투안 그리즈만", "Antoine Griezmann", "그리즈만", "atm", "FW", 7, "프랑스", 35, 58_700, -6.8, 64],
-  ["oblak", "얀 오블락", "Jan Oblak", "오블락", "atm", "GK", 13, "슬로베니아", 33, 41_900, 1.6, 78],
-  ["oyarzabal", "미켈 오야르사발", "Mikel Oyarzabal", "오야르사발", "rso", "FW", 10, "스페인", 29, 61_300, 5.2, 77],
-  ["lautaro", "라우타로 마르티네스", "Lautaro Martínez", "라우타로", "int", "FW", 10, "아르헨티나", 29, 124_100, 3.0, 83],
-  ["barella", "니콜로 바렐라", "Nicolò Barella", "바렐라", "int", "MF", 23, "이탈리아", 29, 92_800, -0.8, 72],
-  ["bastoni", "알레산드로 바스토니", "Alessandro Bastoni", "바스토니", "int", "DF", 95, "이탈리아", 27, 84_300, 2.7, 81],
-  ["pulisic", "크리스천 풀리식", "Christian Pulisic", "풀리식", "mil", "FW", 11, "미국", 28, 79_600, 6.1, 80],
-  ["maignan", "마이크 메냥", "Mike Maignan", "메냥", "mil", "GK", 16, "프랑스", 31, 47_200, -2.5, 66],
-  ["vlahovic", "두산 블라호비치", "Dušan Vlahović", "블라호비치", "juv", "FW", 9, "세르비아", 26, 71_800, -7.4, 58],
-  ["bremer", "브레메르", "Gleison Bremer", "브레메르", "juv", "DF", 3, "브라질", 29, 66_500, 0.3, 73],
-  ["mctominay", "스콧 맥토미니", "Scott McTominay", "맥토미니", "nap", "MF", 8, "스코틀랜드", 29, 77_900, 4.0, 81],
-  ["kane", "해리 케인", "Harry Kane", "케인", "bay", "FW", 9, "잉글랜드", 33, 146_500, 5.6, 89],
-  ["musiala", "자말 무시알라", "Jamal Musiala", "무시알라", "bay", "MF", 10, "독일", 23, 149_200, 7.3, 87],
-  ["kimminjae", "김민재", "Kim Min-jae", "김민재", "bay", "DF", 3, "대한민국", 29, 78_300, 3.8, 82],
-  ["kimmich", "요주아 키미히", "Joshua Kimmich", "키미히", "bay", "MF", 6, "독일", 31, 98_100, -1.4, 76],
-  ["kobel", "그레고어 코벨", "Gregor Kobel", "코벨", "bvb", "GK", 1, "스위스", 28, 45_600, 2.9, 79],
-  ["brandt", "율리안 브란트", "Julian Brandt", "브란트", "bvb", "MF", 10, "독일", 30, 58_400, -3.6, 62],
-  ["grimaldo", "알레한드로 그리말도", "Alejandro Grimaldo", "그리말도", "b04", "DF", 20, "스페인", 31, 61_700, 1.4, 75],
-  ["dembele", "우스만 뎀벨레", "Ousmane Dembélé", "뎀벨레", "psg", "FW", 10, "프랑스", 29, 139_600, 2.0, 84],
-  ["leekangin", "이강인", "Lee Kang-in", "이강인", "psg", "MF", 19, "대한민국", 25, 72_900, 10.4, 83],
-  ["vitinha", "비티냐", "Vitinha", "비티냐", "psg", "MF", 17, "포르투갈", 26, 106_300, 1.8, 82],
-  ["hakimi", "아슈라프 하키미", "Achraf Hakimi", "하키미", "psg", "DF", 2, "모로코", 27, 91_400, -0.9, 78],
+  ["haaland", "엘링 홀란", "Erling Haaland", "홀란", "mci", "FW", "노르웨이", 26, 168_400, 6.4, 91],
+  ["rodri", "로드리", "Rodri", "로드리", "mci", "MF", "스페인", 30, 121_300, -1.2, 78],
+  ["foden", "필 포든", "Phil Foden", "포든", "mci", "MF", "잉글랜드", 26, 104_800, 2.1, 74],
+  ["dias", "후벵 디아스", "Rúben Dias", "디아스", "mci", "DF", "포르투갈", 29, 82_600, 0.4, 71],
+  ["saka", "부카요 사카", "Bukayo Saka", "사카", "ars", "FW", "잉글랜드", 25, 142_900, 8.7, 88],
+  ["odegaard", "마르틴 외데고르", "Martin Ødegaard", "외데고르", "ars", "MF", "노르웨이", 27, 109_500, -2.8, 69],
+  ["rice", "데클란 라이스", "Declan Rice", "라이스", "ars", "MF", "잉글랜드", 27, 116_200, 3.3, 82],
+  ["saliba", "윌리엄 살리바", "William Saliba", "살리바", "ars", "DF", "프랑스", 25, 96_700, 1.9, 80],
+  ["raya", "다비드 라야", "David Raya", "라야", "ars", "GK", "스페인", 30, 54_300, 0.8, 76],
+  ["salah", "모하메드 살라", "Mohamed Salah", "살라", "liv", "FW", "이집트", 34, 118_600, -4.6, 72],
+  ["wirtz", "플로리안 비르츠", "Florian Wirtz", "비르츠", "liv", "MF", "독일", 23, 131_800, 11.2, 90],
+  ["vandijk", "버질 반 다이크", "Virgil van Dijk", "반 다이크", "liv", "DF", "네덜란드", 35, 71_400, -0.6, 77],
+  ["alisson", "알리송", "Alisson Becker", "알리송", "liv", "GK", "브라질", 33, 49_800, 0, 70],
+  ["maddison", "제임스 매디슨", "James Maddison", "매디슨", "tot", "MF", "잉글랜드", 29, 63_900, -3.1, 61],
+  ["vandeven", "미키 반 더 벤", "Micky van de Ven", "반 더 벤", "tot", "DF", "네덜란드", 25, 68_200, 4.4, 79],
+  ["vicario", "굴리엘모 비카리오", "Guglielmo Vicario", "비카리오", "tot", "GK", "이탈리아", 29, 38_400, -1.9, 63],
+  ["mbappe", "킬리안 음바페", "Kylian Mbappé", "음바페", "rma", "FW", "프랑스", 27, 178_200, 4.9, 93],
+  ["vinicius", "비니시우스 주니오르", "Vinícius Júnior", "비니시우스", "rma", "FW", "브라질", 26, 151_700, -5.4, 75],
+  ["bellingham", "주드 벨링엄", "Jude Bellingham", "벨링엄", "rma", "MF", "잉글랜드", 23, 158_900, 2.6, 86],
+  ["valverde", "페데리코 발베르데", "Federico Valverde", "발베르데", "rma", "MF", "우루과이", 28, 112_400, 1.1, 79],
+  ["courtois", "티보 쿠르투아", "Thibaut Courtois", "쿠르투아", "rma", "GK", "벨기에", 34, 52_600, 2.4, 84],
+  ["yamal", "라민 야말", "Lamine Yamal", "야말", "fcb", "FW", "스페인", 19, 172_300, 9.8, 92],
+  ["pedri", "페드리", "Pedri", "페드리", "fcb", "MF", "스페인", 23, 127_500, 3.7, 85],
+  ["raphinha", "하피냐", "Raphinha", "하피냐", "fcb", "FW", "브라질", 29, 109_900, -2.2, 73],
+  ["kounde", "쥘 쿤데", "Jules Koundé", "쿤데", "fcb", "DF", "프랑스", 27, 74_800, 0.9, 74],
+  ["griezmann", "앙투안 그리즈만", "Antoine Griezmann", "그리즈만", "atm", "FW", "프랑스", 35, 58_700, -6.8, 64],
+  ["oblak", "얀 오블락", "Jan Oblak", "오블락", "atm", "GK", "슬로베니아", 33, 41_900, 1.6, 78],
+  ["oyarzabal", "미켈 오야르사발", "Mikel Oyarzabal", "오야르사발", "rso", "FW", "스페인", 29, 61_300, 5.2, 77],
+  ["lautaro", "라우타로 마르티네스", "Lautaro Martínez", "라우타로", "int", "FW", "아르헨티나", 29, 124_100, 3.0, 83],
+  ["barella", "니콜로 바렐라", "Nicolò Barella", "바렐라", "int", "MF", "이탈리아", 29, 92_800, -0.8, 72],
+  ["bastoni", "알레산드로 바스토니", "Alessandro Bastoni", "바스토니", "int", "DF", "이탈리아", 27, 84_300, 2.7, 81],
+  ["pulisic", "크리스천 풀리식", "Christian Pulisic", "풀리식", "mil", "FW", "미국", 28, 79_600, 6.1, 80],
+  ["maignan", "마이크 메냥", "Mike Maignan", "메냥", "mil", "GK", "프랑스", 31, 47_200, -2.5, 66],
+  ["vlahovic", "두산 블라호비치", "Dušan Vlahović", "블라호비치", "juv", "FW", "세르비아", 26, 71_800, -7.4, 58],
+  ["bremer", "브레메르", "Gleison Bremer", "브레메르", "juv", "DF", "브라질", 29, 66_500, 0.3, 73],
+  ["mctominay", "스콧 맥토미니", "Scott McTominay", "맥토미니", "nap", "MF", "스코틀랜드", 29, 77_900, 4.0, 81],
+  ["kane", "해리 케인", "Harry Kane", "케인", "bay", "FW", "잉글랜드", 33, 146_500, 5.6, 89],
+  ["musiala", "자말 무시알라", "Jamal Musiala", "무시알라", "bay", "MF", "독일", 23, 149_200, 7.3, 87],
+  ["kimminjae", "김민재", "Kim Min-jae", "김민재", "bay", "DF", "대한민국", 29, 78_300, 3.8, 82],
+  ["kimmich", "요주아 키미히", "Joshua Kimmich", "키미히", "bay", "MF", "독일", 31, 98_100, -1.4, 76],
+  ["kobel", "그레고어 코벨", "Gregor Kobel", "코벨", "bvb", "GK", "스위스", 28, 45_600, 2.9, 79],
+  ["brandt", "율리안 브란트", "Julian Brandt", "브란트", "bvb", "MF", "독일", 30, 58_400, -3.6, 62],
+  ["grimaldo", "알레한드로 그리말도", "Alejandro Grimaldo", "그리말도", "b04", "DF", "스페인", 31, 61_700, 1.4, 75],
+  ["dembele", "우스만 뎀벨레", "Ousmane Dembélé", "뎀벨레", "psg", "FW", "프랑스", 29, 139_600, 2.0, 84],
+  ["leekangin", "이강인", "Lee Kang-in", "이강인", "psg", "MF", "대한민국", 25, 72_900, 10.4, 83],
+  ["vitinha", "비티냐", "Vitinha", "비티냐", "psg", "MF", "포르투갈", 26, 106_300, 1.8, 82],
+  ["hakimi", "아슈라프 하키미", "Achraf Hakimi", "하키미", "psg", "DF", "모로코", 27, 91_400, -0.9, 78],
 ];
 
 function history(id: string, price: number, change: number, now: number): SeriesPoint[] {
@@ -256,7 +256,7 @@ function scoreDetails(position: Player["position"], records_: Player["records"])
 }
 
 function players(now: number): Player[] {
-  return seeds.map(([id, name, english, short, teamId, position, number, country, age, price, change, seedPerformance]) => {
+  return seeds.map(([id, name, english, short, teamId, position, country, age, price, change, seedPerformance]) => {
     const random = seeded(id + "-season");
     const records_ = records(id, teamId, seedPerformance, position, now);
     // Raw prototype scores (not 0–100): each record shows the same score as its example breakdown.
@@ -266,7 +266,7 @@ function players(now: number): Player[] {
     const apps = 9 + Math.floor(random() * 4);
     const goalsRate = position === "FW" ? 0.7 : position === "MF" ? 0.25 : 0.05;
     return {
-      id, name, english, short, team: teamId, position, number, country, age, price, change, performance,
+      id, name, english, short, team: teamId, position, country, age, price, change, performance,
       volume: Math.round(200 + random() * 2600),
       goals: Math.round(apps * goalsRate * (0.6 + random() * 0.8)),
       assists: Math.round(apps * goalsRate * 0.6 * (0.5 + random())),
@@ -308,27 +308,26 @@ function fixtures(now: number): Fixture[] {
   });
 }
 
-const categories = ["경기 리뷰", "선수 분석", "거래 전략", "자유"];
 const authors = ["노스런던레드", "하이프레스", "가짜9번", "인버티드풀백", "중원사령관", "역습한방", "클린시트", "박스투박스"];
 
 function posts(now: number): { posts: Post[]; comments: Comment[] } {
-  const items: [Post["scope"], string, string, string, string, number][] = [
-    ["club", "ars", "경기 리뷰", "리버풀전 2-1, 하프스페이스 공략이 완벽했다", "전반 30분 이후 사카–외데고르 라인이 오른쪽 하프스페이스를 계속 열어줬습니다. 라이스의 전진 패스 비중도 눈에 띄게 늘었고요. 후반 교체 타이밍만 조금 빨랐으면 더 편하게 이겼을 경기.", 4],
-    ["club", "ars", "거래 전략", "사카 지금 들어가도 늦지 않았을까요?", "최근 일주일 +8% 넘게 올랐는데 다음 일정이 토트넘 원정입니다. 이미 보유 중인 분들은 어떻게 하실 계획인지 궁금합니다.", 9],
-    ["club", "rma", "경기 리뷰", "더비 3-1, 벨링엄 중원 장악력 미쳤다", "볼 회수 9회에 키패스 3회. 음바페 골보다 벨링엄의 압박 전환이 승부를 갈랐다고 봅니다.", 14],
-    ["club", "bay", "선수 분석", "김민재 최근 5경기 수비 지표 정리", "경합 성공률 71%, 인터셉트 경기당 2.4회. 빌드업 관여도 늘면서 Performance가 꾸준히 80점대를 유지 중입니다.", 20],
-    ["club", "psg", "자유", "이강인 오른쪽 하프스페이스 기용 계속 갔으면", "중앙에서 받을 때보다 측면에서 안으로 좁혀 들어올 때 결정적인 패스가 훨씬 많이 나오네요.", 26],
-    ["club", "liv", "거래 전략", "비르츠 +11%… 고점일까 시작일까", "적응 기간 끝나고 경기력이 올라온 게 숫자로 보입니다. 저는 절반만 익절하고 나머지는 홀드합니다.", 31],
-    ["player", "yamal", "선수 분석", "야말, 이번 시즌 드리블 성공률 리그 1위", "볼을 잡은 뒤 첫 터치 방향이 정말 다양합니다. 가격이 비싸도 장기 보유 가치가 있다고 봐요.", 3],
-    ["player", "haaland", "거래 전략", "홀란 16만 돌파, 지금 매각할 타이밍?", "다음 3경기가 상위권 팀 연전이라 고민됩니다. 거래 내역 첨부합니다.", 7],
-    ["player", "leekangin", "경기 리뷰", "이강인 2경기 연속 공격 포인트 🎯", "마르세유전 도움 장면, 수비 세 명 사이로 찔러준 패스가 압권이었습니다.", 11],
-    ["player", "kimminjae", "자유", "김민재 라운지 처음 왔습니다", "보유 선수 중 가장 꾸준한 선수라 애정이 갑니다. 다들 언제 영입하셨나요?", 16],
-    ["player", "saka", "선수 분석", "사카 xG 대비 득점 효율 정리", "기대득점 대비 실제 득점이 +2.1로 높은 편입니다. 단기 반등보다는 꾸준함이 강점.", 22],
-    ["player", "mbappe", "경기 리뷰", "음바페 해트트릭 이후 가치 반응", "해트트릭 다음 날 +4.9%. 이미 높은 가격대라 변동폭은 생각보다 작네요.", 40],
+  const items: [Post["scope"], string, string, string, number][] = [
+    ["club", "ars", "리버풀전 2-1, 하프스페이스 공략이 완벽했다", "전반 30분 이후 사카–외데고르 라인이 오른쪽 하프스페이스를 계속 열어줬습니다. 라이스의 전진 패스 비중도 눈에 띄게 늘었고요. 후반 교체 타이밍만 조금 빨랐으면 더 편하게 이겼을 경기.", 4],
+    ["club", "ars", "사카 지금 들어가도 늦지 않았을까요?", "최근 일주일 +8% 넘게 올랐는데 다음 일정이 토트넘 원정입니다. 이미 보유 중인 분들은 어떻게 하실 계획인지 궁금합니다.", 9],
+    ["club", "rma", "더비 3-1, 벨링엄 중원 장악력 미쳤다", "볼 회수 9회에 키패스 3회. 음바페 골보다 벨링엄의 압박 전환이 승부를 갈랐다고 봅니다.", 14],
+    ["club", "bay", "김민재 최근 5경기 수비 지표 정리", "경합 성공률 71%, 인터셉트 경기당 2.4회. 빌드업 관여도 늘면서 Performance가 꾸준히 80점대를 유지 중입니다.", 20],
+    ["club", "psg", "이강인 오른쪽 하프스페이스 기용 계속 갔으면", "중앙에서 받을 때보다 측면에서 안으로 좁혀 들어올 때 결정적인 패스가 훨씬 많이 나오네요.", 26],
+    ["club", "liv", "비르츠 +11%… 고점일까 시작일까", "적응 기간 끝나고 경기력이 올라온 게 숫자로 보입니다. 저는 절반만 익절하고 나머지는 홀드합니다.", 31],
+    ["player", "yamal", "야말, 이번 시즌 드리블 성공률 리그 1위", "볼을 잡은 뒤 첫 터치 방향이 정말 다양합니다. 가격이 비싸도 장기 보유 가치가 있다고 봐요.", 3],
+    ["player", "haaland", "홀란 16만 돌파, 지금 매각할 타이밍?", "다음 3경기가 상위권 팀 연전이라 고민됩니다. 거래 내역 첨부합니다.", 7],
+    ["player", "leekangin", "이강인 2경기 연속 공격 포인트 🎯", "마르세유전 도움 장면, 수비 세 명 사이로 찔러준 패스가 압권이었습니다.", 11],
+    ["player", "kimminjae", "김민재 라운지 처음 왔습니다", "보유 선수 중 가장 꾸준한 선수라 애정이 갑니다. 다들 언제 영입하셨나요?", 16],
+    ["player", "saka", "사카 xG 대비 득점 효율 정리", "기대득점 대비 실제 득점이 +2.1로 높은 편입니다. 단기 반등보다는 꾸준함이 강점.", 22],
+    ["player", "mbappe", "음바페 해트트릭 이후 가치 반응", "해트트릭 다음 날 +4.9%. 이미 높은 가격대라 변동폭은 생각보다 작네요.", 40],
   ];
-  const result: Post[] = items.map(([scope, target, category, title, body, hoursAgo], i) => ({
+  const result: Post[] = items.map(([scope, target, title, body, hoursAgo], i) => ({
     id: `post-${i + 1}`, author: authors[i % authors.length], authorId: `user-${i % authors.length}`,
-    scope, target, category, title, body, date: new Date(now - hoursAgo * 3_600_000).toISOString(),
+    scope, target, title, body, date: new Date(now - hoursAgo * 3_600_000).toISOString(),
     likes: [42, 18, 77, 35, 24, 51, 63, 29, 88, 12, 19, 46][i], views: [612, 284, 1203, 498, 356, 731, 940, 402, 1388, 166, 271, 702][i],
     commentCount: [3, 2, 5, 1, 2, 4, 3, 2, 6, 1, 1, 3][i], transaction: null,
   }));
@@ -416,7 +415,7 @@ export function mockPublicData(now = Date.now()): PublicData {
   const { posts: postList, comments } = posts(now);
   const demo = member(list, now);
   return {
-    players: list, teams, leagues, fixtures: fixtures(now), formations, categories, posts: postList, comments,
+    players: list, teams, leagues, fixtures: fixtures(now), formations, posts: postList, comments,
     rankings: rankings(now, demo),
     market: {
       volume: list.reduce((s, p) => s + (p.volume ?? 0), 0),

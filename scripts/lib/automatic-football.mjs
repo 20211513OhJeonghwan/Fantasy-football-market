@@ -1,5 +1,6 @@
 import { createFootballClient, externalId, normalizeBatch, normalizeStatus, SyncError } from './football.mjs';
 import { BIG_FIVE, initialTasks, processBulkTask } from './bulk-plan.mjs';
+import { configureMinuteWorker } from './minute-worker-configuration.mjs';
 import { runClubCollection } from './club-collection.mjs';
 
 export function checked(reply) {
@@ -27,6 +28,7 @@ export async function runDailyCollection(db, api, claim, deadline, emit = value 
   checked(await db.rpc('kickx_automatic_daily_start', { p_token: claim.token, p_tasks: initialTasks().map(t => ({ ...t, payload: { ...t.payload, automatic: true } })) }));
   let completed = 0, rows = 0;
   while (Date.now() < deadline) {
+    if(api.remaining!=null && api.remaining<1500)return {completed,rows,done:false,deferred:'LIVE_MATCH_RESERVE'};
     const tasks = checked(await db.from('automation_daily_tasks').select('key,kind,priority,payload,label').eq('day', claim.day).eq('completed', false).order('priority').order('key').limit(1));
     if (!tasks.length) return { completed, rows, done: true };
     const task = tasks[0];
@@ -106,10 +108,12 @@ export async function drainCalculations(db, calculate, deadline, emit = value =>
 
 /** One runner concurrency group plus a persistent DB lease. Source writes and publication
  * retain the original DB locks/CAS. No browser session or administrator actor is required. */
-export async function runAutomaticFootball(db, key, { calculate, mapNames, emit = value => { void value; }, now = new Date().toISOString() }) {
+export async function runAutomaticFootball(db, key, { calculate, mapNames, emit = value => { void value; }, now = new Date().toISOString(), maintenance = false }) {
   const claim = checked(await db.rpc('kickx_automation_claim'));
   if (claim.busy) return { busy: true };
   const summary = {}, started = Date.now();
+  // A short worker owns live/end polling once its Vault + cron setup is installed.
+  const configured = maintenance ? await configureMinuteWorker(db,key,process.env.SUPABASE_SERVICE_ROLE_KEY) : {configured:false};
   let daily = false, failure = null;
   const api = createFootballClient({ key, budget: 3000, timeoutMs: 15000, fetchImpl: async (...args) => {
     checked(await db.rpc('kickx_reserve_provider_request'));
@@ -119,11 +123,11 @@ export async function runAutomaticFootball(db, key, { calculate, mapNames, emit 
     // An unsuccessful daily refresh remains due on the next scheduled run.
     try { if (claim.daily) { summary.daily = await runDailyCollection(db, api, claim, started + 15 * 60000, emit); daily = summary.daily.done; } }
     catch (e) { failure = errorCode(e); emit({ stage: 'daily', error: failure }); }
-    try { summary.matches = await pollFinishedMatches(db, api, now, started + 25 * 60000); }
+    try { if (!configured.configured) summary.matches = await pollFinishedMatches(db, api, now, started + 25 * 60000); }
     catch (e) { failure ??= errorCode(e); emit({ stage: 'matches', error: errorCode(e) }); }
     try {summary.historicalCorrections=await pollHistoricalCorrections(db,api,now,started+27*60000);}
     catch(e){failure??=errorCode(e);emit({stage:'historical-corrections',error:errorCode(e)});}
-    try { summary.clubs=await runClubCollection(db,api,claim,started+30*60000,emit); }
+    try { if(!configured.configured || claim.daily) summary.clubs=await runClubCollection(db,api,claim,started+30*60000,emit); }
     catch(e){failure??=errorCode(e);emit({stage:'clubs',error:errorCode(e)});}
     summary.initialized = checked(await db.rpc('kickx_auto_initialize_market'));
     summary.calculation = await drainCalculations(db, calculate, started + 35 * 60000, emit);

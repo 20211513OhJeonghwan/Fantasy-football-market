@@ -1,0 +1,33 @@
+name: Configure minute football worker
+on:
+  push:
+    branches: [main]
+    paths:
+      - supabase/operations/**
+      - supabase/migrations/202610170001_match_windows_and_realtime.sql
+      - scripts/configure-minute-worker.mjs
+      - scripts/lib/minute-worker-configuration.mjs
+      - .github/workflows/minute-worker-setup.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: football-minute-worker-setup
+  cancel-in-progress: false
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BSD_API_KEY: ${{ secrets.BSD_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Configure Vault using existing repository secrets
+        run: node scripts/configure-minute-worker.mjs

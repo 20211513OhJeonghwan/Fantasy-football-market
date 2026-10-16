@@ -12,7 +12,7 @@ export function useCatalogPage<T extends Player|Fixture>(kind:"players"|"fixture
   const [settled,setSettled]=useState(encoded);
   useEffect(()=>{const timer=setTimeout(()=>setSettled(encoded),250);return()=>clearTimeout(timer);},[encoded]);
   const enabled=status === "ready" && !mock;
-  const resource=useResource<Page<T>>(enabled ? `/api/kickx/${kind}?${settled}` : null, (kind === "players" ? emptyPlayers : emptyFixtures) as ()=>Page<T>);
+  const resource=useResource<Page<T>>(enabled ? `/api/kickx/${kind}?${settled}` : null, (kind === "players" ? emptyPlayers : emptyFixtures) as ()=>Page<T>,30000);
   const revision=data.member?.watchlist.join(",") ?? "";
   const reload=resource.reload, scope=params.scope;
   useEffect(()=>{if(enabled && kind === "players" && scope === "watch") reload();},[revision,enabled,kind,scope,reload]);
@@ -22,7 +22,7 @@ export function useCatalogPage<T extends Player|Fixture>(kind:"players"|"fixture
 export function useCatalogPlayer(id: string | null) {
   const {getPlayer,status,mock,cachePlayers}=usePlatform();
   const enabled=!!id && status === "ready" && !mock;
-  const resource=useResource(enabled ? `/api/kickx/players/${encodeURIComponent(id!)}` : null,emptyDetail);
+  const resource=useResource(enabled ? `/api/kickx/players/${encodeURIComponent(id!)}` : null,emptyDetail,30000);
   useEffect(()=>{if(resource.status === "ready" && resource.data.player) cachePlayers([resource.data.player]);},[resource.status,resource.data,cachePlayers]);
   return {player:enabled ? resource.data.player : getPlayer(id),status:enabled ? resource.status : status,reload:resource.reload};
 }

@@ -4,7 +4,7 @@ import { CheckCircle2, AlertCircle, X } from "lucide-react";
 import { emptyAdminData, emptyPlatformData } from "@/lib/kickx/data";
 import { apiRequest } from "@/lib/kickx/client";
 import type { DataResponse, DataSource, DataStatus, PlatformData, Profile, Player } from "@/lib/kickx/types";
-export function useResource<T>(url: string | null, initial: () => T) {
+export function useResource<T>(url: string | null, initial: () => T, refreshMs = 0) {
   const [data, setData] = useState(initial);
   const [status, setStatus] = useState<DataStatus>("loading");
   const [source, setSource] = useState<DataSource | null>(null);
@@ -14,8 +14,12 @@ export function useResource<T>(url: string | null, initial: () => T) {
     if (!url) return;
     const controller = new AbortController();
     setStatus("loading");
-    void fetch(url, { signal: controller.signal, cache: "no-store", credentials: "same-origin" })
-      .then(async response => {
+    let inFlight = false;
+    const refresh = async () => {
+      if (inFlight || controller.signal.aborted) return;
+      inFlight = true;
+      try {
+        const response=await fetch(url, { signal: controller.signal, cache: "no-store", credentials: "same-origin" });
         if (!response.ok) {
           if (response.status === 401 || response.status === 403) {
             if (!controller.signal.aborted) { setData(initial()); setStatus(response.status === 401 ? "unauthorized" : "forbidden"); }
@@ -23,17 +27,18 @@ export function useResource<T>(url: string | null, initial: () => T) {
           }
           throw new Error("Request failed");
         }
-        const result = await response.json() as DataResponse<T>;
+        const result=await response.json() as DataResponse<T>;
         if (!["ready", "not-configured"].includes(result.status) || !result.data) throw new Error("Invalid response");
-        if (!controller.signal.aborted) {
-          setData(result.data);
-          setStatus(result.status);
-          setSource(result.status === "ready" ? result.source ?? "database" : null);
-        }
-      })
-      .catch(() => { if (!controller.signal.aborted) { setData(initial()); setStatus("error"); } });
-    return () => controller.abort();
-  }, [url, attempt, initial]);
+        if (!controller.signal.aborted) { setData(result.data); setStatus(result.status); setSource(result.status === "ready" ? result.source ?? "database" : null); }
+      } catch { if (!controller.signal.aborted) { setData(initial()); setStatus("error"); } }
+      finally { inFlight = false; }
+    };
+    void refresh();
+    const visibleRefresh=()=>{if(document.visibilityState === "visible")void refresh();};
+    const timer=refreshMs>0?setInterval(visibleRefresh,refreshMs):null;
+    if(refreshMs>0)document.addEventListener("visibilitychange",visibleRefresh);
+    return () => { controller.abort(); if(timer)clearInterval(timer);document.removeEventListener("visibilitychange",visibleRefresh); };
+  }, [url, attempt, initial, refreshMs]);
   return { data, status, source, reload, setData };
 }
 type Notice = { message: string; kind: "success" | "error" };
@@ -48,7 +53,7 @@ type PlatformContext = {
 };
 const Context = createContext<PlatformContext | null>(null);
 export function PlatformProvider({ children }: { children: ReactNode }) {
-  const { data, status, source, reload, setData } = useResource("/api/kickx", emptyPlatformData);
+  const { data, status, source, reload, setData } = useResource("/api/kickx", emptyPlatformData, 30000);
   const mock = source === "mock";
   const [cachedPlayers,setCachedPlayers]=useState<Player[]>([]);
   const cachePlayers=useCallback((players:Player[])=>setCachedPlayers(current=>{

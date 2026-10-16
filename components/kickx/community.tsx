@@ -1,6 +1,6 @@
 "use client";
 import { Select } from "./select";
-import { simple, useTeamOptions } from "./options";
+import { useTeamOptions } from "./options";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
@@ -203,7 +203,7 @@ export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
     player = scope === "player" ? detail.player : undefined;
   const found = !!(team || player);
   const posts = data.posts.filter((p) => p.scope === scope && p.target === target);
-  const roster=useCatalogPage<Player>("players",{team:team?.id,size:12,sort:"number"});
+  const roster=useCatalogPage<Player>("players",{team:team?.id,size:12,sort:"name"});
   const squad=roster.enabled ? (team && roster.status === "ready" ? roster.data.items : []) : team ? data.players.filter(p=>p.team===team.id) : [];
   const identity = clubIdentity(team ?? getTeam(player?.team));
   const style = identity ? ({ "--club": identity.primary, "--club-2": identity.secondary } as CSSProperties) : undefined;
@@ -245,14 +245,14 @@ export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
         <aside className="hub-aside">
           {team ? (
             <section className="panel side-panel">
-              <SectionTitle title="소속 선수 라운지" meta="등번호 순" />
+              <SectionTitle title="소속 선수 라운지" meta="이름순" />
               {squad.length ? (
                 <ul className="side-players">
                   {squad.map((p) => (
                     <li key={p.id}>
                       <Link href={`/community/players/${p.id}`}>
                         <PlayerPortrait player={p} size="sm" />
-                        <span><strong>{p.name}</strong><small>{[p.number != null ? `#${p.number}` : null, p.position].filter(Boolean).join(" · ") || "—"}</small></span>
+                        <span><strong>{p.name}</strong><small>{p.position || "—"}</small></span>
                         <ArrowRight size={14} />
                       </Link>
                     </li>
@@ -279,9 +279,9 @@ export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
   );
 }
 export {PostDetail} from "./community-detail";
-type DraftState = { scope: "club" | "player"; target: string; category: string; title: string; body: string; transaction: string };
-const FIELD_ORDER: PostField[] = ["target", "category", "title", "body", "transaction"];
-const FIELD_LABEL: Record<PostField, string> = { scope: "게시판 종류", target: "대상", category: "주제", title: "제목", body: "내용", transaction: "거래 첨부" };
+type DraftState = { scope: "club" | "player"; target: string; title: string; body: string; transaction: string };
+const FIELD_ORDER: PostField[] = ["target", "title", "body", "transaction"];
+const FIELD_LABEL: Record<PostField, string> = { scope: "게시판 종류", target: "대상", title: "제목", body: "내용", transaction: "거래 첨부" };
 function Counter({ value, min, max }: { value: string; min: number; max: number }) {
   const count = [...value.trim()].length;
   const tone = count > max ? "over" : count >= max * 0.9 ? "near" : count > 0 && count < min ? "under" : "";
@@ -303,7 +303,6 @@ export function WritePost() {
   const value: DraftState = draft ?? {
     scope: initialScope,
     target: existing?.target ?? sp.get("target") ?? (initialScope === "club" ? myTeam ?? "" : ""),
-    category: existing?.category ?? "",
     title: existing ? postHeading(existing.title, existing.body) : "",
     body: existing?.body ?? "",
     transaction: existing?.transaction?.id ?? "",
@@ -320,7 +319,6 @@ export function WritePost() {
   const clubTargets = useTeamOptions(null).filter((o) => o.value === myTeam);
   const errors = validatePost({...value,title:postTitle(value.title,value.body)}, {
     myTeam,
-    categories: data.categories,
     targets: targets.map((t) => t.id),
     transactions: data.member?.transactions.map((t) => t.id) ?? [],
   });
@@ -413,13 +411,6 @@ export function WritePost() {
               options={value.scope === "club" ? clubTargets : selectablePlayers.map((p) => ({ value: p.id, label: p.name, hint: getTeam(p.team)?.name, icon: <ClubCrest id={p.team} size="small" /> }))} />
             <small id="post-target-hint">{value.scope === "club" ? (myTeam ? "응원 구단 라운지에만 작성할 수 있습니다." : <>응원 구단이 없습니다. <Link className="text-link" href="/mypage">마이페이지에서 설정</Link></>) : "선수 라운지에 게시됩니다."}</small>
             {fieldError("target")}
-          </div>
-          <div className={`field ${visible("category") ? "invalid" : ""}`}>
-            <label htmlFor="post-category">주제 <span className="req" aria-hidden="true">*</span></label>
-            <Select id="post-category" invalid={!!visible("category")} describedBy={`post-category-hint${visible("category") ? " post-category-error" : ""}`} onBlur={blur("category")}
-              disabled={phase !== "edit" || !data.categories.length} value={value.category} onChange={(category) => update({ category })} placeholder="주제 선택" options={simple(data.categories)} />
-            <small id="post-category-hint">경기 리뷰, 선수 분석, 거래 전략 등</small>
-            {fieldError("category")}
           </div>
         </div>
         <div className={`field ${visible("title") ? "invalid" : ""}`}>

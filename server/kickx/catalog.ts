@@ -1,4 +1,5 @@
 import "server-only";
+import { attachTradeWindows } from "./trading";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PublicData, Player, Position } from "@/lib/kickx/types";
 import { emptyPublicData } from "@/lib/kickx/data";
@@ -37,7 +38,7 @@ export function mapPlayer(row: Row, snapshot?: Row): Player {
   const photo = text(row.photo);
   return {
     id:required(row.id),name:text(row.name_ko)||text(row.display_name)||required(row.name),originalName:required(row.name),aliases:Array.isArray(row.aliases)?row.aliases:[],english:text(row.english)||text(row.name),short:text(row.name_ko)||text(row.display_name)||text(row.short_name),
-    team:text(row.team_id),position,number:number(row.shirt_number),country:text(row.country),age:ageAt(row.birth_date,new Date()),
+    team:text(row.team_id),position,country:text(row.country),age:ageAt(row.birth_date,new Date()),
     photo:photo && /^https:\/\/sports\.bzzoiro\.com\/img\/player\/[0-9]+\//.test(photo) ? photo : null,
     season:number(row.season),statsScope:text(row.stats_scope),importedMatches:number(row.matches_imported),price:number(snapshot?.price),change:number(snapshot?.change_percent),performance:number(snapshot?.performance),volume:number(snapshot?.volume),
     goals:number(snapshot?.goals),assists:number(snapshot?.assists),minutes:number(snapshot?.minutes),history:[],records:[],analysis:null,
@@ -68,10 +69,12 @@ export async function readCatalog(client: SupabaseClient): Promise<PublicData> {
   ]);
   if(summary.error || summary.count == null) throw summary.error || new Error("Missing player count");
   const players=[...new Map([...price,...rising,...falling].map(row=>[required(row.id),mapPlayer(row,row)])).values()];
-  return {...emptyPublicData(),...await readPrototypePublic(client),
+  await attachTradeWindows(client,players);
+  const prototype=await readPrototypePublic(client);
+  return {...emptyPublicData(),...prototype,
     leagues:leagues.map(row=>({id:required(row.id),name:required(row.name)})),
     teams:teams.map(row=>({id:required(row.id),name:text(row.name_ko)||required(row.name),english:text(row.english)||required(row.name),code:text(row.code),color:text(row.color),leagueId:text(row.league_id)})),
     players,fixtures:fixtures.map(mapFixture),playerTotal:summary.count,
-    updatedAt:players.map(p=>p.updatedAt).filter((v):v is string=>!!v).sort().at(-1)||null,
+    updatedAt:prototype.freshness?.priceUpdatedAt??players.map(p=>p.updatedAt).filter((v):v is string=>!!v).sort().at(-1)??null,
   };
 }
