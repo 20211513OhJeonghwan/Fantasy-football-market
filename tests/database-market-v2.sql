@@ -1,5 +1,7 @@
 -- Isolated v2 economic integration: role boundaries, cutoff, publication, DNP and corrections.
 begin;
+-- Historical fixture imports in this test were observed over ten minutes ago.
+alter table public.fixtures alter column finished_observed_at set default (now()-interval '11 minutes');
 update public.kickx_policy set version='form-v2',pricing_reference_at='2026-08-01T00:00:00Z',pricing_reference_season=2026;
 insert into auth.users values('00000000-0000-0000-0000-000000000091');
 insert into public.profiles(id,nickname) values('00000000-0000-0000-0000-000000000091','V2 Member');

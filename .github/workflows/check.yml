@@ -48,17 +48,9 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f tests/database-bootstrap.sql
           for migration in supabase/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -f "$migration"; done
           psql -v ON_ERROR_STOP=1 -c "update public.kickx_policy set club_competitions_enabled=false"
-          psql -v ON_ERROR_STOP=1 -f tests/database-rls.sql
-          psql -v ON_ERROR_STOP=1 -f tests/database-football.sql
-          psql -v ON_ERROR_STOP=1 -f tests/database-bsd.sql
-          psql -v ON_ERROR_STOP=1 -f tests/database-bulk.sql
-          psql -v ON_ERROR_STOP=1 -f tests/database-prototype.sql
-          psql -v ON_ERROR_STOP=1 -f tests/database-community.sql
-          psql -v ON_ERROR_STOP=1 -f tests/database-automatic.sql
-          psql -v ON_ERROR_STOP=1 -f tests/database-automation.sql
-          psql -v ON_ERROR_STOP=1 -f tests/database-localization.sql
-          psql -v ON_ERROR_STOP=1 -f tests/database-market-v2.sql
-          psql -v ON_ERROR_STOP=1 -f tests/database-club-competitions.sql
+          for test in tests/database-*.sql; do
+            if [ "$test" != tests/database-bootstrap.sql ]; then psql -v ON_ERROR_STOP=1 -f "$test"; fi
+          done
       - name: Browser test dependencies
         run: |
           npm install --prefix /tmp/kickx-browser --no-package-lock @playwright/test@1.56.1

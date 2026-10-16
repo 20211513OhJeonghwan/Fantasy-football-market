@@ -17,7 +17,7 @@ export const imageUrl=id=>`${HOST}/img/player/${externalId(id).slice(4)}/?sor=tr
 const team=(raw,leagueId)=>({id:externalId(raw.id),external_id:raw.id,name:name(raw.name),code:raw.short_name || null,league_id:leagueId ?? null});
 export function normalizePlayer(raw,teamId) {
   const p={id:externalId(raw.id),external_id:raw.id,name:name(raw.name),short_name:raw.short_name || null,
-    position:position(raw.position),shirt_number:number(raw.jersey_number),country:raw.nationality || null,
+    position:position(raw.position),country:raw.nationality || null,
     birth_date:raw.date_of_birth || null,photo:imageUrl(raw.id)};
   // Only current squad changes membership; historical lineups never do.
   if(teamId!=null) p.team_id=externalId(teamId);

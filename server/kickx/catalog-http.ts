@@ -27,9 +27,9 @@ export async function catalogPage(request: Request, kind: "players" | "fixtures"
         && (input.scope !== "rising" || (p.change ?? 0)>0) && (input.scope !== "falling" || (p.change ?? 0)<0);
     }).sort((a,b)=>{
       if(input.sort === "name") return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
-      const key=(input.sort === "price-asc" ? "price" : input.sort) as "number"|"price"|"change"|"performance"|"volume";
+      const key=(input.sort === "price-asc" ? "price" : input.sort) as "price"|"change"|"performance"|"volume";
       const x=a[key],y=b[key];
-      return (x == null ? (y == null ? 0 : 1) : y == null ? -1 : ["price-asc","number"].includes(input.sort) ? x-y : y-x) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+      return (x == null ? (y == null ? 0 : 1) : y == null ? -1 : ["price-asc"].includes(input.sort) ? x-y : y-x) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
     }) : data.fixtures.filter(f=>{
       const h=data.teams.find(t=>t.id === f.home),a=data.teams.find(t=>t.id === f.away);
       return matches([h?.name,h?.english,a?.name,a?.english].join(" ")) && (!input.league || f.leagueId === input.league) && (!input.team || f.home === input.team || f.away === input.team)

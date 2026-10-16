@@ -45,7 +45,7 @@ export function normalizeBatch(task,response,{league,season,teamId,fixtureId}={}
     for(const item of response) {
       if(item.team?.id !== teamId) throw new SyncError("UNEXPECTED_TEAM");
       batch.teams.push(team(item.team,leagueId));
-      for(const raw of item.players ?? []) batch.players.push({...player(raw),team_id:externalId(teamId),position:position(raw.position),shirt_number:numeric(raw.number)});
+      for(const raw of item.players ?? []) batch.players.push({...player(raw),team_id:externalId(teamId),position:position(raw.position)});
     }
     if(!response.length) throw new SyncError("MISSING_SQUAD");
   } else if(task === "fixtures") {

@@ -1,4 +1,6 @@
 begin;
+-- Historical fixture imports in this test were observed over ten minutes ago.
+alter table public.fixtures alter column finished_observed_at set default (now()-interval '11 minutes');
 update public.kickx_policy set version='prototype-v1';
 insert into public.leagues(id,name) values('bsd-900001','Test league');
 insert into public.teams(id,name,provider,league_id) values('bsd-900001','Test FC','bsd','bsd-900001'),('bsd-900002','Away FC','bsd','bsd-900001');

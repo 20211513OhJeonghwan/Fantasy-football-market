@@ -27,7 +27,6 @@ export function PlayerCard({ player, variant = "grid", rank }: { player: Player;
       <Link href={`/players/${player.id}`} className="pcard-stage" aria-label={`${player.name} 상세 보기`}>
         <span className="pcard-bg" aria-hidden="true" />
         <span className="pcard-slash" aria-hidden="true" />
-        <span className="pcard-number num" aria-hidden="true">{player.number ?? ""}</span>
         <span className="pcard-top">
           <span className="pcard-pos" title={player.position ? POSITION_NAME[player.position] : "포지션 정보 없음"}>{player.position ?? "—"}</span>
           {rank != null && <span className="pcard-rank num">#{rank}</span>}

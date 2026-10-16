@@ -27,7 +27,7 @@ export function parseCatalogQuery(params: URLSearchParams, kind: "players" | "fi
     page: integer("page", 1, 10000), size: integer("size", kind === "players" ? 12 : 20, 50), q,
     league: identity("league"), team: identity("team"),
     position: params.has("position") ? allowed(params.get("position")!, ["GK","DF","MF","FW"], "포지션") : null,
-    sort: allowed(params.get("sort") || "number", ["number","price","price-asc","change","performance","volume","name"], "정렬"),
+    sort: allowed(params.get("sort") || "name", ["price","price-asc","change","performance","volume","name"], "정렬"),
     scope: allowed(params.get("scope") || "all", ["all","rising","falling","watch","owned"], "목록"),
     day, state: allowed(params.get("state") || "all", ["all","live","scheduled","finished","other"], "경기 상태"),
   };

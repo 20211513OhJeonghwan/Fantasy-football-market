@@ -33,12 +33,11 @@ export function isSameOrigin(origin: string | null, requestUrl: string) {
 }
 /** Community post limits. Shared by the editor UI and (later) the post API. Policy may tighten before launch. */
 export const POST_LIMITS = { titleMin: 2, titleMax: 80, bodyMin: 10, bodyMax: 3000 } as const;
-export type PostDraft = { scope: string; target: string; category: string; title: string; body: string; transaction: string };
+export type PostDraft = { scope: string; target: string; title: string; body: string; transaction: string };
 export type PostField = keyof PostDraft;
 export type PostRules = {
   /** Club lounges accept posts only from fans of that club (null = no club set). */
   myTeam: string | null;
-  categories: string[];
   targets: string[];
   /** IDs of the author's own transactions; anything else may not be attached. */
   transactions: string[];
@@ -52,8 +51,6 @@ export function validatePost(draft: PostDraft, rules: PostRules): Partial<Record
   else if (!draft.target) errors.target = draft.scope === "club" ? "구단을 선택해 주세요." : "선수를 선택해 주세요.";
   else if (!rules.targets.includes(draft.target)) errors.target = "선택할 수 없는 대상입니다. 다시 선택해 주세요.";
   else if (draft.scope === "club" && draft.target !== rules.myTeam) errors.target = "응원 구단 라운지에만 글을 쓸 수 있습니다.";
-  if (!draft.category) errors.category = "주제를 선택해 주세요.";
-  else if (!rules.categories.includes(draft.category)) errors.category = "선택할 수 없는 주제입니다.";
   const title = length(draft.title);
   if (!title) errors.title = "제목을 입력해 주세요.";
   else if (title < POST_LIMITS.titleMin) errors.title = `제목은 ${POST_LIMITS.titleMin}자 이상 입력해 주세요.`;

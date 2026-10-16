@@ -14,6 +14,7 @@ async function main() {
   if (!url || new URL(url).protocol !== 'https:' || !key || !bsd) throw new Error('AUTOMATION_CONFIG_REQUIRED');
   const db = createClient(url, key, { global: { fetch: nameImportFetch(key) }, auth: { persistSession: false, autoRefreshToken: false } });
   await runAutomaticFootball(db, bsd, {
+    maintenance: process.argv.includes('--maintenance'),
     calculate: (id: string) => calculatePlayer(db, id, null),
     mapNames: async () => {
       // Fill blanks without an external provider first, then improve provisional names.

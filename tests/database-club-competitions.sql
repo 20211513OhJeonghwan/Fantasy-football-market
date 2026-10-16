@@ -1,4 +1,6 @@
 begin;
+-- Historical fixture imports in this test were observed over ten minutes ago.
+alter table public.fixtures alter column finished_observed_at set default (now()-interval '11 minutes');
 update public.kickx_policy set club_competitions_enabled=true,version='form-v2',pricing_reference_at='2026-08-01T00:00:00Z',pricing_reference_season=2026;
 insert into public.leagues(id,name,provider,external_id) values('bsd-1','Premier League','bsd',1),('bsd-7','Champions League','bsd',7) on conflict(id) do nothing;
 insert into public.teams(id,name,provider,external_id,league_id) values('bsd-4401','Club home','bsd',4401,'bsd-1'),('bsd-4402','Foreign opponent','bsd',4402,null);
