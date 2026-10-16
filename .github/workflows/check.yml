@@ -1,0 +1,66 @@
+name: KICK-X checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      KICKX_DATABASE_ENABLED: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: kickx_test
+      KICKX_BROWSER_MODULE: /tmp/kickx-browser
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kickx_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - name: Build and type check
+        run: npm run build
+      - name: SQL migration and role isolation
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/database-bootstrap.sql
+          for migration in supabase/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -f "$migration"; done
+          psql -v ON_ERROR_STOP=1 -c "update public.kickx_policy set club_competitions_enabled=false"
+          for test in tests/database-*.sql; do
+            if [ "$test" != tests/database-bootstrap.sql ]; then psql -v ON_ERROR_STOP=1 -f "$test"; fi
+          done
+      - name: Browser test dependencies
+        run: |
+          npm install --prefix /tmp/kickx-browser --no-package-lock @playwright/test@1.56.1
+          node /tmp/kickx-browser/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Desktop and mobile smoke tests
+        run: node tests/browser-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kickx-browser-checks
+          path: test-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7

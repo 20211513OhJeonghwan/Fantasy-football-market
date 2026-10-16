@@ -1,0 +1,110 @@
+/* KICK-X · Yellow Playbook design tokens. Change values here, never per page. */
+@font-face {
+  font-family: "KICKX Sans";
+  src: url("/fonts/noto-sans-kr.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  color-scheme: light;
+
+  /* Brand */
+  --yellow: #ffe23a;
+  --yellow-strong: #f5d300;
+  --yellow-soft: #fff6c4;
+  --yellow-wash: #fffbe6;
+  --ink: #111110;
+  --ink-2: #2b2b29;
+
+  /* Surfaces */
+  --paper: #efeee8;
+  --surface: #ffffff;
+  --surface-2: #f7f6f2;
+  --surface-3: #efeee9;
+  --line: #e4e3dc;
+  --line-2: #d3d2ca;
+  --line-strong: var(--ink);
+
+  /* Text */
+  --text: #111110;
+  --text-2: #4f4f4a;
+  --text-3: #85857e;
+  --text-inverse: #ffffff;
+
+  /* Status (always paired with a sign or icon) */
+  --up: #0e8a4f;
+  --up-bg: #e5f4ec;
+  --down: #d33a2c;
+  --down-bg: #fdebe8;
+  --warning: #a8700a;
+  --warning-bg: #fff3d6;
+  --info: #2457c5;
+
+  /* Positions */
+  --pos-fw: #d8364a;
+  --pos-fw-bg: #ffe7ea;
+  --pos-mf: #18834a;
+  --pos-mf-bg: #e2f5e9;
+  --pos-df: #2459c9;
+  --pos-df-bg: #e4edff;
+  --pos-gk: #8a6a00;
+  --pos-gk-bg: #fff2bf;
+
+  /* Type */
+  --font: "KICKX Sans", "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --fs-display: clamp(44px, 4.6vw, 76px);
+  --fs-page: 40px;
+  --fs-section: 22px;
+  --fs-card: 17px;
+  --fs-body: 15px;
+  --fs-small: 13px;
+  --fs-caption: 12px;
+  --fs-eyebrow: 11px;
+  --fs-number-xl: 44px;
+  --fs-number-lg: 30px;
+  --fs-number-md: 20px;
+
+  /* Space (4px grid) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+
+  /* Shape */
+  --radius-0: 0;
+  --radius-1: 2px;
+  --radius-2: 4px;
+  --radius-pill: 999px;
+  --border: 1px solid var(--line);
+  --border-strong: 2px solid var(--ink);
+
+  /* Elevation */
+  --shadow-1: 0 1px 2px rgba(17, 17, 16, 0.06);
+  --shadow-2: 0 10px 30px rgba(17, 17, 16, 0.08);
+  --shadow-hard: 4px 4px 0 var(--ink);
+  --shadow-modal: 0 24px 60px rgba(17, 17, 16, 0.28);
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --t-fast: 120ms;
+  --t-base: 180ms;
+  --t-slow: 320ms;
+
+  /* Layout */
+  --app-max: 1680px;
+  --gutter: 40px;
+  --side-col: 404px;
+}
+@media (max-width: 1100px) {
+  :root { --gutter: 24px; --fs-page: 34px; }
+}
+@media (max-width: 640px) {
+  :root { --gutter: 16px; --fs-page: 28px; --fs-section: 19px; --fs-number-xl: 34px; --fs-number-lg: 24px; }
+}

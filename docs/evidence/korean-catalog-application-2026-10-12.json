@@ -1,0 +1,16 @@
+{
+  "completed_at": "2026-10-11T22:07:41.4178423Z",
+  "commit": "25317827233f0f6e54e8adb5269c8d706b1b46ef",
+  "workflow_url": "https://github.com/hyun1290/kick-x-test/actions/runs/38179129628",
+  "mode": "legacy-schema",
+  "candidates": 3122,
+  "preserved_in_final_run": 3088,
+  "inserted_in_final_run": 34,
+  "identity_rejected": [],
+  "bsd_players": 3122,
+  "korean_player_names": 3122,
+  "inserted_across_two_successful_runs": 2735,
+  "name_ko_columns_applied": false,
+  "team_names_applied": false,
+  "required_migration": "202610110001_korean_catalog.sql"
+}

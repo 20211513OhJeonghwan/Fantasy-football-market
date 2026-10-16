@@ -1,0 +1,32 @@
+name: Automatic football operations
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: football-automatic-production
+  cancel-in-progress: false
+jobs:
+  operate:
+    if: github.repository == 'hyun1290/kick-x-test'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BSD_API_KEY: ${{ secrets.BSD_API_KEY }}
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Check server configuration
+        run: |
+          node -e 'for (const key of ["SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY","BSD_API_KEY"]) { if (!process.env[key]) { console.error("Missing repository secret: " + key); process.exitCode = 1; } }'
+      - run: npm ci
+      - name: Daily catalog, finished matches, calculations, rankings and names
+        run: npm run data:automatic -- --maintenance

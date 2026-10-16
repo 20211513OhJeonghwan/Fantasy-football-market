@@ -1,0 +1,41 @@
+name: Apply Korean catalog names
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/localization/*.json'
+      - 'scripts/apply-korean-names.mjs'
+      - 'scripts/lib/korean-catalog.mjs'
+      - 'scripts/lib/missing-korean-names.mjs'
+      - 'scripts/lib/player-transliteration.mjs'
+      - '.github/workflows/korean-catalog.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: korean-name-import
+  cancel-in-progress: false
+jobs:
+  names:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Audit current database names
+        run: node scripts/apply-korean-names.mjs --report=korean-names-before.json
+      - name: Fill missing Korean names without replacing existing labels
+        run: node scripts/apply-korean-names.mjs --apply --report=korean-names-after.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: korean-name-coverage
+          path: korean-names-*.json
+          if-no-files-found: ignore

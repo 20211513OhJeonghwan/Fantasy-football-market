@@ -1,0 +1,29 @@
+name: Market v2 read-only audit
+on:
+  push:
+    branches: [feat/performance-market-v2]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Preview new scoring and prices without writes
+        run: node --conditions=react-server --import tsx scripts/audit-market-v2.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: market-v2-audit
+          path: test-artifacts/market-v2-audit.json
+          if-no-files-found: ignore

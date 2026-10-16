@@ -1,0 +1,96 @@
+{
+  "at": "2026-10-13T10:29:09.613Z",
+  "readOnly": true,
+  "sampling": "20261013; up to 10 players per league-position stratum with imported matches",
+  "catalogPlayers": 3182,
+  "samplePlayers": 200,
+  "failures": 0,
+  "statuses": {
+    "provisional": 539,
+    "not-played": 322,
+    "blocked": 113
+  },
+  "baselineSources": {
+    "available-history": 143,
+    "neutral": 57
+  },
+  "scores": {
+    "n": 539,
+    "min": 9,
+    "p10": 15.78,
+    "median": 34.5,
+    "p90": 67,
+    "max": 131.89,
+    "mean": 38.5
+  },
+  "latestScores": {
+    "n": 143,
+    "min": 9.89,
+    "p10": 14.78,
+    "median": 32.11,
+    "p90": 64,
+    "max": 92.5,
+    "mean": 35.28
+  },
+  "oldLatestScores": {
+    "n": 143,
+    "min": -1.5,
+    "p10": 1,
+    "median": 2.5,
+    "p90": 7,
+    "max": 12,
+    "mean": 3.35
+  },
+  "initialOrReplayedPrices": {
+    "n": 200,
+    "min": 69704,
+    "p10": 80933,
+    "median": 95111,
+    "p90": 102850,
+    "max": 114385,
+    "mean": 92824.97
+  },
+  "byPosition": {
+    "MF": {
+      "players": 50,
+      "n": 148,
+      "min": 10.22,
+      "p10": 17.22,
+      "median": 37.28,
+      "p90": 69.77,
+      "max": 112.5,
+      "mean": 41.5
+    },
+    "DF": {
+      "players": 50,
+      "n": 146,
+      "min": 9.67,
+      "p10": 16.39,
+      "median": 34.5,
+      "p90": 66,
+      "max": 87.5,
+      "mean": 39.3
+    },
+    "GK": {
+      "players": 50,
+      "n": 109,
+      "min": 9,
+      "p10": 25,
+      "median": 38,
+      "p90": 64,
+      "max": 84,
+      "mean": 40.3
+    },
+    "FW": {
+      "players": 50,
+      "n": 136,
+      "min": 9.89,
+      "p10": 13.61,
+      "median": 27.5,
+      "p90": 67.78,
+      "max": 131.89,
+      "mean": 32.95
+    }
+  },
+  "workflow_url": "https://github.com/hyun1290/kick-x-test/actions/runs/38383607941"
+}

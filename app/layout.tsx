@@ -1,26 +1,30 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { PlatformProvider } from "@/components/kickx/provider";
+import { AppShell } from "@/components/kickx/shell";
 import "./globals.css";
-
 export const metadata: Metadata = {
-  title: "KICK-X",
-  description: "실제 축구 경기 데이터를 기반으로 한 판타지 풋볼 마켓 플랫폼",
+  title: { default: "KICK-X | Football Market", template: "%s | KICK-X" },
+  description:
+    "실제 축구의 흐름을 나만의 선수 자산으로. KICK-X 판타지 축구 선수 시장.",
+  icons: { icon: "/favicon.svg" },
 };
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  display: "swap",
-  subsets: ["latin"],
-});
-
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
-      <body className={`${geistSans.className} antialiased`}>{children}</body>
+      <body>
+        <Suspense
+          fallback={
+            <div className="page-loading">KICK-X 화면을 불러오는 중…</div>
+          }
+        >
+          <PlatformProvider>
+            <AppShell>{children}</AppShell>
+          </PlatformProvider>
+        </Suspense>
+      </body>
     </html>
   );
 }
