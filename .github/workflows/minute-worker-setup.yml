@@ -16,6 +16,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   configure:
+    if: github.repository == 'hyun1290/kick-x-test'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
