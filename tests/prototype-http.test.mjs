@@ -11,9 +11,9 @@ test('trade quote and settlement ignore client price, quantity, user and policy 
  const quote=loadTs('../app/api/kickx/trades/quote/route.ts',{'@/server/kickx/http':injected,'@/server/kickx/prototype':prototype});
  const trade=loadTs('../app/api/kickx/trades/route.ts',{'@/server/kickx/http':injected,'@/server/kickx/prototype':prototype});
  const body={playerId:'bsd-1',side:'buy',price:1,fee:0,quantity:999,userId:'forged',policyVersion:'forged'};
- assert.equal((await quote.POST(req(body))).status,200);assert.deepEqual(calls[0],{name:'kickx_quote',args:{p_player:'bsd-1',p_side:'buy'}});
- const id='11111111-1111-1111-1111-111111111111';assert.equal((await trade.POST(req({...body,quoteId:id,requestId:id}))).status,200);assert.deepEqual(calls[1].args,{p_quote:id,p_request:id});
- assert.equal((await trade.POST(req({...body,quoteId:'bad',requestId:id}))).status,400);assert.equal(calls.length,2);
+ assert.equal((await quote.POST(req(body))).status,200);assert.deepEqual(calls.filter(c=>c.name==='kickx_quote')[0],{name:'kickx_quote',args:{p_player:'bsd-1',p_side:'buy'}});
+ const id='11111111-1111-1111-1111-111111111111';assert.equal((await trade.POST(req({...body,quoteId:id,requestId:id}))).status,200);assert.deepEqual(calls.find(c=>c.name==='kickx_trade').args,{p_quote:id,p_request:id});
+ assert.equal((await trade.POST(req({...body,quoteId:'bad',requestId:id}))).status,400);assert.equal(calls.length,4);
 });
 test('all new writes reject foreign origins and missing authentication before database mutation',async()=>{
  for(const [path,method] of [['trades/quote','POST'],['trades','POST'],['squad','PUT'],['community','POST'],['admin/prototype','POST']]){
@@ -44,4 +44,15 @@ test('administrator cannot invoke manual game publication through the removed ad
  let calls=0;const route=loadTs('../app/api/kickx/admin/prototype/route.ts',{'@/server/kickx/http':{...http,authenticatedClient:async()=>{calls++;throw Error('Unexpected mutation');}},'@/server/kickx/prototype':prototype,'@/server/kickx/admin-db':{requireAdmin:async()=>({id:'verified'})}});
  for(const action of ['initialize','rankings','preview','calculate','batch','name'])assert.equal((await route.POST(req({action}))).status,400);
  assert.equal(calls,0);
+});
+
+test('quote and settlement cannot bypass pending SQL installation through direct HTTP calls',async()=>{
+ for(const path of ['trades/quote','trades']) {
+  const calls=[];const client={rpc:async(name)=>{calls.push(name);return {error:{code:'PGRST202',message:'private migration detail'}};}};
+  const route=loadTs(`../app/api/kickx/${path}/route.ts`,{'@/server/kickx/http':{...http,authenticatedClient:async()=>({client,user:{id:'verified'}})},'@/server/kickx/prototype':prototype});
+  const id='11111111-1111-1111-1111-111111111111';
+  const response=await route.POST(req({playerId:'bsd-1',side:'buy',quoteId:id,requestId:id}));
+  assert.equal(response.status,503);assert.deepEqual(calls,['kickx_trade_windows']);
+  assert.doesNotMatch(await response.text(),/private migration/);
+ }
 });

@@ -15,3 +15,8 @@ export function checkDatabase(error:{code?:string;message?:string}|null) {
 export async function prototypeAvailable(db: SupabaseClient) {const r=await db.from("kickx_policy").select("version").limit(1);if(migrationMissing(r.error))return false;checkDatabase(r.error);return !!r.data?.length;}
 export function asObject(value:unknown):Record<string,unknown>{if(!value||typeof value!=="object"||Array.isArray(value))throw new HttpError(400,"입력 형식을 확인해 주세요.");return value as Record<string,unknown>;}
 export function identity(value:unknown,uuid=false) {if(typeof value!=="string"||!(uuid?/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i:/^[a-zA-Z0-9_-]{1,100}$/).test(value))throw new HttpError(400,"ID를 확인해 주세요.");return value;}
+
+/** Fail closed during rollout: settlement must not reach an older DB without match windows. */
+export async function requireMatchTradingRules(db: SupabaseClient) {
+ const result=await db.rpc("kickx_trade_windows",{p_players:[]});checkDatabase(result.error);
+}

@@ -1,6 +1,6 @@
 import { authenticatedClient, failure, json, readJson, requireOrigin } from "@/server/kickx/http";
-import { asObject, checkDatabase, identity } from "@/server/kickx/prototype";
-export async function POST(request:Request){try{requireOrigin(request);const {client}=await authenticatedClient();const body=asObject(await readJson(request));const {data,error}=await client.rpc("kickx_trade",{p_quote:identity(body.quoteId,true),p_request:identity(body.requestId,true)});checkDatabase(error);return json({accepted:true,trade:data});}catch(error){return failure(error);}}
+import { asObject, checkDatabase, identity, requireMatchTradingRules } from "@/server/kickx/prototype";
+export async function POST(request:Request){try{requireOrigin(request);const {client}=await authenticatedClient();const body=asObject(await readJson(request));const quoteId=identity(body.quoteId,true),requestId=identity(body.requestId,true);await requireMatchTradingRules(client);const {data,error}=await client.rpc("kickx_trade",{p_quote:quoteId,p_request:requestId});checkDatabase(error);return json({accepted:true,trade:data});}catch(error){return failure(error);}}
 export async function GET(request:Request){try{
  const {client}=await authenticatedClient();const params=new URL(request.url).searchParams;
  const page=Math.max(1,Math.min(10000,Math.floor(Number(params.get("page"))||1)));
