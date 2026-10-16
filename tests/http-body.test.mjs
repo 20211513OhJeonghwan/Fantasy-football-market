@@ -15,7 +15,7 @@ const hasStatus = status => error => error instanceof HttpError && error.status 
 
 test("post-sized Korean and JSON-escaped bodies fit without changing character limits", async () => {
   for (const body of ["가".repeat(3000), "\u0000".repeat(3000)]) {
-    const post = { scope: "club", target: "club-1", category: "자유", title: "제".repeat(80), body, transactionId: null };
+    const post = { scope: "club", target: "club-1", title: "제".repeat(80), body, transactionId: null };
     const encoded = JSON.stringify(post);
     assert.ok(Buffer.byteLength(encoded) > 4096);
     assert.ok(Buffer.byteLength(encoded) <= MAX_JSON_BODY_BYTES);

@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { loadTs } from "./load-ts.mjs";
 const query=loadTs("../lib/kickx/catalog-query.ts");
-const catalog=loadTs("../server/kickx/catalog.ts",{"server-only":{},"./public-prototype":{readPrototypePublic:async()=>({})},"@/lib/kickx/data":loadTs("../lib/kickx/data.ts")});
-const {readPlayerPage,readFixturePage}=loadTs("../server/kickx/catalog-pages.ts",{"server-only":{},"./public-prototype":{readPrototypePublic:async()=>({})},"@/lib/kickx/catalog-query":query,"./catalog":catalog,"./prototype":{checkDatabase:()=>{},migrationMissing:()=>false}});
+const catalog=loadTs("../server/kickx/catalog.ts",{"./trading":{attachTradeWindows:async(db,players)=>players},"server-only":{},"./public-prototype":{readPrototypePublic:async()=>({})},"@/lib/kickx/data":loadTs("../lib/kickx/data.ts")});
+const {readPlayerPage,readFixturePage}=loadTs("../server/kickx/catalog-pages.ts",{"./trading":{attachTradeWindows:async(db,players)=>players},"server-only":{},"./public-prototype":{readPrototypePublic:async()=>({})},"@/lib/kickx/catalog-query":query,"./catalog":catalog,"./prototype":{checkDatabase:()=>{},migrationMissing:()=>false}});
 function client(calls,rows=[],count=72){
  const q=new Proxy({then(resolve){return Promise.resolve({data:rows,error:null,count}).then(resolve);}}, {get(target,key){return key in target ? target[key] : (...args)=>{calls.push([key,...args]);return q;};}});
  return {from(...args){calls.push(["from",...args]);return q;},rpc(...args){calls.push(["rpc",...args]);return q;}};
@@ -17,7 +17,7 @@ test("player search is filtered before page range and has deterministic null-las
  const calls=[];
  const result=await readPlayerPage(client(calls),query.parseCatalogQuery(new URLSearchParams("page=3&size=12&q=50%25&league=af-39&position=FW"),"players"));
  assert.equal(result.total,72);assert.deepEqual(calls.find(c=>c[0]==="range"),["range",24,35]);
- assert.deepEqual(calls.filter(c=>c[0]==="order"),[["order","shirt_number",{ascending:true,nullsFirst:false}],["order","name"],["order","id"]]);
+ assert.deepEqual(calls.filter(c=>c[0]==="order"),[["order","name",{ascending:true,nullsFirst:false}],["order","name"],["order","id"]]);
  assert.deepEqual(calls.find(c=>c[0]==="ilike"),["ilike","search_text","%50\\%%"]);
 });
 test("watchlist search uses authenticated RLS-backed relation rather than a supplied user ID",async()=>{

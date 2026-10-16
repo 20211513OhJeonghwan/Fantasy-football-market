@@ -9,7 +9,7 @@ export function postTitle(title: string, body: string) {
 export function postHeading(title: string, body: string) {
   return title === postTitle("", body) ? "" : title;
 }
-export function parseCommunityQuery(params: URLSearchParams, categories: readonly string[]) {
+export function parseCommunityQuery(params: URLSearchParams) {
   const scope = params.get("scope") ?? "player";
   if (scope !== "club" && scope !== "player") throw new Error("커뮤니티 종류를 확인해 주세요.");
   const sort = params.get("sort") ?? "new";
@@ -18,9 +18,7 @@ export function parseCommunityQuery(params: URLSearchParams, categories: readonl
   if (!/^\d+$/.test(rawPage) || Number(rawPage) < 1 || Number(rawPage) > 10000) throw new Error("페이지 범위를 확인해 주세요.");
   const target = params.get("target");
   if (target !== null && !/^[a-zA-Z0-9_-]{1,100}$/.test(target)) throw new Error("커뮤니티 대상을 확인해 주세요.");
-  const category = params.get("category");
-  if (category !== null && !categories.includes(category)) throw new Error("게시글 주제를 확인해 주세요.");
   const query = (params.get("q") ?? "").normalize("NFC").trim();
   if (query.length > 100 || /[\x00-\x1f]/.test(query)) throw new Error("검색어는 100자 이내로 입력해 주세요.");
-  return { scope: scope as CommunityScope, sort, page: Number(rawPage), target, category, query };
+  return { scope: scope as CommunityScope, sort, page: Number(rawPage), target, query };
 }

@@ -133,7 +133,6 @@
 .tag.outline { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line-2); }
 .tag.up { background: var(--up-bg); color: var(--up); }
 .tag.down { background: var(--down-bg); color: var(--down); }
-.category-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; font-size: var(--fs-caption); font-weight: 800; background: var(--yellow-soft); color: var(--ink); border-radius: 3px; }
 .mock-badge {
   display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px;
   background: var(--yellow); color: var(--ink); font-size: 11px; font-weight: 900; letter-spacing: 0.02em; border-radius: 3px; white-space: nowrap;
@@ -168,7 +167,6 @@
 .portrait-neck { fill: #2e2e2b; }
 .portrait-head { fill: #3a3a36; }
 .portrait-hair { fill: #121211; }
-.portrait-number { fill: #fff; font-size: 17px; font-weight: 900; font-family: var(--font); letter-spacing: -0.04em; }
 .portrait.sm { --w: 40px; --h: 40px; border-radius: 50%; }
 .portrait.sm .portrait-fx { background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 1px, transparent 1.4px) 0 0 / 5px 5px; }
 .portrait.md { --w: 56px; --h: 56px; }

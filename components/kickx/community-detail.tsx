@@ -110,7 +110,6 @@ export function PostDetail() {
             {post.scope === "club" ? <ClubCrest id={post.target} size="small" /> : targetPlayer ? <PlayerPortrait player={targetPlayer} size="sm" /> : null}
             {targetName || "—"}
           </Link>
-          <span className="category-tag">{post.category}</span>
         </div>
         <h1>{postHeading(post.title,post.body) || `${targetName ?? (post.scope === "club" ? "구단" : "선수")} 이야기`}</h1>
         <div className="article-author">

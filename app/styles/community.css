@@ -41,8 +41,8 @@
 .feed-main > * { max-width: 100%; }
 .community-feed-card .feed-card-header { display: flex; align-items: baseline; justify-content: flex-start; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
 .feed-author { font-size: 15px; font-weight: 700; color: var(--ink); }
-.feed-card-header time, .feed-category { font-size: var(--fs-small); color: var(--text-3); }
-.feed-category::before, .feed-card-header time::before { content: "·"; margin-right: 6px; }
+.feed-card-header time { font-size: var(--fs-small); color: var(--text-3); }
+.feed-card-header time::before { content: "·"; margin-right: 6px; }
 .community-feed-card .feed-card-target { height: 30px; padding: 0 12px 0 4px; margin-bottom: 8px; border: 0; border-radius: 999px; background: var(--surface-2); font-size: var(--fs-small); font-weight: 700; }
 .community-feed-card .feed-card-target::before { display: none; }
 .community-feed-card .feed-card-target:hover { background: var(--surface-3); }

@@ -6,7 +6,6 @@ export const emptyPublicData = (): PublicData => ({
   leagues: [],
   fixtures: [],
   formations: [],
-  categories: [],
   posts: [],
   comments: [],
   rankings: [],

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { loadTs } from "./load-ts.mjs";
 const data = loadTs("../lib/kickx/data.ts");
-const { readCatalog, readRows } = loadTs("../server/kickx/catalog.ts", {"server-only": {}, "./public-prototype":{readPrototypePublic:async()=>({})}, "@/lib/kickx/data":data});
+const { readCatalog, readRows } = loadTs("../server/kickx/catalog.ts", {"./trading":{attachTradeWindows:async(db,players)=>players},"server-only": {}, "./public-prototype":{readPrototypePublic:async()=>({})}, "@/lib/kickx/data":data});
 function clientFor(tables, calls = []) {
   return {from(table) {
     let start=0,end=499;

@@ -216,9 +216,6 @@ export function PlayerPortrait({
           <path className="portrait-neck" d="M43 58 L57 58 L58 71 L50 75 L42 71 Z" />
           <ellipse className="portrait-head" cx="50" cy="45" rx="13" ry="15.5" />
           <path className="portrait-hair" d="M37 42 C36 30 44 26 51 27 C60 27 65 33 63 43 C60 37 55 35 50 35 C44 35 40 38 37 42 Z" />
-          {player.number != null && size !== "sm" && (
-            <text x="50" y="96" textAnchor="middle" className="portrait-number">{player.number}</text>
-          )}
         </svg>
       )}
     </span>
@@ -739,11 +736,12 @@ export function TradeButton({
 }) {
   const [open, setOpen] = useState(false);
   const {data}=usePlatform();
+  const locked=player?.tradeWindow?.locked;
   const duplicate=side==="buy" && data.member?.holdings.some(h=>h.playerId===player?.id);
   return (
     <>
-      <button type="button" className={className} disabled={duplicate || !player || !!player.status || player.price == null} title={player?.status || undefined} onClick={() => setOpen(true)}>
-        {duplicate ? "보유 중" : player?.status || label || (side === "buy" ? "매입" : "매각")}
+      <button type="button" className={className} disabled={locked || duplicate || !player || !!player.status || player.price == null} title={locked ? "경기 시작 90분 전부터 종료 확인 후 10분까지 거래할 수 없습니다." : player?.status || undefined} onClick={() => setOpen(true)}>
+        {locked ? "경기 거래 제한" : duplicate ? "보유 중" : player?.status || label || (side === "buy" ? "매입" : "매각")}
       </button>
       {open && player && <TradeDialog player={player} side={side} onClose={() => setOpen(false)} />}
     </>

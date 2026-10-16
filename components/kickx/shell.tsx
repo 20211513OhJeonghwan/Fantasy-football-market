@@ -106,7 +106,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <>
               <span>상승 <b className="up num">{money(data.market.rising)}</b></span>
               <span>하락 <b className="down num">{money(data.market.falling)}</b></span>
-              <span>최근 갱신 <b className="num">{dateText(data.updatedAt)}</b></span>
+              <span>경기 확인 <b className="num">{dateText(data.freshness?.lastCheckedAt ?? null)}</b></span>
+              <span>가격 적용 <b className="num">{dateText(data.updatedAt)}</b></span>
             </>
           ) : <span>REAL FOOTBALL. YOUR GAME.</span>}
         </span>
