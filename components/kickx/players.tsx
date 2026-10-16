@@ -36,13 +36,12 @@ import {
 
 const PAGE = 12;
 const SORT_OPTIONS = [
-  { value: "number", label: "등번호 순" },
+  { value: "name", label: "이름순" },
   { value: "price", label: "가치 높은 순" },
   { value: "price-asc", label: "가치 낮은 순" },
   { value: "change", label: "상승률 순" },
   { value: "performance", label: "Performance 순" },
   { value: "volume", label: "거래량 순" },
-  { value: "name", label: "이름 순" },
 ];
 function compareNumber(a: number | null, b: number | null, ascending = false) {
   if (a == null) return b == null ? 0 : 1;
@@ -64,14 +63,14 @@ function MarketHero({ league, onLeague }: { league: string; onLeague: (id: strin
             <div><dt>등록 선수</dt><dd className="num">{total ? money(total) : "—"}</dd></div>
             <div><dt>구단</dt><dd className="num">{data.teams.length || "—"}</dd></div>
             <div><dt>리그</dt><dd className="num">{data.leagues.length || "—"}</dd></div>
-            <div><dt>최근 갱신</dt><dd className="num small">{dateText(data.updatedAt)}</dd></div>
+            <div><dt>가격 적용</dt><dd className="num small">{dateText(data.updatedAt)}</dd></div>
           </dl>
         </div>
         <div className="market-hero-stack" aria-hidden="true">
           {featured.map((p, i) => (
             <Link key={p.id} href={`/players/${p.id}`} tabIndex={-1} className={`hero-card hero-card-${i}`}>
               <PlayerPortrait player={p} size="xl" />
-              <span className="hero-card-plate"><b>{p.short || p.name}</b><small>{p.position ?? "—"}{p.number != null ? ` · #${p.number}` : ""}</small></span>
+              <span className="hero-card-plate"><b>{p.short || p.name}</b><small>{p.position ?? "—"}</small></span>
             </Link>
           ))}
         </div>
@@ -106,7 +105,7 @@ export function PlayerList({ market = false }: { market?: boolean }) {
     [league, setLeague] = useState("all"),
     [team, setTeam] = useState(sp.get("team") || "all"),
     [pos, setPos] = useState("전체");
-  const [sort, setSort] = useState(market ? "volume" : "number"),
+  const [sort, setSort] = useState(market ? "volume" : "name"),
     [viewChoice, setView] = useState<string | null>(null),
     [tab, setTab] = useState(sp.get("watchlist") === "1" ? "관심 선수" : "전체 선수"),
     [page, setPage] = useState(1);
@@ -134,9 +133,9 @@ export function PlayerList({ market = false }: { market?: boolean }) {
       );
     })
     .sort((a, b) => {
-      if (sort === "name") return a.name.localeCompare(b.name);
-      const key = (sort === "price-asc" ? "price" : sort) as "number" | "price" | "change" | "performance" | "volume";
-      return compareNumber(a[key], b[key], ["price-asc","number"].includes(sort)) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+      if (sort === "name") return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+      const key = (sort === "price-asc" ? "price" : sort) as "price" | "change" | "performance" | "volume";
+      return compareNumber(a[key], b[key], ["price-asc"].includes(sort)) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
     });
   const remote=useCatalogPage<Player>("players",{q,league,team,position:pos === "전체" ? undefined : pos,sort,page,size:PAGE,scope:({"관심 선수":"watch","보유 선수":"owned","상승 선수":"rising","하락 선수":"falling"} as Record<string,string>)[tab] ?? "all"});
   const status=remote.enabled ? remote.status : platformStatus;
@@ -160,7 +159,7 @@ export function PlayerList({ market = false }: { market?: boolean }) {
         eyebrow={market ? "PLAYER EXCHANGE" : "DISCOVER YOUR NEXT PLAYER"}
         title={market ? "선수 시장" : "선수 탐색"}
         description={market ? "경기의 흐름을 읽고, 가치가 움직이는 순간을 잡으세요." : "리그·구단·포지션으로 나에게 맞는 선수를 찾아보세요."}
-        action={<span className="updated-at">최근 갱신 <b>{dateText(data.updatedAt)}</b></span>}
+        action={<span className="updated-at">가격 적용 <b>{dateText(data.updatedAt)}</b></span>}
       />
       {market && (
         <>
@@ -334,7 +333,6 @@ export function PlayerDetail() {
       <BackLink />
       <section className="detail-hero" style={{ "--club": detailClub.identity?.primary ?? "#55554f", "--club-2": detailClub.identity?.secondary ?? "#ffffff" } as CSSProperties}>
         <span className="detail-hero-bg" aria-hidden="true" />
-        <span className="detail-hero-number num" aria-hidden="true">{p.number ?? ""}</span>
         <div className="detail-photo"><PlayerPortrait player={p} size="xl" /></div>
         <div className="detail-identity">
           <div className="detail-badges">
@@ -346,7 +344,6 @@ export function PlayerDetail() {
           <div className="detail-meta">
             <span className="detail-club">{team?.name || "소속 정보 없음"}</span>
             <PositionBadge position={p.position} />
-            <span>#{p.number ?? "—"}</span>
             <span>{p.country || "국적 정보 없음"}</span>
             <span>{p.age != null ? `${p.age}세` : "나이 정보 없음"}</span>
           </div>

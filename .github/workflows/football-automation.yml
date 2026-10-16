@@ -28,4 +28,4 @@ jobs:
           node -e 'for (const key of ["SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY","BSD_API_KEY"]) { if (!process.env[key]) { console.error("Missing repository secret: " + key); process.exitCode = 1; } }'
       - run: npm ci
       - name: Daily catalog, finished matches, calculations, rankings and names
-        run: npm run data:automatic
+        run: npm run data:automatic -- --maintenance

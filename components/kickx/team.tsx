@@ -33,9 +33,9 @@ export function TeamScreen() {
   const identity = clubIdentity(team);
   const league = getLeague(team?.leagueId);
   const [page, setPage] = useState(1), [matchPage, setMatchPage] = useState(1);
-  const roster = useCatalogPage<Player>("players", { team: teamId, sort: "number", page, size: PAGE });
+  const roster = useCatalogPage<Player>("players", { team: teamId, sort: "name", page, size: PAGE });
   const schedule = useCatalogPage<Fixture>("fixtures", { team: teamId, page: matchPage, size: PAGE });
-  const localPlayers = data.players.filter((p) => p.team === teamId).sort((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity) || a.name.localeCompare(b.name));
+  const localPlayers = data.players.filter((p) => p.team === teamId).sort((a, b) => a.name.localeCompare(b.name));
   const localMatches = data.fixtures.filter((f) => f.home === teamId || f.away === teamId).sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
   const players = mock ? localPlayers : roster.status === "ready" ? roster.data.items : [];
   const matches = mock ? localMatches : schedule.status === "ready" ? schedule.data.items : [];
@@ -67,7 +67,7 @@ export function TeamScreen() {
       </section>
       <section className="panel flush team-section">
         <div className="panel-head">
-          <h2><Users size={18} />소속 선수 <span className="muted">등번호 순</span></h2>
+          <h2><Users size={18} />소속 선수 <span className="muted">이름순</span></h2>
           <span className="muted num">{playerTotal != null ? `${playerTotal}명` : ""}</span>
         </div>
         {players.length > 0 && (
@@ -75,7 +75,6 @@ export function TeamScreen() {
             {players.map((p) => (
               <li key={p.id}>
                 <Link className="roster-card hover-lift" href={`/players/${p.id}`}>
-                  <span className="roster-number num">{p.number ?? "—"}</span>
                   <PlayerPortrait player={p} size="sm" />
                   <span className="roster-text">
                     <strong>{p.name}</strong>

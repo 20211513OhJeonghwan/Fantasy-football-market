@@ -1,4 +1,5 @@
 import "server-only";
+import { attachTradeWindows } from "./trading";
 import type { KickxRepository } from "./repository";
 import type { MemberData, Session } from "@/lib/kickx/types";
 import { createRequestClient } from "./supabase";
@@ -44,7 +45,7 @@ export class SupabaseKickxRepository implements KickxRepository {
         checkDatabase(wallet.error);
         const result = await client.rpc("kickx_member_data");
         checkDatabase(result.error);
-        return {...result.data, ownedPlayers: (result.data.ownedPlayers ?? []).map((p: Record<string,unknown>)=>mapPlayer(p,p))};
+        return {...result.data, ownedPlayers: await attachTradeWindows(client,(result.data.ownedPlayers ?? []).map((p: Record<string,unknown>)=>mapPlayer(p,p)))};
       }
     }
     const watchlist: string[] = [];

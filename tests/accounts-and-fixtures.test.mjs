@@ -47,8 +47,8 @@ test("featured fixtures prioritize recorded live state, then upcoming, then late
   assert.equal(rows[0].id,"old");
 });
 test("post drafts enforce fan-only club lounges, length limits and own-trade attachments", () => {
-  const rules = { myTeam: "ars", categories: ["자유"], targets: ["ars", "liv"], transactions: ["tx-1"] };
-  const valid = { scope: "club", target: "ars", category: "자유", title: "아스널 경기 후기", body: "오늘 경기 정말 좋았습니다.", transaction: "" };
+  const rules = { myTeam: "ars", targets: ["ars", "liv"], transactions: ["tx-1"] };
+  const valid = { scope: "club", target: "ars", title: "아스널 경기 후기", body: "오늘 경기 정말 좋았습니다.", transaction: "" };
   assert.deepEqual(validation.validatePost(valid, rules), {});
   assert.ok(validation.validatePost({ ...valid, target: "liv" }, rules).target);
   assert.ok(validation.validatePost(valid, { ...rules, myTeam: null }).target);

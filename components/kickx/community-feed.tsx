@@ -12,7 +12,7 @@ import { usePlatform, useResource } from "./provider";
 import { useCatalogPage, useCatalogPlayer } from "./catalog";
 import { usePost } from "./community-detail";
 import { Select } from "./select";
-import { Change, ClubCrest, DataEmpty, PlayerPortrait, Tabs } from "./ui";
+import { Change, ClubCrest, DataEmpty, PlayerPortrait } from "./ui";
 
 const SIZE = 20;
 const emptyFeed = () => ({ items: [] as Post[], total: 0, page: 1, size: SIZE });
@@ -35,7 +35,7 @@ function PlayerPicker({ value, onChange }: { value: string; onChange: (id: strin
 function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: CommunityScope; target?: string; targetName?: string; onSaved: () => void; onClose: () => void }) {
   const { data, mock, notify, getTeam, getPlayer } = usePlatform();
   const [selected, setSelected] = useState(target ?? (scope === "club" ? data.session?.profile?.team ?? "" : ""));
-  const [body, setBody] = useState(""), [title, setTitle] = useState(""), [category, setCategory] = useState("자유"), [transaction, setTransaction] = useState("");
+  const [body, setBody] = useState(""), [title, setTitle] = useState(""), [transaction, setTransaction] = useState("");
   const [advanced, setAdvanced] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const request = useRef(""), lock = useRef(false), id = useId();
   const name = targetName || (scope === "club" ? getTeam(selected)?.name : getPlayer(selected)?.name);
@@ -43,8 +43,8 @@ function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (lock.current) return;
-    const draft = { scope, target: selected, title: postTitle(title, body), body, category, transaction };
-    const errors = validatePost(draft, { myTeam: data.session?.profile?.team ?? null, categories: data.categories, targets: selected ? [selected] : [], transactions: data.member?.transactions.map(t => t.id) ?? [] });
+    const draft = { scope, target: selected, title: postTitle(title, body), body, transaction };
+    const errors = validatePost(draft, { myTeam: data.session?.profile?.team ?? null, targets: selected ? [selected] : [], transactions: data.member?.transactions.map(t => t.id) ?? [] });
     if (Object.keys(errors).length) { setError(Object.values(errors).join(" ")); return; }
     if (mock) { notify("예시 모드 · 실제로 저장되지 않습니다."); return; }
     lock.current = true; setBusy(true); setError(""); request.current ||= crypto.randomUUID();
@@ -63,7 +63,6 @@ function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: 
       <div className="feed-composer-options"><button type="button" className="text-link" aria-expanded={advanced} onClick={() => setAdvanced(v => !v)}>제목·주제·거래 첨부 {advanced ? "닫기" : "추가"}</button><span className="fine-print num">{[...body].length} / {POST_LIMITS.bodyMax}</span></div>
       {advanced && <div className="feed-composer-advanced">
         <label htmlFor={`${id}-title`}>제목 (선택)</label><input id={`${id}-title`} value={title} maxLength={POST_LIMITS.titleMax} onChange={e => { changed(); setTitle(e.target.value); }} />
-        <Select label="빠른 글 주제" value={category} onChange={v => { changed(); setCategory(v); }} options={data.categories.map(c => ({ value: c, label: c }))} />
         {!!data.member?.transactions.length && <Select label="빠른 글 거래 첨부" value={transaction} onChange={v => { changed(); setTransaction(v); }} options={[{ value: "", label: "첨부 안 함" }, ...data.member.transactions.map(t => ({ value: t.id, label: `${t.playerName} · ${t.type === "buy" ? "매입" : "매각"} · ${money(t.price)} P`, hint: dateText(t.date) }))]} />}
       </div>}
       {error && <p className="field-error" role="alert">{error}</p>}
@@ -120,7 +119,6 @@ function FeedCard({ post, showTarget }: { post: Post; showTarget: boolean }) {
     <header className="feed-card-header">
       <strong className="feed-author">{post.author}</strong>
       <time dateTime={post.date} title={dateText(post.date)}>{relativeTime(post.date)}</time>
-      <span className="feed-category">{post.category}</span>
     </header>
     {showTarget && (
       <Link className="feed-card-target" href={lounge} style={{ "--club": clubIdentity(chipTeam)?.primary } as CSSProperties}>
@@ -158,13 +156,13 @@ function FeedCard({ post, showTarget }: { post: Post; showTarget: boolean }) {
 
 export function CommunityFeed({ scope, target, targetName, title = "이야기", compose = true }: { scope: CommunityScope; target?: string; targetName?: string; title?: string; compose?: boolean }) {
   const { data, mock, status, reload: reloadPlatform } = usePlatform();
-  const [query, setQuery] = useState(""), [category, setCategory] = useState("전체"), [sort, setSort] = useState("new"), [page, setPage] = useState(1);
+  const [query, setQuery] = useState(""), [sort, setSort] = useState("new"), [page, setPage] = useState(1);
   const [search,setSearch]=useState("");
   useEffect(()=>{const timer=setTimeout(()=>setSearch(query.trim()),250);return()=>clearTimeout(timer);},[query]);
   const params = new URLSearchParams({ scope, q: search, sort, page: String(page) });
-  if (target) params.set("target", target); if (category !== "전체") params.set("category", category);
+  if (target) params.set("target", target);
   const remote = useResource(!mock && status === "ready" ? `/api/kickx/community?${params}` : null, emptyFeed);
-  const local = data.posts.filter(p => p.scope === scope && (!target || p.target === target) && (category === "전체" || p.category === category) && `${p.title} ${p.body}`.toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => sort === "popular" ? b.likes - a.likes : Date.parse(b.date) - Date.parse(a.date));
+  const local = data.posts.filter(p => p.scope === scope && (!target || p.target === target) && `${p.title} ${p.body}`.toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => sort === "popular" ? b.likes - a.likes : Date.parse(b.date) - Date.parse(a.date));
   const items = (mock ? local.slice((page - 1) * SIZE, page * SIZE) : remote.data.items).filter(p => p.scope === scope && (!target || p.target === target));
   const total = mock ? local.length : remote.data.total, pages = Math.max(1, Math.ceil(total / SIZE));
   const feedStatus = status !== "ready" ? status : mock ? status : remote.status;
@@ -173,9 +171,8 @@ export function CommunityFeed({ scope, target, targetName, title = "이야기", 
     {compose && <CommunityComposer key={`${scope}:${target ?? "hub"}`} scope={scope} target={target} targetName={targetName} onSaved={() => { setPage(1); remote.reload(); }} />}
     <section className="panel flush" aria-label={`${scope === "club" ? "구단" : "선수"} 이야기 피드`}>
       <div className="post-browser-title"><h2>{title}{ready && <span className="num">{money(total)}건</span>}</h2></div>
-      <div className="panel-head"><Tabs items={["전체", ...data.categories]} value={category} label="피드 주제" onChange={v => { setCategory(v); setPage(1); }} /></div>
-      <div className="toolbar post-tools"><label className="input-search"><Search size={16} /><input aria-label="피드 검색" maxLength={100} value={query} placeholder="내용·제목 검색" onChange={e => { setQuery(e.target.value); setPage(1); }} /></label><Select label="피드 정렬" value={sort} onChange={v => { setSort(v); setPage(1); }} options={[{ value: "new", label: "최신순" }, { value: "popular", label: "공감순", hint: "누적 공감" }]} variant="compact" />{(query || category !== "전체") && <button type="button" className="button ghost small" onClick={() => { setQuery(""); setCategory("전체"); setPage(1); }}>초기화</button>}</div>
-      {!ready ? <DataEmpty entity="게시글" status={feedStatus} retry={status === "ready" ? remote.reload : reloadPlatform} /> : items.length ? <div className="feed-cards">{items.map(p => <FeedCard key={p.id} post={p} showTarget={!target} />)}</div> : <div className="feed-empty"><h3>{query || category !== "전체" ? "조건에 맞는 이야기가 없습니다" : "아직 이야기가 없습니다"}</h3><p>{query || category !== "전체" ? "검색어나 주제를 바꿔보세요." : "첫 이야기를 남겨보세요."}</p></div>}
+      <div className="toolbar post-tools"><label className="input-search"><Search size={16} /><input aria-label="피드 검색" maxLength={100} value={query} placeholder="내용·제목 검색" onChange={e => { setQuery(e.target.value); setPage(1); }} /></label><Select label="피드 정렬" value={sort} onChange={v => { setSort(v); setPage(1); }} options={[{ value: "new", label: "최신순" }, { value: "popular", label: "공감순", hint: "누적 공감" }]} variant="compact" />{query && <button type="button" className="button ghost small" onClick={() => { setQuery(""); setPage(1); }}>초기화</button>}</div>
+      {!ready ? <DataEmpty entity="게시글" status={feedStatus} retry={status === "ready" ? remote.reload : reloadPlatform} /> : items.length ? <div className="feed-cards">{items.map(p => <FeedCard key={p.id} post={p} showTarget={!target} />)}</div> : <div className="feed-empty"><h3>{query ? "조건에 맞는 이야기가 없습니다" : "아직 이야기가 없습니다"}</h3><p>{query ? "검색어를 바꿔보세요." : "첫 이야기를 남겨보세요."}</p></div>}
       {ready && pages > 1 && <div className="panel-foot pagination"><span>{money(total)}건 · {page} / {pages}</span><div><button aria-label="이전 피드 페이지" disabled={page === 1} onClick={() => setPage(v => v - 1)}><ChevronLeft size={17} /></button><button aria-label="다음 피드 페이지" disabled={page >= pages} onClick={() => setPage(v => v + 1)}><ChevronRight size={17} /></button></div></div>}
     </section>
   </div>;

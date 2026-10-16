@@ -37,7 +37,6 @@ export type Player = {
   short: string | null;
   team: string | null;
   position: Position | null;
-  number: number | null;
   country: string | null;
   age: number | null;
   season?: number | null;
@@ -55,6 +54,7 @@ export type Player = {
   analysis: string | null;
   updatedAt: string | null;
   status: string | null;
+  tradeWindow?: {locked:boolean;fixtureId?:string;startsAt?:string;finishedAt?:string|null;unlockAt?:string|null};
   /** Licensed photo URL. Null/undefined renders the illustrated placeholder. */
   photo?: string | null;
 };
@@ -102,7 +102,6 @@ export type Post = {
   authorId: string;
   scope: "club" | "player";
   target: string;
-  category: string;
   title: string;
   body: string;
   date: string;
@@ -170,6 +169,7 @@ export type RankingPeriod = {
   rows: RankingRow[];
 };
 export type PublicData = {
+  freshness?: {lastCheckedAt:string|null;lastSuccessAt:string|null;lastError:string|null;priceUpdatedAt:string|null;workerRunning:boolean|null} | null;
   communityCounts?: {scope:"club"|"player";target:string;count:number}[];
   policy?: {version:string;initialPoints:number;initialPrice:number;sellFeeBps:number;quoteSeconds:number;clubCompetitionsEnabled?:boolean} | null;
   /** Total DB catalog count; players below are bounded previews. */
@@ -179,7 +179,6 @@ export type PublicData = {
   leagues: League[];
   fixtures: Fixture[];
   formations: Formation[];
-  categories: string[];
   posts: Post[];
   comments: Comment[];
   rankings: RankingPeriod[];

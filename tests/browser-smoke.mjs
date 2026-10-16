@@ -79,7 +79,7 @@ try {
   mockPage.on("pageerror",error=>errors.push(error.message));
   const empty=loadTs("../lib/kickx/data.ts").emptyPlatformData();
   const state={...empty,
-    players:[{id:"test-player",name:"CI-only player",english:null,short:null,team:null,position:"FW",number:null,country:null,age:null,price:0,change:0,performance:0,volume:0,goals:0,assists:0,minutes:0,history:[],records:[],analysis:null,updatedAt:null,status:null}],
+    players:[{id:"test-player",name:"CI-only player",english:null,short:null,team:null,position:"FW",country:null,age:null,price:0,change:0,performance:0,volume:0,goals:0,assists:0,minutes:0,history:[],records:[],analysis:null,updatedAt:null,status:null}],
     session:{userId:"test-account",role:"member",profile:{nickname:"테스트 사용자",team:null}},
     member:{financialReady:false,points:null,totalAssets:null,playerAssets:null,profit:null,returnRate:null,weeklyRank:null,holdings:[],transactions:[],watchlist:[],assetHistory:[],squad:null},
   };
@@ -212,7 +212,7 @@ try {
   }
   report.checks.push("Admin visits have no collection mutation; member restriction and restore survive reload");
   // Browser contract doubles only. SQL integration above independently tests actual persistence.
-  state.players[0].price=100000;state.players[0].position='FW';state.players[0].number=9;
+  state.players[0].price=100000;state.players[0].position='FW';
   state.teams=[{id:'test-team',name:'테스트 구단',english:'Test Club',code:'TST',color:null,leagueId:null}];
   state.players[0].team='test-team';state.categories=['자유'];
   state.formations=[{id:'4-3-3',name:'4-3-3',positions:['GK','DF','DF','DF','DF','MF','MF','MF','FW','FW','FW']}];
@@ -270,7 +270,7 @@ try {
     await route.fulfill({json:{id:savedPost?.id}});
   });
   await mockPage.goto(base+'/community/write?scope=player&target=test-player',{waitUntil:'networkidle'});
-  await mockPage.getByRole('combobox',{name:'주제',exact:false}).click();await mockPage.getByRole('option',{name:'자유',exact:true}).click();
+  assert.equal(await mockPage.getByRole('combobox',{name:'주제',exact:false}).count(),0);
   await mockPage.getByLabel('제목',{exact:false}).fill('테스트 경기 후기');await mockPage.locator('#post-body').fill('저장 흐름을 점검하는 테스트 게시글 내용입니다.');
   await mockPage.getByRole('button',{name:'게시글 등록',exact:true}).click();await mockPage.getByRole('link',{name:'저장한 게시글 보기',exact:true}).click();
   await mockPage.getByRole('heading',{name:'테스트 경기 후기',exact:true}).waitFor();

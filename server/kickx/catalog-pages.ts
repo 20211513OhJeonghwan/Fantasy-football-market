@@ -1,4 +1,5 @@
 import "server-only";
+import { attachTradeWindows } from "./trading";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Fixture, Player } from "@/lib/kickx/types";
 import { literalLike, type CatalogQuery } from "@/lib/kickx/catalog-query";
@@ -16,12 +17,12 @@ export async function readPlayerPage(client: SupabaseClient, input: CatalogQuery
   if (input.position) query = query.eq("position", input.position);
   if (input.scope === "rising") query = query.gt("change_percent", 0);
   if (input.scope === "falling") query = query.lt("change_percent", 0);
-  const column = { number:"shirt_number",price:"price", "price-asc":"price", change:"change_percent", performance:"performance", volume:"volume", name:"name" }[input.sort]!;
-  const { data, error, count } = await query.order(column, { ascending: ["price-asc","name","number"].includes(input.sort), nullsFirst:false }).order("name").order("id")
+  const column = { price:"price", "price-asc":"price", change:"change_percent", performance:"performance", volume:"volume", name:"name" }[input.sort]!;
+  const { data, error, count } = await query.order(column, { ascending: ["price-asc","name"].includes(input.sort), nullsFirst:false }).order("name").order("id")
     .range((input.page-1)*input.size, input.page*input.size-1);
   if (error) throw error;
   if (!data || count == null) throw new Error("Missing paginated catalog result");
-  return {items:data.map((row:Record<string,unknown>)=>mapPlayer(row, row)),total:count,page:input.page,size:input.size};
+  return {items:await attachTradeWindows(client,data.map((row:Record<string,unknown>)=>mapPlayer(row, row))),total:count,page:input.page,size:input.size};
 }
 export async function readFixturePage(client: SupabaseClient, input: CatalogQuery): Promise<CatalogPage<Fixture>> {
   let query = client.from("fixture_catalog").select("*", {count:"exact"});
@@ -71,5 +72,6 @@ export async function readPlayerDetail(client: SupabaseClient, id: string): Prom
     checkDatabase(baseline.error);checkDatabase(priceSteps.error);
     player.pricing={baseline:baseline.data?.detail ?? null,recent:priceSteps.data ?? []};
   }
+  await attachTradeWindows(client,[player]);
   return player;
 }
