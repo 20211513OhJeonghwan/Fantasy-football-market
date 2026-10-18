@@ -18,14 +18,15 @@ test('regular and supplemental competitions share polling while stale seasons an
 function harness({task=null,fixture=null,providerFailure=false,detail=null}={}) {
  if(task && !task.retry_at)task.retry_at=now;
  const calls=[],store={kickx_policy:{club_competitions_enabled:true},football_entity_sources:[{kind:'league',external_id:1,raw:{currentSeason:{season:{id:101,year:2026,is_current:true,start_date:'2026-07-01',end_date:'2027-06-30'}}}}],teams:[{provider:'bsd',league_id:'bsd-1',external_id:10}],realtime_fixture_tasks:task?[task]:[],realtime_calendar_checks:[{league_id:'bsd-1',season_id:101,retry_at:'2027-01-01'}],calculation_queue:[],realtime_fixture_checks:task?[{fixture_id:task.fixture_id,retry_at:now}]:[]};
- const db={rpc:async(name,args)=>{calls.push({name,args});if(name==='kickx_realtime_due_fixtures')return {data:fixture?[fixture]:[]};if(name==='kickx_realtime_claim')return {data:{token:'lease',now}};return {data:0};},from(table){
-  let mode='read',value,filters=[],upper=[];
+ const db={rpc:async(name,args)=>{calls.push({name,args});if(name==='kickx_realtime_due_fixtures')return {data:fixture?[fixture]:[]};if(name==='kickx_realtime_claim')return {data:{token:'lease',now}};if(name==='kickx_ack_calculation')store.calculation_queue=store.calculation_queue.filter(row=>row.player_id!==args.p_player);return {data:0};},from(table){
+  let mode='read',value,filters=[],upper=[],limit=Infinity;
   const q=new Proxy({then(resolve){let data=store[table]??[];if(Array.isArray(data))for(const [key,val] of filters)data=data.filter(row=>row[key]===val);
     if(Array.isArray(data))for(const [key,val] of upper)data=data.filter(row=>String(row[key])<=String(val));
+    if(Array.isArray(data))data=data.slice(0,limit);
     if(mode==='delete')store[table]=store[table].filter(row=>!data.includes(row));
     if(mode==='update')for(const row of data)Object.assign(row,value);
     if(mode==='upsert'){store[table]??=[];store[table].push(value);}
-    calls.push({table,mode,value});return Promise.resolve({data}).then(resolve);}}, {get(target,key){if(key in target)return target[key];return (...args)=>{if(key==='eq')filters.push(args);if(key==='lte')upper.push(args);if(['update','upsert'].includes(key)){mode=key;value=args[0];}if(key==='delete')mode=key;return q;};}});return q;
+    calls.push({table,mode,value});return Promise.resolve({data}).then(resolve);}}, {get(target,key){if(key in target)return target[key];return (...args)=>{if(key==='eq')filters.push(args);if(key==='lte')upper.push(args);if(key==='limit')limit=args[0];if(['update','upsert'].includes(key)){mode=key;value=args[0];}if(key==='delete')mode=key;return q;};}});return q;
  }};
  const api={requests:0,async get(path){this.requests++;if(providerFailure)throw new SyncError('PROVIDER_NETWORK_ERROR');if(detail)return detail;assert.match(path,/player-stats/);return {event_id:9,count:0,player_stats:[]};}};
  return {db,api,calls,store};
@@ -49,6 +50,16 @@ test('provider failures retain the original task payload and use backoff, never 
 test('a busy minute lease performs no provider requests or calculations',async()=>{
  let calls=0;const result=await runRealtimeFootball({rpc:async()=>({data:{busy:true}})},'private',{calculate:async()=>{calls++;},api:{get:()=>calls++}});
  assert.equal(result.busy,true);assert.equal(calls,0);
+});
+
+test('minute calculation batches leave room for Auth while all queued players are processed',async()=>{
+ const h=harness();let active=0,peak=0;
+ h.store.calculation_queue=Array.from({length:5},(_,i)=>({player_id:'test-'+i,revision:'revision-'+i,retry_at:now}));
+ const result=await runRealtimeFootball(h.db,'private',{api:h.api,now,calculate:async()=>{
+  active++;peak=Math.max(peak,active);await new Promise(resolve=>setTimeout(resolve,1));active--;return {};
+ }});
+ assert.equal(peak,2);assert.equal(result.calculated,5);assert.equal(h.store.calculation_queue.length,0);
+ assert.equal(result.error,null);
 });
 
 test('a rescheduled kickoff uses its new time when planning the next poll',async()=>{

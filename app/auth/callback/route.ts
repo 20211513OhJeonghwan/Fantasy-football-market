@@ -19,12 +19,12 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   if (!code || url.searchParams.has("error")) return redirect(failed);
   try {
-    const client = await createRequestClient();
-    const { error } = await client.auth.exchangeCodeForSession(code);
-    if (error) return redirect(failed);
-    const verified = await client.auth.getUser();
-    if (verified.error || !verified.data.user) return redirect(failed);
-    const profile = await client.from("profiles").select("id").eq("id", verified.data.user.id).maybeSingle();
+    const client = await createRequestClient({ freshAuth: true });
+    // This user comes directly from the Auth server's one-time code exchange,
+    // rather than from an unverified cookie. A second user lookup is redundant.
+    const { data, error } = await client.auth.exchangeCodeForSession(code);
+    if (error || !data.user) return redirect(failed);
+    const profile = await client.from("profiles").select("id").eq("id", data.user.id).maybeSingle();
     if (profile.error) return redirect("/login?error=profile");
     return redirect(profile.data ? next : "/onboarding?next=" + encodeURIComponent(next));
   } catch { return redirect(failed); }
