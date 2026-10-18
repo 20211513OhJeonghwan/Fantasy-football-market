@@ -1,0 +1,40 @@
+name: Apply supplied Korean player names
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/localization/players.workbook.ko.json'
+      - 'scripts/apply-workbook-player-names.mjs'
+      - 'scripts/lib/workbook-player-names.mjs'
+      - '.github/workflows/player-workbook-names.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: korean-name-import
+  cancel-in-progress: false
+jobs:
+  names:
+    if: github.repository == 'hyun1290/kick-x-test'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Preview identity matches and preserved labels
+        run: node scripts/apply-workbook-player-names.mjs --report=workbook-names-before.json
+      - name: Apply supplied labels and protect them from automatic translation
+        run: node scripts/apply-workbook-player-names.mjs --apply --report=workbook-names-after.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workbook-name-import
+          path: workbook-names-*.json
+          if-no-files-found: ignore
