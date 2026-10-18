@@ -55,6 +55,20 @@ test('conflicting workbook records cannot select a label by input order',()=>{
   assert.ok(plan.skipped.every(row=>row.reason==='conflicting_workbook_labels'));
 });
 
+test('reviewed date conflicts bind both source and DB identities and can never repair DOB or a different player',()=>{
+  const source={...row,birth_date:'2000-01-03'};
+  const override={key:row.key,id:player.id,expected_name:player.name,birth_date:player.birth_date,expected_team_id:player.team_id,
+    source_name:source.name,source_birth_date:source.birth_date,source_team:source.team,allow_birth_date_conflict:true};
+  const actual={...data([source]),identity_overrides:[override]};
+  assert.equal(planWorkbookNames(actual,[player],[team],[name]).rows[0].id,player.id);
+  assert.ok(!('birth_date' in planWorkbookNames(actual,[player],[team],[name]).rows[0].value));
+  assert.ok(!matchWorkbookPlayer({...source,name:'Other Name'},[player],[team],[name],override).player);
+  assert.ok(!matchWorkbookPlayer(source,[{...player,team_id:'bsd-2'}],[team],[name],override).player);
+  assert.ok(!matchWorkbookPlayer(source,[{...player,birth_date:'1999-01-01'}],[team],[name],override).player);
+  assert.ok(!matchWorkbookPlayer({...source,birth_date:'2000-01-04'},[player],[team],[name],override).player);
+  assert.throws(()=>validateWorkbookNames({...actual,identity_overrides:[{...override,expected_name:'Someone else'}]}));
+});
+
 function fakeDb({current=player,concurrent=false}={}) {
   const operations=[];
   return {operations,from(table){
