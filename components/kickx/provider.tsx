@@ -1,19 +1,20 @@
 "use client";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type SetStateAction } from "react";
 import { CheckCircle2, AlertCircle, X } from "lucide-react";
 import { emptyAdminData, emptyPlatformData } from "@/lib/kickx/data";
 import { apiRequest } from "@/lib/kickx/client";
 import type { DataResponse, DataSource, DataStatus, PlatformData, Profile, Player } from "@/lib/kickx/types";
 export function useResource<T>(url: string | null, initial: () => T, refreshMs = 0) {
-  const [data, setData] = useState(initial);
-  const [status, setStatus] = useState<DataStatus>("loading");
-  const [source, setSource] = useState<DataSource | null>(null);
+  const [snapshot,setSnapshot]=useState<{url:string|null;data:T;status:DataStatus;source:DataSource|null}>(()=>({url:null,data:initial(),status:'loading',source:null}));
+  const setData=useCallback((next:SetStateAction<T>)=>setSnapshot(current=>({...current,data:typeof next==='function'?(next as (value:T)=>T)(current.data):next})),[]);
   const [attempt, setAttempt] = useState(0);
   const reload = useCallback(() => setAttempt(a => a + 1), []);
   useEffect(() => {
-    if (!url) return;
+    if (!url) {setSnapshot({url:null,data:initial(),status:'loading',source:null});return;}
     const controller = new AbortController();
-    setStatus("loading");
+    // Reload the same data in the background. A new search still gets an
+    // explicit loading state, and old requests cannot commit after navigation.
+    setSnapshot(current=>current.url===url&&current.status==='ready'?current:{url,data:initial(),status:'loading',source:null});
     let inFlight = false;
     const refresh = async () => {
       if (inFlight || controller.signal.aborted) return;
@@ -22,15 +23,15 @@ export function useResource<T>(url: string | null, initial: () => T, refreshMs =
         const response=await fetch(url, { signal: controller.signal, cache: "no-store", credentials: "same-origin" });
         if (!response.ok) {
           if (response.status === 401 || response.status === 403) {
-            if (!controller.signal.aborted) { setData(initial()); setStatus(response.status === 401 ? "unauthorized" : "forbidden"); }
+            if (!controller.signal.aborted) setSnapshot({url,data:initial(),status:response.status === 401 ? "unauthorized" : "forbidden",source:null});
             return;
           }
           throw new Error("Request failed");
         }
         const result=await response.json() as DataResponse<T>;
         if (!["ready", "not-configured"].includes(result.status) || !result.data) throw new Error("Invalid response");
-        if (!controller.signal.aborted) { setData(result.data); setStatus(result.status); setSource(result.status === "ready" ? result.source ?? "database" : null); }
-      } catch { if (!controller.signal.aborted) { setData(initial()); setStatus("error"); } }
+        if (!controller.signal.aborted) setSnapshot({url,data:result.data,status:result.status,source:result.status === "ready" ? result.source ?? "database" : null});
+      } catch { if (!controller.signal.aborted) setSnapshot({url,data:initial(),status:'error',source:null}); }
       finally { inFlight = false; }
     };
     void refresh();
@@ -39,7 +40,10 @@ export function useResource<T>(url: string | null, initial: () => T, refreshMs =
     if(refreshMs>0)document.addEventListener("visibilitychange",visibleRefresh);
     return () => { controller.abort(); if(timer)clearInterval(timer);document.removeEventListener("visibilitychange",visibleRefresh); };
   }, [url, attempt, initial, refreshMs]);
-  return { data, status, source, reload, setData };
+  // A route/account change must never expose the previous resource's data while
+  // its effect is still starting, even for a single render.
+  const current=snapshot.url===url;
+  return { data:current?snapshot.data:initial(), status:current?snapshot.status:'loading' as DataStatus, source:current?snapshot.source:null, reload, setData };
 }
 type Notice = { message: string; kind: "success" | "error" };
 type PlatformContext = {

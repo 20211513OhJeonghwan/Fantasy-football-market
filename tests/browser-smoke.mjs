@@ -83,6 +83,29 @@ try {
     session:{userId:"test-account",role:"member",profile:{nickname:"테스트 사용자",team:null}},
     member:{financialReady:false,points:null,totalAssets:null,playerAssets:null,profit:null,returnRate:null,weeklyRank:null,holdings:[],transactions:[],watchlist:[],assetHistory:[],squad:null},
   };
+  // Public page requests must start before a deliberately blocked dashboard.
+  // This tests ordering, rather than asserting a machine-dependent time limit.
+  for(const detail of [false,true]) {
+    const concurrent=await browser.newContext();
+    let release;
+    const gate=new Promise(resolve=>{release=resolve;});
+    let released=false;
+    await concurrent.route(/\/api\/kickx$/,async route=>{await gate;await route.fulfill({json:{status:'ready',data:state}});});
+    const endpoint=detail?/\/api\/kickx\/players\/test-player$/:/\/api\/kickx\/players\?/;
+    await concurrent.route(endpoint,route=>route.fulfill({json:{status:'ready',data:detail?{player:state.players[0]}:{items:state.players,total:1,page:1,size:12}}}));
+    const concurrentPage=await concurrent.newPage();
+    try {
+      const requested=concurrentPage.waitForRequest(request=>endpoint.test(request.url()),{timeout:10000});
+      await concurrentPage.goto(base+(detail?'/players/test-player':'/players'),{waitUntil:'domcontentloaded'});
+      await requested;
+      assert.equal(released,false);
+      await concurrentPage.getByRole('heading',{name:'CI-only player',exact:true}).waitFor({timeout:10000});
+    } finally {
+      const completed=concurrentPage.waitForResponse(response=>new URL(response.url()).pathname==='/api/kickx',{timeout:5000}).catch(()=>null);
+      released=true;release();await completed;await concurrent.close();
+    }
+  }
+  report.checks.push('Public player list and detail render while dashboard bootstrap is still pending');
   await mock.route(/\/api\/kickx$/,route=>route.fulfill({json:{status:"ready",data:state}}));
   const catalogRequests=[];
   let failSearch=false;

@@ -40,10 +40,15 @@ export class SupabaseKickxRepository implements KickxRepository {
     if (!session || session.userId !== userId) throw new Error("Member identity mismatch");
     const client = await this.client;
     if (session.profile) {
-      const wallet = await client.rpc("kickx_open_wallet");
-      if (!migrationMissing(wallet.error)) {
+      // Existing wallets are a read-only operation. open_wallet takes the global
+      // economy lock and must only run once for a member without a wallet.
+      let result = await client.rpc("kickx_member_data");
+      if (result.error?.code === "P0001" && result.error.message === "PROFILE_REQUIRED") {
+        const wallet=await client.rpc("kickx_open_wallet");
         checkDatabase(wallet.error);
-        const result = await client.rpc("kickx_member_data");
+        result=await client.rpc("kickx_member_data");
+      }
+      if (!migrationMissing(result.error)) {
         checkDatabase(result.error);
         return {...result.data, ownedPlayers: await attachTradeWindows(client,(result.data.ownedPlayers ?? []).map((p: Record<string,unknown>)=>mapPlayer(p,p)))};
       }
