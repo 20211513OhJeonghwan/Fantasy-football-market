@@ -6,7 +6,11 @@ import { createRequestClient } from "./supabase";
 import { authenticatedClient, failure, HttpError, json } from "./http";
 import {prototypeAvailable} from "./prototype";
 import { readFixturePage, readPlayerDetail, readPlayerPage } from "./catalog-pages";
-export async function catalogPage(request: Request, kind: "players" | "fixtures") {
+import { timedRead } from "./read-timing";
+export function catalogPage(request: Request, kind: "players" | "fixtures") {
+  return timedRead(()=>readCatalogPage(request,kind));
+}
+async function readCatalogPage(request: Request, kind: "players" | "fixtures") {
   try {
     const input=parseCatalogQuery(new URL(request.url).searchParams,kind);
     const repo=getKickxRepository();
@@ -38,7 +42,8 @@ export async function catalogPage(request: Request, kind: "players" | "fixtures"
     return json({status:"ready",source:"mock",data:{...empty,items:items.slice((input.page-1)*input.size,input.page*input.size),total:items.length}});
   } catch(error) { return error instanceof CatalogInputError ? json({error:error.message},400) : failure(error); }
 }
-export async function catalogDetail(id: string) {
+export function catalogDetail(id: string) {return timedRead(()=>readCatalogDetail(id));}
+async function readCatalogDetail(id: string) {
   try {
     if(!/^[a-zA-Z0-9_-]{1,100}$/.test(id)) throw new HttpError(400,"선수 ID를 확인해 주세요.");
     const repo=getKickxRepository();
