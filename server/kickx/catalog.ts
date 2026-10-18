@@ -5,6 +5,10 @@ import type { PublicData, Player, Position } from "@/lib/kickx/types";
 import { emptyPublicData } from "@/lib/kickx/data";
 import { readPrototypePublic } from "./public-prototype";
 type Row = Record<string, unknown>;
+// Leave computed search_text out of normal reads. PostgreSQL can then avoid its
+// correlated league-name aggregation unless a search filter actually needs it.
+export const PLAYER_COLUMNS: string = "id,name,english,short_name,name_ko,display_name,aliases,team_id,position,country,birth_date,photo,season,stats_scope,matches_imported,price,change_percent,performance,volume,goals,assists,minutes,market_updated_at,updated_at,trade_status";
+export const FIXTURE_COLUMNS: string = "id,league_id,home_team_id,away_team_id,starts_at,status,home_score,away_score,stage,round_label,penalties_home,penalties_away,reflection_status";
 const text = (v: unknown) => typeof v === "string" ? v : null;
 const number = (v: unknown) => v != null && (typeof v === "number" || typeof v === "string") && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null;
 function required(v: unknown) { const s = text(v); if (!s) throw new Error("Invalid catalog identity"); return s; }
@@ -53,28 +57,31 @@ export function mapFixture(row: Row) {
  */
 export async function readCatalog(client: SupabaseClient): Promise<PublicData> {
   const query = async (table: string, column: string, ascending=false, limit=24, since?: string) => {
-    let q=client.from(table).select("*").order(column,{ascending,nullsFirst:false}).order("id").limit(limit);
+    const columns: string=table==='player_catalog'?PLAYER_COLUMNS:"id,league_id,home_team_id,away_team_id,starts_at,status,home_score,away_score,stage,round_label,penalties_home,penalties_away";
+    let q=client.from(table).select(columns).order(column,{ascending,nullsFirst:false}).order("id").limit(limit);
     if(table==='player_catalog')q=q.in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']);
     if(since) q=q.gte("starts_at",since);
     const {data,error}=await q;
     if(error) throw error;
-    if(!data) throw new Error("Missing catalog preview");
-    return data as Row[];
+    if(!Array.isArray(data)) throw new Error("Missing catalog preview");
+    return data as unknown as Row[];
   };
-  const [leagues,teams,price,rising,falling,fixtures,summary]=await Promise.all([
-    readRows(client,"leagues","id,name"),readRows(client,"teams","*"),
+  const previews=Promise.all([
+    readRows(client,"leagues","id,name"),readRows(client,"teams","id,name,name_ko,english,code,color,league_id"),
     query("player_catalog","price"),query("player_catalog","change_percent",false,5),query("player_catalog","change_percent",true,5),
     query("fixtures","starts_at",true,20,new Date(Date.now()-86400000).toISOString()),
     client.from("player_catalog").select("id",{count:"exact",head:true}).in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']),
-  ]);
-  if(summary.error || summary.count == null) throw summary.error || new Error("Missing player count");
-  const players=[...new Map([...price,...rising,...falling].map(row=>[required(row.id),mapPlayer(row,row)])).values()];
-  await attachTradeWindows(client,players);
-  const prototype=await readPrototypePublic(client);
+  ]).then(async ([leagues,teams,price,rising,falling,fixtures,summary])=>{
+    if(summary.error || summary.count == null) throw summary.error || new Error("Missing player count");
+    const players=[...new Map([...price,...rising,...falling].map(row=>[required(row.id),mapPlayer(row,row)])).values()];
+    await attachTradeWindows(client,players);
+    return {leagues,teams,players,fixtures,total:summary.count};
+  });
+  const [{leagues,teams,players,fixtures,total},prototype]=await Promise.all([previews,readPrototypePublic(client)]);
   return {...emptyPublicData(),...prototype,
     leagues:leagues.map(row=>({id:required(row.id),name:required(row.name)})),
     teams:teams.map(row=>({id:required(row.id),name:text(row.name_ko)||required(row.name),english:text(row.english)||required(row.name),code:text(row.code),color:text(row.color),leagueId:text(row.league_id)})),
-    players,fixtures:fixtures.map(mapFixture),playerTotal:summary.count,
+    players,fixtures:fixtures.map(mapFixture),playerTotal:total,
     updatedAt:prototype.freshness?.priceUpdatedAt??players.map(p=>p.updatedAt).filter((v):v is string=>!!v).sort().at(-1)??null,
   };
 }
