@@ -23,7 +23,11 @@ export function validateWorkbookNames(data) {
   }
   const overrides = new Set();
   for (const row of data.identity_overrides ?? []) {
-    if (!keys.has(row.key) || overrides.has(row.key) || !/^bsd-\d+$/.test(row.id) || !row.expected_name || !row.birth_date) throw new Error('INVALID_WORKBOOK_IDENTITY_OVERRIDE');
+    if (!keys.has(row.key) || overrides.has(row.key) || !/^bsd-\d+$/.test(row.id) || !row.expected_name
+      || !/^\d{4}-\d{2}-\d{2}$/.test(row.birth_date) || !row.source_name || !row.source_team
+      || !own(row,'source_birth_date') || !own(row,'expected_team_id')
+      || (row.expected_team_id != null && !/^bsd-\d+$/.test(row.expected_team_id))
+      || (row.allow_birth_date_conflict && (!row.expected_team_id || !equalName(row.source_name,row.expected_name)))) throw new Error('INVALID_WORKBOOK_IDENTITY_OVERRIDE');
     overrides.add(row.key);
   }
   return data;
@@ -66,7 +70,10 @@ export function matchWorkbookPlayer(row, players, teams, names = [], override, i
   if (override) {
     const player = bsd.find(player => player.id === override.id);
     if (!player || player.name !== override.expected_name || !sameDay(player.birth_date, override.birth_date)
-      || !sameDay(row.birth_date, override.birth_date)) return { reason: 'reviewed_identity_changed', candidates: [] };
+      || player.team_id !== override.expected_team_id || row.name !== override.source_name
+      || row.team !== override.source_team || row.birth_date !== override.source_birth_date
+      || (!sameDay(row.birth_date, override.birth_date) && !(override.allow_birth_date_conflict && override.expected_team_id
+        && equalName(row.name,player.name)))) return { reason: 'reviewed_identity_changed', candidates: [] };
     return { player, method: 'reviewed_identity' };
   }
   const exactPlayers=bySpelling.get(compact(row.name))??[], birthdayPlayers=byBirthday.get(row.birth_date)??[];
