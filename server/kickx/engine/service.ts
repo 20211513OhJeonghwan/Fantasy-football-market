@@ -6,6 +6,14 @@ import { calculatePerformance as calculateLegacy } from "./legacy-performance";
 import { calculatePricing } from "./pricing";
 import { HttpError } from "../http";
 import { checkDatabase } from "../prototype";
+type ScoringJson = Record<string, unknown>;
+type CalculationRecord = {
+ player_id:string;fixture_id:string;team_id:string;updated_at:string;
+ stats:ScoringJson & {minutes_played?:number|null};legacy_stats:ScoringJson|null;
+ fixtures:{id:string;starts_at:string;season:number|null;status:string;home_team_id:string;away_team_id:string;
+  home_score:number|null;away_score:number|null;updated_at:string;
+  football_event_sources:{detail:ScoringJson|null;lineups:ScoringJson|null;incidents:ScoringJson|null;updated_at:string}|null};
+};
 export async function calculatePlayer(db: SupabaseClient, playerId: string, actor: string | null, preview=false,
  previewPolicy?: {referenceAt:string;referenceSeason:number|null}) {
  if (previewPolicy && !preview) throw new HttpError(400,"시험 정책은 읽기 전용으로만 사용할 수 있습니다.");
@@ -13,9 +21,11 @@ export async function calculatePlayer(db: SupabaseClient, playerId: string, acto
  const version = previewPolicy ? RULE_VERSION : policy.data.version;
  if (![RULE_VERSION,"prototype-v1"].includes(version)) throw new HttpError(409,"지원하지 않는 산정 정책입니다.");
  const calculator = version === RULE_VERSION ? calculatePerformance : calculateLegacy;
- const stats=[];
+ const stats: CalculationRecord[]=[];
  for(let offset=0;;offset+=500){
-  const r=await db.from("football_match_stats").select("*,fixtures!inner(*,football_event_sources(*))").eq("player_id",playerId).order("fixture_id").range(offset,offset+499);
+  // Event-wide raw player statistics are much larger than the scoring evidence.
+  // Keep revision timestamps and every field consumed by either calculator.
+  const r=await db.from("football_match_stats").select("player_id,fixture_id,team_id,stats,legacy_stats,updated_at,fixtures!inner(id,starts_at,season,status,home_team_id,away_team_id,home_score,away_score,updated_at,football_event_sources(detail,lineups,incidents,updated_at))").eq("player_id",playerId).order("fixture_id").range(offset,offset+499).returns<CalculationRecord[]>();
   checkDatabase(r.error);stats.push(...(r.data??[]));if((r.data?.length??0)<500)break;if(offset>=9500)throw new HttpError(422,"선수 기록 범위가 너무 큽니다.");
  }
  const expected=stats.map(m=>({fixture:m.fixture_id,statsAt:m.updated_at,sourceAt:m.fixtures.football_event_sources?.updated_at??null,fixtureAt:m.fixtures.updated_at}));
