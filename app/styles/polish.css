@@ -90,3 +90,61 @@
 .dash-watch-card { border-color: var(--line-2); }
 .podium-rank { font-size: 60px; top: 10px; -webkit-text-stroke-width: 1.5px; opacity: 0.55; }
 .podium-card.place-1 .podium-rank { opacity: 0.8; }
+
+/* ================= Reference pass (FotMob / Sofascore / Toss patterns) =================
+   Neutral canvas, white cards with gentle corners and no heavy frames; brand colour stays in the
+   masthead, primary actions and active states. */
+:root { --paper: #f2f2ef; --line: #e9e9e4; --line-2: #dcdcd5; --radius-1: 6px; --radius-2: 10px; }
+.panel, .card, .stat-grid, .dash-panel, .movers-grid, .detail-price, .squad-board, .podium-card, .my-rank,
+.match-row, .roster-card, .score-panel, .article, .comment-form, .rules-section, .home-search, .market-hero,
+.portfolio-hero, .admin-hero, .detail-hero, .lounge-hero, .team-section, .explorer, .lounge-head, .pitch,
+.squad-footer, .attached-trade, .write-form, .profile-card, .pipeline, .proto-admin, .order-panel {
+  border-radius: 12px;
+}
+.panel, .card, .dash-panel, .movers-grid, .squad-board, .podium-card, .score-panel, .article, .rules-section,
+.panel.frame, .card.frame, .order-panel, .profile-card { border: 1px solid var(--line); box-shadow: none; }
+.panel.frame, .card.frame, .dash-panel, .squad-board { box-shadow: none; }
+.stat-grid { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.stat-card, .stat-grid > .stat-card + .stat-card { padding: var(--s-4) var(--s-5); }
+.movers-grid, .market-hero, .admin-hero, .detail-hero, .lounge-hero, .pitch, .home-search { overflow: hidden; }
+.home-search { overflow: visible; }
+.portfolio-hero { box-shadow: none; }
+.my-rank { box-shadow: none; }
+.podium-card.place-1 { border-color: var(--ink); }
+
+/* Match rows: a clean list row with thin club edges */
+.match-row { border: 1px solid var(--line); background: var(--surface); overflow: hidden; }
+.match-row::before, .match-row::after { width: 3px; top: 0; bottom: 0; }
+.match-row::before { left: 0; } .match-row::after { right: 0; }
+.match-row:hover { transform: none; box-shadow: none; border-color: var(--line-2); background: #fbfbf9; }
+.match-day h2 { border-bottom: 1px solid var(--line-2); }
+
+/* Controls */
+.button { border-radius: 8px; }
+.kx-select-trigger, .input-search, input, select, textarea { border-radius: 8px; }
+.tag, .category-tag, .status-pill, .trade-type, .position, .league-mark, .result-tag, .score-status, .score-chip { border-radius: 5px; }
+.tabs.segment { border-radius: 10px; } .tabs.segment button { border-radius: 7px; }
+.pagination button, .icon-button { border-radius: 8px; }
+.modal { border-radius: 14px; }
+.detail-price { box-shadow: 0 10px 30px -20px rgba(17, 17, 16, 0.5); }
+
+/* Fixtures: one card per day, rows divided by hairlines (FotMob-style day groups) */
+.match-day ul, .match-list { gap: 0; padding-top: 0; }
+.match-day ul { margin-top: 10px; }
+.match-day ul, .match-list { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.match-list { margin: var(--s-4) var(--s-6) var(--s-5); padding: 0; }
+.match-day .match-row, .match-list .match-row { border: 0; border-radius: 0; border-bottom: 1px solid var(--line); background: transparent; overflow: visible; }
+.match-day .match-row:last-child, .match-list .match-row:last-child { border-bottom: 0; }
+.match-day .match-row:first-child, .match-list .match-row:first-child { border-radius: 12px 12px 0 0; }
+.match-day .match-row:last-child, .match-list .match-row:last-child { border-radius: 0 0 12px 12px; }
+.match-day .match-row:only-child, .match-list .match-row:only-child { border-radius: 12px; }
+.match-day .match-row:first-child::before { border-top-left-radius: 12px; } .match-day .match-row:first-child::after { border-top-right-radius: 12px; }
+.match-day .match-row:last-child::before { border-bottom-left-radius: 12px; } .match-day .match-row:last-child::after { border-bottom-right-radius: 12px; }
+.match-day .match-row:hover, .match-list .match-row:hover { background: #fafaf7; }
+.match-day h2 { border-bottom: 0; padding-bottom: 0; }
+.match-score strong { border-width: 1px; }
+@media (max-width: 640px) { .match-list { margin: var(--s-3); } }
+@media (max-width: 900px) {
+  /* Without the card stack the diagonal stripe would run through the copy. */
+  .market-hero::before { background: radial-gradient(circle, rgba(255, 255, 255, 0.09) 1.2px, transparent 1.8px) 0 0 / 12px 12px; }
+}
