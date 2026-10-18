@@ -3,7 +3,7 @@ import { Select } from "./select";
 import { POSITION_OPTIONS, useTeamOptions } from "./options";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowRight, ArrowUpRight, BookOpen, ChevronDown, Search, Shield, TrendingUp, X } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronDown, Search, Shield, TrendingUp, X } from "lucide-react";
 import { dateText, money, score } from "@/lib/kickx/data";
 import { fixtureGroup, fixtureStatus, selectFeaturedFixtures } from "@/lib/kickx/fixtures";
 import type { Player } from "@/lib/kickx/types";
@@ -337,25 +337,6 @@ export function HomeScreen() {
         </div>
       </section>
 
-      <section className="home-guide" aria-label="KICK-X 시작 가이드">
-        <div className="home-guide-intro">
-          <span className="eyebrow">HOW KICK-X WORKS</span>
-          <h2>경기를 보는 눈이,<br />선택의 차이를 만듭니다.</h2>
-        </div>
-        {[
-          ["01", "DISCOVER", "선수를 발견하세요", "실제 경기 기록과 Performance로 다음 선수를 찾습니다.", "/players"],
-          ["02", "TRADE", "가상 포인트로 영입", "현재 가치로 매입하고, 가치가 오르면 매각해 수익을 확정합니다.", "/market"],
-          ["03", "BUILD", "베스트 11 구성", "보유 선수로 포메이션을 짜고 나만의 스쿼드를 완성합니다.", "/squad"],
-          ["04", "COMPETE", "수익률로 경쟁", "주간·월간 수익률 랭킹에서 안목을 증명하세요.", "/ranking"],
-        ].map(([index, label, title, body, href]) => (
-          <Link key={index} href={href} className="home-guide-step">
-            <span className="home-guide-index num">{index}<small>{label}</small></span>
-            <strong>{title}</strong>
-            <p>{body}</p>
-            <ArrowUpRight size={20} />
-          </Link>
-        ))}
-      </section>
 
       {guideOpen && (
         <Modal title="지표 읽는 법" eyebrow="METRIC GUIDE" onClose={() => setGuideOpen(false)}>
