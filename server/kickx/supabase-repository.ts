@@ -9,14 +9,15 @@ import { readOperations } from "./ingestion";
 export class SupabaseKickxRepository implements KickxRepository {
   readonly configured = true;
   readonly adminConfigured = true;
-  private client = createRequestClient();
+  private client: ReturnType<typeof createRequestClient> | null = null;
+  private getClient() { return this.client ||= createRequestClient(); }
   private session: Promise<Session | null> | null = null;
   getSession() {
     this.session ||= this.readSession();
     return this.session;
   }
   private async readSession(): Promise<Session | null> {
-    const client = await this.client;
+    const client = await this.getClient();
     const { data, error } = await client.auth.getUser();
     if (error) {
       if (error.name === "AuthSessionMissingError" || error.status === 401 || error.code === "refresh_token_not_found" || error.code === "refresh_token_already_used") return null;
@@ -34,11 +35,11 @@ export class SupabaseKickxRepository implements KickxRepository {
       profile: profile.data ? { nickname: profile.data.nickname, team: profile.data.team_id } : null,
     };
   }
-  async getPublicData() { return readCatalog(await this.client); }
+  async getPublicData() { return readCatalog(await this.getClient()); }
   async getMemberData(userId: string): Promise<MemberData | null> {
     const session = await this.getSession();
     if (!session || session.userId !== userId) throw new Error("Member identity mismatch");
-    const client = await this.client;
+    const client = await this.getClient();
     if (session.profile) {
       // Existing wallets are a read-only operation. open_wallet takes the global
       // economy lock and must only run once for a member without a wallet.
