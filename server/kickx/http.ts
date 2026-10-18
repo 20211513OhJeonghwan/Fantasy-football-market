@@ -42,7 +42,7 @@ export async function authenticatedClient() {
   const client = await createRequestClient();
   const { data, error } = await client.auth.getUser();
   if (error || !data.user) {
-    if (error && error.status && error.status >= 500) throw new HttpError(503, "로그인 상태를 확인하지 못했습니다. 다시 시도해 주세요.");
+    if (error && (error.status === 409 || error.status && error.status >= 500)) throw new HttpError(503, "로그인 상태를 확인하지 못했습니다. 다시 시도해 주세요.");
     throw new HttpError(401, "로그인 후 다시 시도해 주세요.");
   }
   return { client, user: data.user };
@@ -50,6 +50,11 @@ export async function authenticatedClient() {
 export function failure(error: unknown) {
   if (error instanceof InputError) return json({ error: error.message }, 400);
   if (error instanceof HttpError) return json({ error: error.message }, error.status);
+  if (error && typeof error === "object" && "__isAuthError" in error && error.__isAuthError === true) {
+    const status = "status" in error ? Number(error.status) : 0;
+    const retryable = status === 409 || status >= 500;
+    return json({ error: retryable ? "로그인 상태 확인이 지연되고 있습니다. 잠시 후 다시 시도해 주세요." : "로그인 후 다시 시도해 주세요." }, retryable ? 503 : 401);
+  }
   // Never expose database details, credentials, or user records in responses.
   return json({ error: "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요." }, 500);
 }
