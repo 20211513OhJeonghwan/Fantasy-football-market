@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const callback = new URL("/auth/callback", request.url);
     const jar = await cookies();
     jar.set("kickx-auth-next", safeReturnPath(input?.next), { httpOnly: true, sameSite: "lax", secure: callback.protocol === "https:", path: "/auth", maxAge: 600 });
-    const client = await createRequestClient();
+    const client = await createRequestClient({ freshAuth: true });
     const { data, error } = await client.auth.signInWithOAuth({
       provider: "google", options: { redirectTo: callback.toString(), skipBrowserRedirect: true },
     });

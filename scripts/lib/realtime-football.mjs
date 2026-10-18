@@ -88,7 +88,9 @@ async function drainMatchTasks(db,api,now,deadline,summary) {
 }
 async function calculatePending(db,calculate,deadline,summary) {
   while(Date.now()<deadline) {
-    const jobs=checked(await db.from('calculation_queue').select('player_id,revision').lte('retry_at',new Date().toISOString()).order('queued_at',{ascending:false}).order('player_id').limit(8));
+    // Leave database capacity for Auth and page reads. Publishing is serialized
+    // by the economy lock anyway; eight concurrent replays create a wait queue.
+    const jobs=checked(await db.from('calculation_queue').select('player_id,revision').lte('retry_at',new Date().toISOString()).order('queued_at',{ascending:false}).order('player_id').limit(2));
     if(!jobs.length)break;
     await Promise.all(jobs.map(async job=>{
       let error=null;

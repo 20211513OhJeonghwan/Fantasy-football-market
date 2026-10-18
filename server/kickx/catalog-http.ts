@@ -2,7 +2,7 @@ import "server-only";
 import { CatalogInputError, parseCatalogQuery } from "@/lib/kickx/catalog-query";
 import { fixtureGroup, koreanDay } from "@/lib/kickx/fixtures";
 import { getKickxRepository } from "./repository";
-import { createRequestClient } from "./supabase";
+import { createPublicClient } from "./supabase";
 import { authenticatedClient, failure, HttpError, json } from "./http";
 import {prototypeAvailable} from "./prototype";
 import { readFixturePage, readPlayerDetail, readPlayerPage } from "./catalog-pages";
@@ -17,7 +17,7 @@ async function readCatalogPage(request: Request, kind: "players" | "fixtures") {
     const empty={items:[],total:0,page:input.page,size:input.size};
     if(!repo.configured) return json({status:"not-configured",data:empty});
     if(repo.source !== "mock") {
-      const client=kind === "players" && ["watch","owned"].includes(input.scope) ? (await authenticatedClient()).client : await createRequestClient();
+      const client=kind === "players" && ["watch","owned"].includes(input.scope) ? (await authenticatedClient()).client : createPublicClient();
       if(kind==="players"&&input.scope==="owned"&&!await prototypeAvailable(client))return json({status:"not-configured",data:empty});
       return json({status:"ready",data:await (kind === "players" ? readPlayerPage(client,input) : readFixturePage(client,input))});
     }
@@ -48,7 +48,7 @@ async function readCatalogDetail(id: string) {
     if(!/^[a-zA-Z0-9_-]{1,100}$/.test(id)) throw new HttpError(400,"선수 ID를 확인해 주세요.");
     const repo=getKickxRepository();
     if(!repo.configured) return json({status:"not-configured",data:{player:null}});
-    const player=repo.source === "mock" ? (await repo.getPublicData()).players.find(p=>p.id===id) ?? null : await readPlayerDetail(await createRequestClient(),id);
+    const player=repo.source === "mock" ? (await repo.getPublicData()).players.find(p=>p.id===id) ?? null : await readPlayerDetail(createPublicClient(),id);
     return json({status:"ready",...(repo.source ? {source:repo.source} : {}),data:{player}});
   } catch(error) {return failure(error);}
 }
