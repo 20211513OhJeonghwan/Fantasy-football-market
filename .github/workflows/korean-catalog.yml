@@ -3,7 +3,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'data/localization/*.json'
+      - 'data/localization/players.ko.json'
+      - 'data/localization/teams.ko.json'
       - 'scripts/apply-korean-names.mjs'
       - 'scripts/lib/korean-catalog.mjs'
       - 'scripts/lib/missing-korean-names.mjs'
