@@ -1,6 +1,7 @@
 "use client";
 import {CommunityFeed} from "./community-feed";
 import {PerformanceDetails} from "./performance";
+import { MatchReportDialog } from "./match-report";
 import { Select } from "./select";
 import { useLeagueOptions, useTeamOptions } from "./options";
 import Link from "next/link";
@@ -9,7 +10,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { ArrowRight, ChevronLeft, ChevronRight, LayoutGrid, List, MessageCircle, RotateCcw, Search, Sparkles } from "lucide-react";
 import { dateText, money, seriesForDays, score } from "@/lib/kickx/data";
 import { leagueIdentity } from "@/lib/kickx/club-identity";
-import type { Player } from "@/lib/kickx/types";
+import type { Player, PlayerRecord } from "@/lib/kickx/types";
 import { usePlatform } from "./provider";
 import { useCatalogPage, useCatalogPlayer } from "./catalog";
 import { PlayerCard } from "./player-card";
@@ -305,11 +306,12 @@ function PerformanceBars({ player }: { player: Player }) {
 }
 export function PlayerDetail() {
   const params = useParams();
-  const { data, mock, getTeam, getLeague } = usePlatform();
+  const { data, getTeam, getLeague } = usePlatform();
   const detail = useCatalogPlayer(String(params.id));
   const {player:p,status} = detail;
   const [period, setPeriod] = useState("1개월"),
     [tab, setTab] = useState("최근 경기");
+  const [reportRecord, setReportRecord] = useState<PlayerRecord | null>(null);
   const owned = data.member?.holdings.find((h) => h.playerId === p?.id);
   const team = getTeam(p?.team);
   const detailClub = useClub(p?.team);
@@ -409,6 +411,7 @@ export function PlayerDetail() {
                         <th className="numeric">골</th>
                         <th className="numeric">도움</th>
                         <th className="numeric">Performance</th>
+                        <th>리포트</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -425,6 +428,7 @@ export function PlayerDetail() {
                           <td className="numeric">{money(r.goals)}</td>
                           <td className="numeric">{money(r.assists)}</td>
                           <td className="numeric"><span className={`score-chip ${r.performance == null ? "none" : ""}`}>{score(r.performance)}</span></td>
+                          <td><button type="button" className="button secondary small report-button" disabled={!r.fixtureId || r.performance == null} onClick={() => setReportRecord(r)} aria-label={`${r.opponent} 경기 리포트`}><Sparkles size={14} />{r.performance == null ? "산정 대기" : "리포트"}</button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -436,10 +440,11 @@ export function PlayerDetail() {
               <CommunityFeed key={p.id} scope="player" target={p.id} targetName={p.name} title={`${p.short || p.name} 이야기`} />
             ) : (
               <div className="analysis">
-                <span className="tag ink"><Sparkles size={13} />AI 가치 분석{mock ? " · 예시" : ""}</span>
-                <h3>경기력과 가치를 함께 읽어보세요.</h3>
-                {p.analysis ? <p>{p.analysis}</p> : <DataEmpty entity="가치 분석" />}
-                <p className="fine-print">AI 분석은 저장된 경기 기록과 가치 이력을 설명하는 보조 정보이며, 가치를 결정하지 않습니다.</p>
+                <span className="tag ink"><Sparkles size={13} />경기별 AI 리포트</span>
+                <h3>경기력과 가치가 달라진 이유를 확인하세요.</h3>
+                <p>최근 경기의 리포트에서 Performance 가점·감점과 최근 출전 기록에 따른 가치 변동을 함께 설명합니다.</p>
+                {p.records.filter(r => r.fixtureId && r.performance != null).slice(0, 3).map(r => <button key={r.id} className="button secondary small" onClick={() => setReportRecord(r)}><Sparkles size={14} />{dateText(r.playedAt, false)} · vs {r.opponent}</button>)}
+                {!p.records.some(r => r.fixtureId && r.performance != null) && <p className="fine-print">경기 종료 후 산정이 반영되면 리포트를 볼 수 있습니다.</p>}
               </div>
             )}
           </section>
@@ -482,6 +487,7 @@ export function PlayerDetail() {
           </section>
         </aside>
       </div>
+      {reportRecord && <MatchReportDialog key={`${p.id}:${reportRecord.fixtureId}`} playerId={p.id} record={reportRecord} onClose={() => setReportRecord(null)} />}
       <PerformanceDetails player={p}/>
     </>
   );
