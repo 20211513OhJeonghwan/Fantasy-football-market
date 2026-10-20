@@ -148,3 +148,25 @@
   /* Without the card stack the diagonal stripe would run through the copy. */
   .market-hero::before { background: radial-gradient(circle, rgba(255, 255, 255, 0.09) 1.2px, transparent 1.8px) 0 0 / 12px 12px; }
 }
+
+/* ---------- Fixed 4-3-3 holding capacity (2026-10-21) ---------- */
+.capacity-strip { margin: var(--s-3) 0 0; padding: var(--s-3); border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.capacity-strip ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); }
+.capacity-strip li { display: grid; gap: 6px; min-width: 0; }
+.capacity-head { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.capacity-head b { font-size: 14px; font-weight: 900; }
+.capacity-bar { display: block; height: 4px; border-radius: 2px; background: var(--line-2); overflow: hidden; }
+.capacity-bar i { display: block; height: 100%; background: var(--ink); }
+.capacity-strip li.full .capacity-bar i { background: var(--yellow-strong); box-shadow: inset 0 0 0 1px var(--ink); }
+.capacity-strip small { font-size: 11px; font-weight: 700; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.capacity-strip li.full small { color: var(--ink); font-weight: 900; }
+.capacity-strip p { margin: var(--s-2) 0 0; font-size: 11.5px; line-height: 1.5; color: var(--text-3); }
+
+/* Visible trade restriction under the detail CTA; the disabled button's tooltip is not readable on touch. */
+.trade-notice { display: grid; gap: 2px; margin: var(--s-2) 0 0; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--surface-2); font-size: 12.5px; line-height: 1.5; color: var(--text-2); text-align: left; }
+.trade-notice b { font-size: 13px; font-weight: 900; color: var(--ink); }
+.trade-notice.full { border-color: var(--ink); background: var(--yellow); }
+.trade-notice.full span, .trade-notice.full .text-link { color: var(--ink); }
+.trade-notice.lock { border-color: var(--ink); background: var(--ink); color: rgba(255, 255, 255, 0.78); }
+.trade-notice.lock b { color: var(--yellow); }
+.button:disabled { cursor: not-allowed; }

@@ -220,10 +220,21 @@ export function SquadScreen() {
             <p className="slot-hint">피치에서 자리를 먼저 선택하면 해당 포지션 선수만 표시됩니다.</p>
           )}
           {!target && <Tabs items={["전체", "FW", "MF", "DF", "GK"]} value={filter} onChange={setFilter} variant="segment" label="포지션 필터" />}
-          <p className="fine-print" aria-label="포지션별 보유 정원">{(["GK", "DF", "MF", "FW"] as const).map(pos => {
-            const capacity = positionCapacity(member, pos, id => owned.find(p => p.id === id))!;
-            return `${pos} ${capacity.count}/${capacity.limit}${capacity.full ? " · 정원 마감" : ""}`;
-          }).join(" / ")}. 라인업에서 선수를 빼도 보유 정원은 비워지지 않습니다.</p>
+          <div className="capacity-strip" role="group" aria-label="포지션별 보유 정원">
+            <ul>
+              {(["GK", "DF", "MF", "FW"] as const).map(pos => {
+                const capacity = positionCapacity(member, pos, id => owned.find(p => p.id === id))!;
+                return (
+                  <li key={pos} className={capacity.full ? "full" : ""}>
+                    <span className="capacity-head"><PositionBadge position={pos} /><b className="num">{capacity.count}/{capacity.limit}</b></span>
+                    <span className="capacity-bar" aria-hidden="true"><i style={{ width: `${Math.min(100, (capacity.count / capacity.limit) * 100)}%` }} /></span>
+                    <small>{capacity.full ? "정원 마감" : `${capacity.limit - capacity.count}명 매입 가능`}</small>
+                  </li>
+                );
+              })}
+            </ul>
+            <p>보유 선수 기준입니다. 라인업에서 빼도 정원은 비워지지 않으며, 매각하면 다시 매입할 수 있습니다.</p>
+          </div>
           <ul className="bench-list">
             {visible.map((p) => {
               const inLineup = safeSlots.includes(p.id);

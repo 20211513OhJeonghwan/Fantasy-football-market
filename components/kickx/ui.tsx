@@ -754,6 +754,27 @@ export function TradeButton({
     </>
   );
 }
+/** Visible reason for a blocked trade, so touch users see what the disabled button's tooltip says. */
+export function TradeNotice({ player }: { player: Player }) {
+  const { data, getPlayer } = usePlatform();
+  const lock = player.tradeWindow;
+  if (lock?.locked) return (
+    <p className="trade-notice lock" role="note">
+      <b>경기 거래 제한</b>
+      <span>경기 시작 90분 전부터 종료 확인 후 10분까지 매입·매각할 수 없습니다.{lock.unlockAt ? ` 해제 예정 ${dateText(lock.unlockAt)}` : ""}</span>
+    </p>
+  );
+  if (data.member?.holdings.some(h => h.playerId === player.id)) return null;
+  if (!player.position) return <p className="trade-notice" role="note"><b>포지션 확인 중</b><span>포지션 정보가 없는 선수는 매입할 수 없습니다.</span></p>;
+  const capacity = positionCapacity(data.member, player.position, getPlayer);
+  if (!capacity?.full) return null;
+  return (
+    <p className="trade-notice full" role="note">
+      <b>{player.position} {capacity.count}/{capacity.limit} · 정원 마감</b>
+      <span>같은 포지션 선수를 매각하면 다시 매입할 수 있습니다. <Link className="text-link" href="/assets">보유 자산 보기</Link></span>
+    </p>
+  );
+}
 export function BackLink({ href = "/players", label = "선수 목록" }: { href?: string; label?: string }) {
   return (
     <Link href={href} className="back-link">

@@ -29,6 +29,7 @@ import {
   StatCard,
   Tabs,
   TradeButton,
+  TradeNotice,
   WatchButton,
   ClubCrest,
   LeagueMark,
@@ -370,6 +371,7 @@ export function PlayerDetail() {
             <TradeButton player={owned ? p : undefined} side="sell" className="button secondary large" label="매각하기" />
             <WatchButton id={p.id} />
           </div>
+          <TradeNotice player={p} />
           {p.status && <p className="detail-status">{p.status} · 현재 거래할 수 없습니다.</p>}
         </div>
       </section>

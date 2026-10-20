@@ -8,7 +8,7 @@ import { Change, ClubCrest, LeagueMark, Sparkline, useClub, WatchButton } from "
 
 const POSITION_NAME = { GK: "골키퍼", DF: "수비수", MF: "미드필더", FW: "공격수" } as const;
 
-/** Collectible-style player card: club-coloured stage, giant shirt number, name plate and honest stats. */
+/** Collectible-style player card: club-coloured stage, name plate and honest stats. */
 export function PlayerCard({ player, variant = "grid", rank }: { player: Player; variant?: "grid" | "feature"; rank?: number }) {
   const { data, getLeague } = usePlatform();
   const { team, identity } = useClub(player.team);

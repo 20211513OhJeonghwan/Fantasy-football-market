@@ -10,10 +10,6 @@
 .community-feed .post-browser-title { padding: var(--s-6) var(--s-6) var(--s-2); }
 .community-feed .post-browser-title h2 { font-size: 20px; font-weight: 800; }
 .community-feed .panel-head { padding: var(--s-2) var(--s-6) var(--s-3); border-bottom: 0; }
-.community-feed .panel-head .tabs { gap: 6px; border: 0; overflow-x: auto; scrollbar-width: none; }
-.community-feed .panel-head .tabs button { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-size: var(--fs-small); font-weight: 700; border: 0; box-shadow: none; }
-.community-feed .panel-head .tabs button::after { display: none; }
-.community-feed .panel-head .tabs button.active { background: var(--ink); color: #fff; }
 .community-feed .post-tools { padding: 0 var(--s-6) var(--s-4); border-bottom: 1px solid var(--line); }
 .community-feed .post-tools .input-search { background: var(--surface-2); border-color: transparent; }
 
@@ -86,7 +82,6 @@
   .community-feed-card { grid-template-columns: 34px minmax(0, 1fr); gap: 10px; padding: var(--s-4); }
   .feed-avatar { width: 34px; height: 34px; font-size: 13px; }
   .community-feed .panel-head, .community-feed .post-tools, .community-feed .post-browser-title { padding-left: var(--s-4); padding-right: var(--s-4); }
-  .community-feed .panel-head .tabs { flex-wrap: nowrap; }
   .feed-card-links { width: auto; margin-left: auto; }
 }
 .lounge-head { overflow: hidden; }
