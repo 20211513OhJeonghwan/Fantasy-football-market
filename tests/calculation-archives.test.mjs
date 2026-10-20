@@ -34,3 +34,14 @@ test('no work causes no Storage requests and no database writes',async()=>{
  const h=setup();assert.equal((await archiveCalculationRevisions(h.db,{initialBatch:[]})).done,true);
  assert.deepEqual(h.calls,[]);
 });
+
+test('checkpoint archives preserve full payloads and acknowledge only their original keys and hashes',async()=>{
+ const rows=[{_source:'daily',day:'2026-10-20',key:'match:1',archive_hash:'original',payload:{phase:'legacy',stats:{goals:1}}}];
+ let compressed;const order=[];
+ const db={storage:{getBucket:async()=>({data:{public:false}}),from:()=>({upload:async(path,bytes)=>{assert.match(path,/^checkpoint-payloads\//);compressed=bytes;order.push('upload');return {};},download:async()=>{order.push('verify');return {data:new Blob([compressed])};}})},
+  rpc:async(name,args)=>{order.push(name);if(name==='kickx_checkpoint_archive_batch')return {data:rows};assert.equal(name,'kickx_finish_checkpoint_archive');assert.deepEqual(args.p_rows,[{_source:'daily',day:'2026-10-20',key:'match:1',archive_hash:'original'}]);return {data:1};}};
+ const {archiveCheckpointPayloads}=await import('../scripts/lib/calculation-archives.mjs');
+ assert.equal((await archiveCheckpointPayloads(db,{maxBatches:1})).archived,1);
+ assert.deepEqual(JSON.parse(gunzipSync(compressed)).rows,rows);
+ assert.deepEqual(order,['kickx_checkpoint_archive_batch','upload','verify','kickx_finish_checkpoint_archive']);
+});

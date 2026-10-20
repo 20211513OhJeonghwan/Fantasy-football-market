@@ -1,4 +1,11 @@
 begin;
+-- Storage metadata fixtures exist only in this disposable test transaction.
+create schema if not exists storage;
+create table if not exists storage.buckets(id text primary key,public boolean not null default false);
+create table if not exists storage.objects(bucket_id text,name text);
+grant usage on schema storage to service_role;
+grant select,insert on storage.buckets,storage.objects to service_role;
+insert into storage.buckets(id,public) values('kickx-calculation-archives',false) on conflict do nothing;
 update public.kickx_policy set club_competitions_enabled=false,version='form-v2',pricing_reference_at=now()-interval '10 days',pricing_reference_season=2026;
 insert into public.leagues(id,name,provider,external_id) values('bsd-93001','Incremental test','bsd',93001);
 insert into public.teams(id,name,provider,external_id,league_id) values
@@ -59,6 +66,8 @@ do $$declare input jsonb;results jsonb;answer jsonb;reference jsonb;old_time tim
  -- The archived copy is acknowledged by ID + original full-JSON fingerprint.
  archived:=public.kickx_revision_archive_batch(250);
  path:='calculation-revisions/'||repeat('a',64)||'.json.gz';
+ begin perform public.kickx_finish_revision_archive(path,archived);raise exception 'UNBACKED_ARCHIVE_ACCEPTED';exception when others then if sqlerrm<>'ARCHIVE_OBJECT_REQUIRED' then raise;end if;end;
+ insert into storage.objects(bucket_id,name) values('kickx-calculation-archives',path);
  if not exists(select 1 from jsonb_array_elements(archived) x where x->>'player_id'='bsd-93001') then raise exception 'No older revision to archive';end if;
  if public.kickx_finish_revision_archive(path,'[{"id":"00000000-0000-0000-0000-000000000000","archive_hash":"wrong"}]')<>0 then raise exception 'Wrong fingerprint compacted a row';end if;
  perform public.kickx_finish_revision_archive(path,archived);
@@ -76,7 +85,10 @@ insert into public.automation_daily_tasks(day,key,kind,priority,payload,label,co
  values(current_date,'retention-test','match',0,'{"raw":"discard"}','Completed test',true),
  (current_date,'retention-active','match',0,'{"phase":"stats"}','Active test',false);
 do $$begin
- if (select payload from public.automation_daily_tasks where key='retention-test')<>'{}'::jsonb then raise exception 'Completed payload retained';end if;
+ if (select payload from public.automation_daily_tasks where key='retention-test')='{}'::jsonb then raise exception 'Completed payload lost before verified backup';end if;
+ insert into storage.objects(bucket_id,name) values('kickx-calculation-archives','checkpoint-payloads/'||repeat('b',64)||'.json.gz');
+ perform public.kickx_finish_checkpoint_archive('checkpoint-payloads/'||repeat('b',64)||'.json.gz',public.kickx_checkpoint_archive_batch(250));
+ if (select payload from public.automation_daily_tasks where key='retention-test')<>'{}'::jsonb then raise exception 'Verified completed payload not compacted';end if;
  if (select payload from public.automation_daily_tasks where key='retention-active')->>'phase'<>'stats' then raise exception 'Active checkpoint lost';end if;
 end $$;
 set local role anon;
@@ -85,7 +97,8 @@ do $$begin
  or has_function_privilege(current_user,'public.kickx_publish_calculation_delta(uuid,text,text,jsonb)','execute')
  or has_function_privilege(current_user,'public.kickx_revision_archive_batch(integer)','execute')
  or has_function_privilege(current_user,'public.kickx_finish_revision_archive(text,jsonb)','execute')
- or has_function_privilege(current_user,'public.kickx_dispatch_storage_maintenance()','execute') then raise exception 'Internal operation exposed';end if;
+ or has_function_privilege(current_user,'public.kickx_checkpoint_archive_batch(integer)','execute')
+ or has_function_privilege(current_user,'public.kickx_finish_checkpoint_archive(text,jsonb)','execute') then raise exception 'Internal operation exposed';end if;
 end $$;
 reset role;
 rollback;
