@@ -33,7 +33,7 @@ export async function archiveCalculationRevisions(db, { initialBatch, maxBatches
   let bucket, archived = 0, bytes = 0, batches = 0;
   let rows = initialBatch;
   while (batches < maxBatches && Date.now() < deadline) {
-    rows ??= checked(await db.rpc(batchRpc, { p_limit: 250 }));
+    rows ??= checked(await db.rpc(batchRpc, { p_limit: 50 }));
     if (!Array.isArray(rows)) throw new Error('ARCHIVE_INVALID_BATCH');
     if (!rows.length) return { archived, bytes, batches, done: true };
     bucket ??= await privateBucket(db);
