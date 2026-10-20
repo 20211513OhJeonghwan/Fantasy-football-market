@@ -18,7 +18,7 @@ test('removing event-wide raw payloads preserves legacy/v2 scores, prices, hashe
    const db={from:table=>{
     const result=table==='kickx_policy'?{data:{version,club_competitions_enabled:true,pricing_reference_at:'2026-08-01T00:00:00Z',pricing_reference_season:2026}}:{data:[row]};
     const q=new Proxy({then:(resolve,reject)=>Promise.resolve(result).then(resolve,reject)},{get:(target,key)=>key in target?target[key]:()=>q});return q;
-   },rpc:async(name,args)=>{assert.equal(name,'kickx_publish_calculation');publications.push(args);return {data:{unchanged:false}};}};
+   },rpc:async(name,args)=>{if(name==='kickx_calculation_input')return {error:{code:'PGRST202'}};assert.equal(name,'kickx_publish_calculation');publications.push(args);return {data:{unchanged:false}};}};
    await calculatePlayer(db,'bsd-2',null);
   }
   assert.deepEqual(publications[0],publications[1]);
@@ -27,4 +27,20 @@ test('removing event-wide raw payloads preserves legacy/v2 scores, prices, hashe
   assert.equal(publications[0].p_expected[0].fixtureAt,record.fixtures.updated_at);
   assert.equal(publications[0].p_results[0].status,'provisional');
  }
+});
+
+test('a cached calculation never downloads historical records or policy rows',async()=>{
+ const calls=[];
+ const db={from:()=>{throw Error('Historical read');},rpc:async(name,args)=>{
+  calls.push({name,args});
+  return name==='kickx_calculation_input'?{data:{policy:{version:'form-v2',club_competitions_enabled:true},token:'source-revision',records:[]}}:{data:{unchanged:true}};
+ }};
+ assert.equal((await calculatePlayer(db,'bsd-2',null)).unchanged,true);
+ assert.deepEqual(calls.map(x=>x.name),['kickx_calculation_input','kickx_publish_calculation_delta']);
+ assert.deepEqual(calls[1].args,{p_actor:null,p_player:'bsd-2',p_token:'source-revision',p_results:[]});
+});
+
+test('incremental read failures never fall back to an unbounded historical read',async()=>{
+ const db={from:()=>{throw Error('Historical read');},rpc:async()=>({error:{code:'57014',message:'QUERY_TIMEOUT'}})};
+ await assert.rejects(calculatePlayer(db,'bsd-2',null),/QUERY_TIMEOUT/);
 });

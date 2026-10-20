@@ -56,7 +56,7 @@ test('player history, scores, pricing and trading restrictions run together afte
 function memberRepository(replies) {
   const calls=[];
   const db={rpc:async name=>{calls.push(name);return replies[name].shift();}};
-  const {SupabaseKickxRepository}=loadTs('../server/kickx/supabase-repository.ts',{'server-only':{},'./trading':trading,'./supabase':{createRequestClient:async()=>db},'./catalog':{mapPlayer:row=>row},'./prototype':{checkDatabase,migrationMissing},'./ingestion':{readOperations:async()=>{throw new Error('Unexpected admin read');}}});
+  const {SupabaseKickxRepository}=loadTs('../server/kickx/supabase-repository.ts',{'server-only':{},'./trading':trading,'./supabase':{createRequestClient:async()=>db},'./catalog':{mapPlayer:row=>row},'./public-cache':{},'./prototype':{checkDatabase,migrationMissing},'./ingestion':{readOperations:async()=>{throw new Error('Unexpected admin read');}}});
   const repo=new SupabaseKickxRepository();
   repo.getSession=async()=>({userId:'verified-user',profile:{nickname:'Test'},role:'member'});
   return {repo,calls};

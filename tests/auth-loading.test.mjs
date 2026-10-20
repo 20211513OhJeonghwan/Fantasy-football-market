@@ -39,7 +39,7 @@ test('creating a configured catalog repository never starts session refresh, and
  const db={auth:{getUser:async()=>{verified++;return {data:{user:{id:'verified-user'}},error:null};}},
   from:()=>({select(){return this;},eq(){return this;},maybeSingle:async()=>({data:null,error:null})})};
  const {SupabaseKickxRepository}=loadTs('../server/kickx/supabase-repository.ts',{
-  'server-only':{},'./supabase':{createRequestClient:async()=>{clients++;return db;}},'./trading':{},'./catalog':{},'./prototype':{},'./ingestion':{},
+  'server-only':{},'./supabase':{createRequestClient:async()=>{clients++;return db;}},'./trading':{},'./catalog':{},'./public-cache':{},'./prototype':{},'./ingestion':{},
  });
  const repo=new SupabaseKickxRepository();
  assert.equal(clients,0);
@@ -56,6 +56,7 @@ test('public list and detail routes use anonymous reads while private filters st
   './http':{...http,authenticatedClient:async()=>{selected.push('authenticated');return {client:'member'};}},
   './prototype':{prototypeAvailable:async()=>true},'./read-timing':{timedRead:operation=>operation()},
   './catalog-pages':{readPlayerPage:async db=>{selected.push(db);return {items:[]};},readFixturePage:async db=>{selected.push(db);return {items:[]};},readPlayerDetail:async db=>{selected.push(db);return null;}},
+  './public-cache':{readCachedPlayerPage:async()=>{publicClients++;selected.push('public');return {items:[]};},readCachedFixturePage:async()=>{publicClients++;selected.push('public');return {items:[]};},readCachedPlayerDetail:async()=>{publicClients++;selected.push('public');return null;}},
  });
  for(const [kind,query] of [['players',''],['fixtures',''],['players','scope=watch'],['players','scope=owned']]){
   assert.equal((await catalogPage(new Request('https://kickx.invalid/api/kickx/'+kind+'?'+query),kind)).status,200);
