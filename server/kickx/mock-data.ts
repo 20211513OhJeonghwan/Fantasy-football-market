@@ -1,4 +1,5 @@
 import "server-only";
+import { SQUAD_FORMATION } from "@/lib/kickx/squad";
 /**
  * Development sample data (KICKX_MOCK_DATA=true).
  *
@@ -10,7 +11,6 @@ import type {
   AdminData,
   Comment,
   Fixture,
-  Formation,
   Holding,
   League,
   MemberData,
@@ -282,12 +282,7 @@ function players(now: number): Player[] {
   });
 }
 
-const formations: Formation[] = [
-  { id: "4-3-3", name: "4-3-3", positions: ["GK", "DF", "DF", "DF", "DF", "MF", "MF", "MF", "FW", "FW", "FW"] },
-  { id: "4-4-2", name: "4-4-2", positions: ["GK", "DF", "DF", "DF", "DF", "MF", "MF", "MF", "MF", "FW", "FW"] },
-  { id: "4-2-3-1", name: "4-2-3-1", positions: ["GK", "DF", "DF", "DF", "DF", "MF", "MF", "MF", "MF", "MF", "FW"] },
-  { id: "3-5-2", name: "3-5-2", positions: ["GK", "DF", "DF", "DF", "MF", "MF", "MF", "MF", "MF", "FW", "FW"] },
-];
+const formations = [SQUAD_FORMATION];
 
 function fixtures(now: number): Fixture[] {
   const pairs: [string, string, number, string, number | null, number | null][] = [
@@ -357,10 +352,10 @@ function rankings(now: number, demo: MemberData) {
 }
 
 const demoSquad: Record<string, string[]> = {
-  // Holdings chosen to fill a 4-3-3 plus a short bench.
+  // Holdings respect the fixed 4-3-3 position capacities.
   GK: ["raya"], DF: ["saliba", "kimminjae", "vandeven", "bastoni"], MF: ["rice", "leekangin", "musiala"], FW: ["saka", "haaland", "yamal"],
 };
-const bench = ["pulisic", "kobel"];
+const bench: string[] = [];
 
 function member(list: Player[], now: number): MemberData {
   const random = seeded("demo-member");

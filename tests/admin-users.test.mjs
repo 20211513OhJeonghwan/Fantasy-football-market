@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { loadTs } from './load-ts.mjs';
 const validation=loadTs('../lib/kickx/validation.ts');
 const http=loadTs('../server/kickx/http.ts',{'server-only':{},'@/lib/kickx/validation':validation,'./config':{},'./supabase':{}});
-const prototype=loadTs('../server/kickx/prototype.ts',{'server-only':{},'./http':http});
+const squadRules=loadTs('../lib/kickx/squad.ts');
+const prototype=loadTs('../server/kickx/prototype.ts',{'server-only':{},'./http':http,'@/lib/kickx/squad':squadRules});
 const catalog=loadTs('../lib/kickx/catalog-query.ts');
 const request=(input,origin='https://kickx.invalid')=>new Request('https://kickx.invalid/api/kickx/admin/users',{method:'POST',headers:{'content-type':'application/json',origin},body:JSON.stringify(input)});
 test('member management requires verified admin and same origin before a mutation',async()=>{
