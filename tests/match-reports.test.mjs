@@ -62,6 +62,13 @@ test('a page/report read never generates or writes; its public response omits le
  assert.deepEqual(api.calls.map(c=>c.name),['kickx_read_match_report']);
  for(const key of ['inputHash','claimToken','requestedBy'])assert.equal(body[key],undefined);
 });
+test('historical initial-price inputs retain their distinct explanation without generating',async()=>{
+ const existing={status:'unavailable',facts:null,unavailableReason:'baseline-history'};
+ const api=handlers({existing,claim:existing});
+ assert.equal((await (await api.readMatchReport('player','fixture')).json()).unavailableReason,'baseline-history');
+ assert.equal((await (await api.createMatchReport(new Request('https://kickx.test'),'player','fixture')).json()).unavailableReason,'baseline-history');
+ assert.equal(api.generated(),0);
+});
 test('cached and competing claims skip the provider; missing configuration performs only a read',async()=>{
  for(const claim of [{status:'ready',facts,text},{status:'pending',facts},{status:'limited',facts}]){
   const api=handlers({claim});await api.createMatchReport(new Request('https://kickx.test'),'player','fixture');assert.equal(api.generated(),0);assert.equal(api.calls.length,1);
