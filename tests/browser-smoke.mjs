@@ -200,6 +200,42 @@ try {
   assert.equal(await mockPage.getByRole("dialog").count(),0);
   await mockPage.setViewportSize({width:1440,height:1000});
   report.checks.push("Match report loads only on open, generates once, shares cached text, and fits mobile");
+  // A failed model/claim request must not discard the successful numerical read.
+  state.players[0].records[0].fixtureId="failed-report-fixture";
+  let failedReportPosts=0;
+  await mock.route("**/api/kickx/players/test-player/matches/failed-report-fixture/report",route=>{
+    if(route.request().method()==="POST") {
+      failedReportPosts++;
+      return route.fulfill({status:500,json:{error:"요청을 처리하지 못했습니다."}});
+    }
+    return route.fulfill({json:{status:"missing",facts:reportFacts,text:null,generatedAt:null,canGenerate:true}});
+  });
+  await mockPage.goto(base+"/players/test-player",{waitUntil:"networkidle"});
+  await mockPage.getByRole("button",{name:"리포트 상대 경기 리포트",exact:true}).click();
+  await mockPage.getByRole("dialog").getByRole("alert").waitFor();
+  assert.ok(await mockPage.getByRole("heading",{name:"경기력 산정 요약",exact:true}).isVisible());
+  assert.ok((await mockPage.getByRole("dialog").innerText()).includes("92,000"));
+  assert.equal(failedReportPosts,1,"Failed generation retried automatically");
+  await Promise.all([
+    mockPage.waitForResponse(response=>response.url().includes("/failed-report-fixture/report")&&response.request().method()==="POST"),
+    mockPage.getByRole("button",{name:"다시 확인",exact:true}).click(),
+  ]);
+  await mockPage.getByRole("dialog").getByRole("alert").waitFor();
+  assert.equal(failedReportPosts,2,"Manual retry did not issue a fresh generation request");
+  await mockPage.keyboard.press("Escape");
+  state.players[0].records[0].fixtureId="history-report-fixture";
+  let historyReportPosts=0;
+  await mock.route("**/api/kickx/players/test-player/matches/history-report-fixture/report",route=>{
+    if(route.request().method()==="POST")historyReportPosts++;
+    return route.fulfill({json:{status:"unavailable",unavailableReason:"baseline-history",facts:null,text:null,generatedAt:null,canGenerate:true}});
+  });
+  await mockPage.goto(base+"/players/test-player",{waitUntil:"networkidle"});
+  await mockPage.getByRole("button",{name:"리포트 상대 경기 리포트",exact:true}).click();
+  await mockPage.getByText("이 경기는 초기 가격을 산정할 때 반영된 과거 경기입니다.",{exact:false}).waitFor();
+  assert.equal(historyReportPosts,0,"Historical initial-price input generated a report");
+  assert.ok((await mockPage.getByRole("dialog").innerText()).includes("57"));
+  await mockPage.keyboard.press("Escape");
+  report.checks.push("Failed report generation preserves figures with manual retry; initial-price history has a distinct explanation");
   await mockPage.goto(base+"/transactions",{waitUntil:"networkidle"});
   const totals=await mockPage.locator(".transaction-stats strong").allTextContents();
   assert.ok(totals.length===3&&totals.every(text=>text.includes("—")));

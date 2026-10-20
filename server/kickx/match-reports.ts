@@ -5,13 +5,14 @@ import { authenticatedClient, failure, json, requireOrigin } from "./http";
 import { checkDatabase, identity } from "./prototype";
 import { generateReport, reportModelConfig, ReportModelError } from "./report-model";
 
-type StoredReport = { status: MatchReport["status"] | "claimed"; facts?: ReportFacts | null; text?: ReportText; generatedAt?: string; retryAt?: string; inputHash?: string; claimToken?: string };
+type StoredReport = { status: MatchReport["status"] | "claimed"; facts?: ReportFacts | null; text?: ReportText; generatedAt?: string; retryAt?: string; unavailableReason?: MatchReport["unavailableReason"]; inputHash?: string; claimToken?: string };
 function publicReport(result: StoredReport): MatchReport {
   return {
     status: result.status === "claimed" ? "pending" : result.status,
     facts: result.facts ?? null, text: result.status === "ready" ? result.text ?? null : null,
     generatedAt: result.status === "ready" ? result.generatedAt ?? null : null,
     canGenerate: !!reportModelConfig(), retryAt: result.retryAt ?? null,
+    unavailableReason: result.unavailableReason ?? null,
   };
 }
 export async function readMatchReport(playerId: string, fixtureId: string) {

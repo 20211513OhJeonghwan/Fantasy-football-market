@@ -21,14 +21,18 @@
 
 운영 활성화 순서:
 
-1. `supabase/migrations/20261020062505_match_ai_reports.sql` 전체를 Supabase SQL Editor에서 한 번 실행한다.
+1. `supabase/migrations/20261020062505_match_ai_reports.sql` 전체를 Supabase SQL Editor에서 한 번 실행한다. 기존 적용 프로젝트는 원본을 다시 실행하지 않고, `20261020074226_fix_match_report_generation.sql` 추가 수정만 실행한다. 신규 프로젝트는 두 파일을 순서대로 실행한다.
 2. Vercel의 해당 프로젝트 서버 환경변수에 `GEMINI_API_KEY`와 `SUPABASE_SERVICE_ROLE_KEY`를 설정하고 재배포한다. GitHub Actions의 비밀변수는 Vercel에 자동 공유되지 않는다.
 
 Google AI Studio에서 **Free tier 프로젝트의 키**를 사용한다. 이 기능을 위해 결제 계정을 연결할 필요는 없다. 키를 저장소나 채팅에 올리지 않는다. 선택 환경변수 `GEMINI_REPORT_MODEL`의 기본값은 `gemini-3.5-flash-lite`다.
 
 이 작업 환경에는 Gemini 키가 없으므로 실제 공급자 호출 검증은 키 설정 뒤 필요하다. 키가 없는 상태에서는 외부 모델 호출·생성용 DB 쓰기가 발생하지 않는다.
 
-코드는 PR #23으로 main에 병합했고 Vercel 배포 성공을 확인했다. 운영 DB 적용 도구는 `Invalid or expired requestState` 오류를 두 번 반환했고, 이후 읽기 검사에서도 마이그레이션과 리포트 RPC가 없음을 확인했다. 따라서 운영 DB는 아직 미적용이다. 배포된 리포트 GET도 서버용 Supabase 키 설정을 요구하는 503을 반환했다. 위 두 설정을 완료하기 전에는 운영 AI 리포트가 활성화된 상태가 아니다.
+운영 오류 진단(2026-10-20): 원본 SQL과 서버 키는 적용된 상태로, 공개 GET과 로그인 확인은 성공했다. 생성 POST의 DB RPC는 `UPDATE requires a WHERE clause`로 거부됐다. 운영 `authenticator` 연결이 `safeupdate`를 미리 로드하기 때문에, 일반 SQL 연결의 성공만으로는 이 문제를 재현할 수 없었다.
+
+추가 수정은 기존 단일 정책 행의 사용량 UPDATE에 `WHERE id=true`를 명시한다. DB 보호 설정은 유지한다. 초기 가격 산정에 이미 쓰인 과거 경기에는 별도 가격 변동 기록이 없으므로 `baseline-history`로 구분해 안내하고, AI 생성 POST가 실패해도 성공한 GET의 실제 산정 요약은 유지한다. 재시도는 사용자가 버튼을 누른 경우만 한다.
+
+운영 적용 도구가 `Invalid or expired requestState`를 반환했고, 읽기 검사에서도 추가 수정 함수는 미적용임을 확인했다. 따라서 **추가 수정 SQL을 SQL Editor에서 실행해야 생성 오류 해결이 운영 DB에 반영된다.** 실제 Gemini 호출은 아직 검증하지 못했다.
 
 ## 전송량과 DB 크기 제한
 
@@ -79,6 +83,6 @@ Google AI Studio에서 **Free tier 프로젝트의 키**를 사용한다. 이 �
 
 - 모델/API 단위 테스트: 프롬프트 최소화, 실제 숫자 덮어쓰기 방지, 공급자 한도·오류·잘린 출력, 중복 요청, 권한·출처 검사.
 - SQL 통합 테스트: 같은 경기 재사용, 생성 권한, 잘못된 토큰, 실제 정정 무효화, 입력 해시만 바뀐 재산정 재사용, 한도·보관 상한, 구형 행 보존, 익명/회원 권한 분리.
-- 브라우저 테스트: 최초 로딩 요청 없음, 버튼에서 생성, 재열기 추가 호출 없음, 모바일 모달, Escape 닫기.
+- 브라우저 테스트: 최초 로딩 요청 없음, 버튼에서 생성, 재열기 추가 호출 없음, 모바일 모달, Escape 닫기. 추가 회귀 검증은 생성 POST 500 시 숫자 유지·수동 재시도 및 초기 가격 과거 경기 안내를 포함한다.
 - 실제 모델의 한국어 품질과 계정 무료 한도는 운영 키 설정 후 확인한다.
-- 최종 검증: 단위 테스트 **188개**, 실제 PostgreSQL **17**의 전체 마이그레이션·권한 테스트, 데스크톱 **1440px**·모바일 **390px** 브라우저 테스트, lint·빌드 모두 통과. CI: https://github.com/hyun1290/kick-x-test/actions/runs/39382813857
+- 초기 구현 검증: 단위 테스트 **188개**, 실제 PostgreSQL **17**의 전체 마이그레이션·권한 테스트, 데스크톱 **1440px**·모바일 **390px** 브라우저 테스트, lint·빌드 모두 통과. CI: https://github.com/hyun1290/kick-x-test/actions/runs/39382813857

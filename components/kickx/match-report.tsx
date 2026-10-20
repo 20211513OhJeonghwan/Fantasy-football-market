@@ -12,7 +12,8 @@ import { usePlatform } from "./provider";
 // A small in-memory cache avoids rereading a report when its dialog is reopened.
 // No persistent browser storage and no polling, subscriptions, or page-load fetches.
 const readyCache = new Map<string, { at: number; report: MatchReport }>();
-const inFlight = new Map<string, Promise<MatchReport>>();
+type LoadedReport = { report: MatchReport; generationError?: string };
+const inFlight = new Map<string, Promise<LoadedReport>>();
 async function fetchReport(url: string, method: "GET" | "POST") {
   const response = await fetch(url, { method, credentials: method === "GET" ? "omit" : "same-origin" });
   const result = await response.json();
@@ -21,18 +22,21 @@ async function fetchReport(url: string, method: "GET" | "POST") {
 }
 function loadReport(url: string, generate: boolean) {
   const cached = readyCache.get(url);
-  if (cached && Date.now() - cached.at < 60000) return Promise.resolve(cached.report);
+  if (cached && Date.now() - cached.at < 60000) return Promise.resolve({ report: cached.report } as LoadedReport);
   const key = `${url}:${generate}`;
   const running = inFlight.get(key);
   if (running) return running;
   const promise = (async () => {
     let result = await fetchReport(url, "GET");
-    if (generate && result.canGenerate && result.status === "missing") result = await fetchReport(url, "POST");
+    if (generate && result.canGenerate && result.status === "missing") {
+      try { result = await fetchReport(url, "POST"); }
+      catch { return { report: result, generationError: "AI 설명을 작성하지 못했습니다. 저장된 산정 요약을 확인해 주세요." }; }
+    }
     if (result.status === "ready") {
       if (readyCache.size >= 40) readyCache.delete(readyCache.keys().next().value!);
       readyCache.set(url, { at: Date.now(), report: result });
     }
-    return result;
+    return { report: result };
   })().finally(() => inFlight.delete(key));
   inFlight.set(key, promise);
   return promise;
@@ -49,7 +53,7 @@ export function MatchReportDialog({ playerId, record, onClose }: { playerId: str
   useEffect(() => {
     let active = true;
     setLoading(true); setError("");
-    loadReport(url, signedIn).then(result => { if (active) setReport(result); })
+    loadReport(url, signedIn).then(result => { if (active) { setReport(result.report); setError(result.generationError ?? ""); } })
       .catch(error => { if (active) setError(error instanceof Error ? error.message : "리포트를 불러오지 못했습니다."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -84,7 +88,7 @@ export function MatchReportDialog({ playerId, record, onClose }: { playerId: str
           </dl>
           <p className="fine-print">최근 경기일수록 가중치가 큽니다. 출전 기록이 5경기보다 적으면 초기 보정 점수로 채웁니다. 한 경기 점수가 양수여도 가치는 하락할 수 있습니다.</p>
         </section>
-        {!loading && !text && <div className="report-notice">
+        {!loading && !text && !error && <div className="report-notice">
           {!report.canGenerate ? <p>AI 설명을 준비하고 있습니다. 저장된 산정 요약은 위에서 확인할 수 있습니다.</p>
             : !data.session ? <p><Link className="text-link" href={`/login?next=${encodeURIComponent(`/players/${playerId}`)}`}>로그인</Link>하면 아직 없는 AI 설명을 작성할 수 있습니다. 작성된 리포트는 누구나 볼 수 있습니다.</p>
             : !signedIn ? <p><Link className="text-link" href="/onboarding">프로필 설정</Link> 후 AI 설명을 작성할 수 있습니다.</p>
@@ -96,7 +100,9 @@ export function MatchReportDialog({ playerId, record, onClose }: { playerId: str
         </div>}
         <p className="fine-print">{text ? `AI가 저장된 산정 결과를 설명한 참고 정보입니다. 숫자는 실제 계산 결과이며 AI가 가격을 결정하지 않습니다. · ${dateText(report.generatedAt)}` : "숫자는 서버에 저장된 실제 산정 결과입니다."}</p>
       </>}
-      {!loading && !error && report?.status === "unavailable" && <p className="report-notice">경기가 종료되고 Performance와 가치 변동 산정이 모두 반영된 뒤 리포트를 볼 수 있습니다.</p>}
+      {!loading && !error && report?.status === "unavailable" && (report.unavailableReason === "baseline-history"
+        ? <div className="report-notice"><p>이 경기는 초기 가격을 산정할 때 반영된 과거 경기입니다. 별도의 경기 전후 가격 변동 기록이 없어 AI 가치 변동 리포트는 제공되지 않습니다.</p>{record.performance != null && <p>Performance <strong className="num">{score(record.performance)}점</strong> · {record.minutes}분 출전</p>}</div>
+        : <p className="report-notice">이 경기의 Performance와 가치 변동 산정 결과를 아직 함께 확인할 수 없습니다. 기록 수집·산정이 반영된 뒤 다시 확인해 주세요.</p>)}
     </div>
   </Modal>;
 }

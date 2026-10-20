@@ -60,6 +60,17 @@ do $$declare first jsonb;second jsonb;h text;t uuid;before_usage jsonb;begin
  perform pg_temp.report_assert((select count(*)=1 from public.player_analyses where fixture_id='report-fixture'),'Corrections created extra cache rows');
 end $$;
 reset role;
+-- A seeded historical match has no individual price step, not an unfinished game.
+insert into public.fixtures(id,home_team_id,away_team_id,starts_at,status)
+ values('report-history','report-home','report-away','2026-09-01T12:00:00Z','FT');
+insert into public.player_initial_values(player_id,rule_version,detail,input_hash)
+ values('report-player','form-v2','{"fixtures":["report-history"]}','initial-history');
+set local role service_role;
+select pg_temp.report_assert((public.kickx_read_match_report('report-player','report-history'))->>'unavailableReason'='baseline-history','Historical initial-price input was described as pending');
+select pg_temp.report_assert((public.kickx_claim_match_report('report-player','report-history','00000000-0000-0000-0000-000000000081'))->>'status'='unavailable','Historical input consumed a generation claim');
+select pg_temp.report_assert(not exists(select 1 from public.player_analyses where fixture_id='report-history'),'Historical input created a cache row');
+select pg_temp.report_assert((public.kickx_read_match_report('report-player','unknown-fixture'))->>'unavailableReason'='awaiting-results','Missing results were described as initial-price history');
+reset role;
 set local role anon;
 select pg_temp.report_assert((select count(id)=1 from public.player_analyses),'Guest can see private match rows, or legacy rows disappeared');
 select pg_temp.report_denied('select requested_by from public.player_analyses');

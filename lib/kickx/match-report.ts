@@ -25,4 +25,5 @@ export type MatchReport = {
   /** Only a completed model response is called AI. The numerical summary always works. */
   canGenerate: boolean;
   retryAt?: string | null;
+  unavailableReason?: "baseline-history" | "awaiting-results" | null;
 };
