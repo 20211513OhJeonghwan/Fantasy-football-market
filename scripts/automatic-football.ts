@@ -31,8 +31,8 @@ async function main() {
     // Reuse this runner's existing Supabase client and credentials. There is no
     // new webhook, Vault forwarding, scheduler or privileged public endpoint.
     try {
-      const checkpoints = await archiveCheckpointPayloads(db, { maxBatches: 16, deadline: Date.now() + 90000 });
-      const revisions = await archiveCalculationRevisions(db, { maxBatches: 32, deadline: Date.now() + 120000 });
+      const checkpoints = await archiveCheckpointPayloads(db, { maxBatches: 200, deadline: Date.now() + 90000 });
+      const revisions = await archiveCalculationRevisions(db, { maxBatches: 200, deadline: Date.now() + 120000 });
       console.log(JSON.stringify({ stage: 'verified-archives', checkpoints, revisions }));
     } catch {
       console.error(JSON.stringify({ stage: 'verified-archives', error: 'ARCHIVE_RETRY' }));
