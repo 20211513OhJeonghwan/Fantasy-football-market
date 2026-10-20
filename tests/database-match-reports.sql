@@ -13,6 +13,9 @@ insert into public.performance_results(player_id,fixture_id,score,status,rule_ve
  values('report-player','report-fixture',57,'provisional','form-v2','source-a','[{"metric":"minutes","value":90,"points":30},{"metric":"goals","value":1,"points":30},{"metric":"yellow_cards","value":1,"points":-3}]','["UNVERIFIED"]');
 insert into public.player_price_results(player_id,fixture_id,rule_version,played_at,price_before,price_after,target_price,form_score,change_percent,window_fixture_ids,input_hash)
  values('report-player','report-fixture','form-v2','2026-10-01T12:00:00Z',100000,92000,80000,40,-8,'["report-fixture"]','source-a');
+-- The previous explanation format refreshes lazily in the same row.
+insert into public.player_analyses(id,fixture_id,body,source_updated_at,input_hash,prompt_version,status)
+ values('report-player','report-fixture','{"performance":"이전 경기력 설명입니다.","value":"이전 가치 설명입니다."}',now(),'old-fingerprint','match-report-v1','ready');
 -- A legacy row must survive the schema extension and remain independently readable.
 insert into public.player_analyses(id,body,source_updated_at) values('report-player','Legacy player analysis',now());
 create function pg_temp.report_assert(ok boolean,message text) returns void language plpgsql as $$begin
@@ -28,14 +31,15 @@ do $$declare first jsonb;second jsonb;h text;t uuid;before_usage jsonb;begin
  first:=public.kickx_read_match_report('report-player','report-fixture');
  perform pg_temp.report_assert(first->>'status'='missing' and first#>>'{facts,priceAfter}'='92000','Read must return stored pricing, without a write');
  perform pg_temp.report_assert((select ai_report_usage=before_usage from public.kickx_policy),'Read consumed quota');
+ perform pg_temp.report_assert(not(first?'text') and first->>'promptVersion'='match-report-performance-v2','Old prompt text leaked instead of a lazy refresh');
  first:=public.kickx_claim_match_report('report-player','report-fixture','00000000-0000-0000-0000-000000000081');
  perform pg_temp.report_assert(first->>'status'='claimed','Initial claim failed');
  h:=first->>'inputHash';t:=(first->>'claimToken')::uuid;
  second:=public.kickx_claim_match_report('report-player','report-fixture','00000000-0000-0000-0000-000000000081');
  perform pg_temp.report_assert(second->>'status'='pending','Concurrent claim should reuse the in-flight lease');
  perform pg_temp.report_assert((select (ai_report_usage->>'daily')::integer=1 from public.kickx_policy),'Duplicate click consumed quota');
- perform pg_temp.report_assert(not public.kickx_finish_match_report('report-player','report-fixture',gen_random_uuid(),h,'{"performance":"득점과 출전이 가점에 반영되었습니다.","value":"목표 가격이 낮아 하락 방향으로 반영됐습니다."}','gemini-test'),'A wrong lease was accepted');
- perform pg_temp.report_assert(public.kickx_finish_match_report('report-player','report-fixture',t,h,'{"performance":"득점과 출전이 가점에 반영되었습니다.","value":"목표 가격이 낮아 하락 방향으로 반영됐습니다."}','gemini-test'),'Finalize failed');
+ perform pg_temp.report_assert(not public.kickx_finish_match_report('report-player','report-fixture',gen_random_uuid(),h,'{"performance":"득점과 출전이 가점에 반영되었습니다."}','gemini-test'),'A wrong lease was accepted');
+ perform pg_temp.report_assert(public.kickx_finish_match_report('report-player','report-fixture',t,h,'{"performance":"득점과 출전이 가점에 반영되었습니다."}','gemini-test'),'Finalize failed');
  first:=public.kickx_claim_match_report('report-player','report-fixture','00000000-0000-0000-0000-000000000081');
  perform pg_temp.report_assert(first->>'status'='ready','Completed reports were regenerated');
  -- A whole-player replay timestamp/hash change must not invalidate an unchanged match.
@@ -43,6 +47,11 @@ do $$declare first jsonb;second jsonb;h text;t uuid;before_usage jsonb;begin
  update public.player_price_results set input_hash='replay-b' where player_id='report-player';
  first:=public.kickx_read_match_report('report-player','report-fixture');
  perform pg_temp.report_assert(first->>'status'='ready' and first->>'inputHash'=h,'Unchanged replay invalidated a report');
+ -- Pricing-only changes do not regenerate a performance-only explanation.
+ update public.player_price_results set price_after=93000,change_percent=-7,target_price=81000 where player_id='report-player';
+ first:=public.kickx_read_match_report('report-player','report-fixture');
+ perform pg_temp.report_assert(first->>'status'='ready' and first->>'inputHash'=h and first#>>'{facts,priceAfter}'='93000','Pricing-only update invalidated performance text');
+ perform pg_temp.report_assert(not(first->'text'?'value'),'Removed value explanation was stored again');
  -- Real corrections hide the old text immediately, reuse the same row, and reject stale saves.
  update public.performance_results set score=60 where player_id='report-player';
  first:=public.kickx_read_match_report('report-player','report-fixture');
@@ -51,7 +60,7 @@ do $$declare first jsonb;second jsonb;h text;t uuid;before_usage jsonb;begin
  t:=(first->>'claimToken')::uuid;h:=first->>'inputHash';
  update public.performance_results set score=61,input_hash='source-new' where player_id='report-player';
  perform pg_temp.report_assert((public.kickx_read_match_report('report-player','report-fixture'))->>'status'='unavailable','Withheld pricing was paired with a newer score');
- perform pg_temp.report_assert(not public.kickx_finish_match_report('report-player','report-fixture',t,h,'{"performance":"득점과 출전이 가점에 반영되었습니다.","value":"목표 가격이 낮아 하락 방향으로 반영됐습니다."}','gemini-test'),'Stale response overwrote corrected results');
+ perform pg_temp.report_assert(not public.kickx_finish_match_report('report-player','report-fixture',t,h,'{"performance":"득점과 출전이 가점에 반영되었습니다."}','gemini-test'),'Stale response overwrote corrected results');
  update public.player_price_results set input_hash='source-new' where player_id='report-player';
  first:=public.kickx_claim_match_report('report-player','report-fixture','00000000-0000-0000-0000-000000000081');
  perform pg_temp.report_assert(first->>'status'='claimed','New facts must get their own retry budget');

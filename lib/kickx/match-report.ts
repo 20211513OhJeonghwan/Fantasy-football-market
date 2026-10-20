@@ -1,5 +1,5 @@
 /** Small public DTO. Source statistics and provider responses are never stored here. */
-export type ReportText = { performance: string; value: string };
+export type ReportText = { performance: string };
 export type ReportFacts = {
   playerName: string;
   opponent: string;

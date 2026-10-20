@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { loadTs } from "./load-ts.mjs";
 const query=loadTs("../lib/kickx/catalog-query.ts");
 const catalog=loadTs("../server/kickx/catalog.ts",{"./trading":{attachTradeWindows:async(db,players)=>players},"server-only":{},"./public-prototype":{readPrototypePublic:async()=>({})},"@/lib/kickx/data":loadTs("../lib/kickx/data.ts")});
-const {readPlayerPage,readFixturePage}=loadTs("../server/kickx/catalog-pages.ts",{"./trading":{attachTradeWindows:async(db,players)=>players},"server-only":{},"./public-prototype":{readPrototypePublic:async()=>({})},"@/lib/kickx/catalog-query":query,"./catalog":catalog,"./prototype":{checkDatabase:()=>{},migrationMissing:()=>false}});
+const {readPlayerPage,readFixturePage,readPlayerDetail}=loadTs("../server/kickx/catalog-pages.ts",{"./trading":{attachTradeWindows:async(db,players)=>players},"server-only":{},"./public-prototype":{readPrototypePublic:async()=>({})},"@/lib/kickx/catalog-query":query,"./catalog":catalog,"./prototype":{checkDatabase:()=>{},migrationMissing:()=>false}});
 function client(calls,rows=[],count=72){
  const q=new Proxy({then(resolve){return Promise.resolve({data:rows,error:null,count}).then(resolve);}}, {get(target,key){return key in target ? target[key] : (...args)=>{calls.push([key,...args]);return q;};}});
  return {from(...args){calls.push(["from",...args]);return q;},rpc(...args){calls.push(["rpc",...args]);return q;}};
@@ -30,4 +30,23 @@ test("KST day filter includes UTC previous evening and excludes next midnight bo
  await readFixturePage(client(calls),query.parseCatalogQuery(new URLSearchParams("day=2026-10-01"),"fixtures"));
  assert.deepEqual(calls.find(c=>c[0]==="gte"),["gte","starts_at","2026-09-30T15:00:00.000Z"]);
  assert.deepEqual(calls.find(c=>c[0]==="lt"),["lt","starts_at","2026-10-01T15:00:00.000Z"]);
+});
+test("detail marks only ended matches with their own price result as reportable without extra report reads",async()=>{
+ const rows={
+  player_catalog:{id:'report-player',name:'Report Player'},price_history:[],teams:[],performance_results:[],player_initial_values:null,
+  player_match_records:[
+   {id:'priced',fixture_id:'priced',performance:0,minutes:90,opponent:'Away'},
+   {id:'baseline',fixture_id:'baseline',performance:70,minutes:90,opponent:'Away'},
+   {id:'live',fixture_id:'live',performance:30,minutes:45,opponent:'Away'},
+   {id:'dnp',fixture_id:'dnp',performance:0,minutes:0,opponent:'Away'},
+  ],
+  player_price_results:[{fixture_id:'priced'},{fixture_id:'live'},{fixture_id:'dnp'}],
+  fixtures:[{id:'priced',status:'FT'},{id:'baseline',status:'FT'},{id:'live',status:'HT'},{id:'dnp',status:'FT'}],
+ };
+ const calls=[];
+ const db={from(table){calls.push(table);const q=new Proxy({then(resolve){return Promise.resolve({data:rows[table],error:null}).then(resolve);}},{get(target,key){return key in target?target[key]:()=>q;}});return q;}};
+ const player=await readPlayerDetail(db,'report-player');
+ assert.deepEqual(player.records.map(r=>r.reportAvailable),[true,false,false,false]);
+ assert.equal(calls.filter(t=>t==='player_price_results').length,1);
+ assert.ok(!calls.includes('player_analyses'));
 });
