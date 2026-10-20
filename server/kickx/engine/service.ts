@@ -17,6 +17,24 @@ type CalculationRecord = {
 export async function calculatePlayer(db: SupabaseClient, playerId: string, actor: string | null, preview=false,
  previewPolicy?: {referenceAt:string;referenceSeason:number|null}) {
  if (previewPolicy && !preview) throw new HttpError(400,"시험 정책은 읽기 전용으로만 사용할 수 있습니다.");
+ if (!preview) {
+  const input=await db.rpc("kickx_calculation_input",{p_player:playerId});
+  // Rolling deploys and the legacy scoring policy retain the full reference path.
+  if (input.error && !["PGRST202","42883"].includes(input.error.code)) checkDatabase(input.error);
+  if (!input.error && input.data?.policy.version===RULE_VERSION) {
+   const records=input.data.records as CalculationRecord[];
+   const clubs=input.data.policy.club_competitions_enabled===true;
+   const results=records.map(m=>({...calculatePerformance({fixtureId:m.fixture_id,playerId,teamId:m.team_id,
+    status:m.fixtures.status,homeTeam:m.fixtures.home_team_id,awayTeam:m.fixtures.away_team_id,
+    homeScore:m.fixtures.home_score,awayScore:m.fixtures.away_score,stats:m.stats,legacy:m.legacy_stats,
+    source:m.fixtures.football_event_sources??{},clubCompetitions:clubs}),ruleVersion:RULE_VERSION,
+    ...(clubs?{scoringRevision:'club-competitions-v1'}:{})}));
+   const saved=await db.rpc("kickx_publish_calculation_delta",{p_actor:actor,p_player:playerId,
+    p_token:input.data.token,p_results:results});
+   checkDatabase(saved.error);
+   return {playerId,...saved.data};
+  }
+ }
  const policy = await db.from("kickx_policy").select("*").single();checkDatabase(policy.error);
  const version = previewPolicy ? RULE_VERSION : policy.data.version;
  if (![RULE_VERSION,"prototype-v1"].includes(version)) throw new HttpError(409,"지원하지 않는 산정 정책입니다.");

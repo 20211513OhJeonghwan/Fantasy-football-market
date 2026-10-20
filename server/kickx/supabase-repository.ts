@@ -3,7 +3,8 @@ import { attachTradeWindows } from "./trading";
 import type { KickxRepository } from "./repository";
 import type { MemberData, Session } from "@/lib/kickx/types";
 import { createRequestClient } from "./supabase";
-import { readCatalog, mapPlayer } from "./catalog";
+import { mapPlayer } from "./catalog";
+import { readCachedCatalog } from "./public-cache";
 import { checkDatabase, migrationMissing } from "./prototype";
 import { readOperations } from "./ingestion";
 export class SupabaseKickxRepository implements KickxRepository {
@@ -35,7 +36,14 @@ export class SupabaseKickxRepository implements KickxRepository {
       profile: profile.data ? { nickname: profile.data.nickname, team: profile.data.team_id } : null,
     };
   }
-  async getPublicData() { return readCatalog(await this.getClient()); }
+  async getPublicData() {
+    const [data, session] = await Promise.all([readCachedCatalog(), this.getSession()]);
+    if (!session) return data;
+    // Likes and moderation flags depend on identity and stay outside the cache.
+    const posts = await (await this.getClient()).rpc("kickx_posts", { p_size: 20 });
+    checkDatabase(posts.error);
+    return { ...data, posts: posts.data.items };
+  }
   async getMemberData(userId: string): Promise<MemberData | null> {
     const session = await this.getSession();
     if (!session || session.userId !== userId) throw new Error("Member identity mismatch");
