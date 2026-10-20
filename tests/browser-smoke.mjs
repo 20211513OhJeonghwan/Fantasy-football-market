@@ -174,6 +174,32 @@ try {
   await mockPage.locator(".detail-photo .portrait svg").waitFor();
   assert.equal(await mockPage.locator(".detail-photo .portrait img").count(),0);
   report.checks.push("BSD missing photo falls back; imported-match totals are labeled explicitly");
+  // Opening a match report is the only trigger; reopening shares the cached result.
+  const reportFacts={playerName:"CI-only player",opponent:"리포트 상대",playedAt:"2026-10-18T12:00:00Z",minutes:90,score:57,scoreStatus:"provisional",ruleVersion:"form-v2",contributions:[{metric:"minutes",value:90,points:30},{metric:"goals",value:1,points:30},{metric:"yellow_cards",value:1,points:-3}],warningCount:1,priceBefore:100000,priceAfter:92000,targetPrice:80000,formScore:40,changePercent:-8,windowSize:5};
+  state.players[0].records=[{id:"report-record",fixtureId:"test-fixture",playedAt:reportFacts.playedAt,opponent:reportFacts.opponent,result:"승",minutes:90,goals:1,assists:0,performance:57}];
+  let reportGets=0,reportPosts=0;
+  await mock.route("**/api/kickx/players/test-player/matches/test-fixture/report",route=>{
+    const creating=route.request().method()==="POST";
+    if(creating)reportPosts++;else reportGets++;
+    return route.fulfill({json:{status:creating||reportPosts?"ready":"missing",facts:reportFacts,text:creating||reportPosts?{performance:"득점과 출전이 가점에 반영되었습니다.",value:"목표 가격이 낮아 하락 방향으로 반영됐습니다."}:null,generatedAt:"2026-10-20T00:00:00Z",canGenerate:true}});
+  });
+  await mockPage.goto(base+"/players/test-player",{waitUntil:"networkidle"});
+  assert.equal(reportGets+reportPosts,0,"Player detail fetched a report eagerly");
+  await mockPage.getByRole("button",{name:"리포트 상대 경기 리포트",exact:true}).click();
+  await mockPage.getByRole("heading",{name:"AI 경기력 설명",exact:true}).waitFor();
+  assert.equal(reportGets,1);assert.equal(reportPosts,1);
+  assert.ok((await mockPage.getByRole("dialog").innerText()).includes("92,000"));
+  await mockPage.getByRole("button",{name:"닫기",exact:true}).click();
+  await mockPage.getByRole("button",{name:"리포트 상대 경기 리포트",exact:true}).click();
+  await mockPage.getByRole("heading",{name:"AI 경기력 설명",exact:true}).waitFor();
+  assert.equal(reportGets,1);assert.equal(reportPosts,1,"Reopening generated/read a report again");
+  await mockPage.setViewportSize({width:390,height:844});
+  assert.ok(await mockPage.getByRole("dialog").evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+  await mockPage.screenshot({path:"test-artifacts/match-report-mobile.png",fullPage:true});
+  await mockPage.keyboard.press("Escape");
+  assert.equal(await mockPage.getByRole("dialog").count(),0);
+  await mockPage.setViewportSize({width:1440,height:1000});
+  report.checks.push("Match report loads only on open, generates once, shares cached text, and fits mobile");
   await mockPage.goto(base+"/transactions",{waitUntil:"networkidle"});
   const totals=await mockPage.locator(".transaction-stats strong").allTextContents();
   assert.ok(totals.length===3&&totals.every(text=>text.includes("—")));
