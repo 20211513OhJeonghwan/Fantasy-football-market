@@ -4,7 +4,8 @@ import {loadTs} from './load-ts.mjs';
 const validation=loadTs('../lib/kickx/validation.ts');
 const helpers=loadTs('../lib/kickx/community.ts',{'./validation':validation});
 const http=loadTs('../server/kickx/http.ts',{'server-only':{},'@/lib/kickx/validation':validation,'./config':{},'./supabase':{}});
-const prototype=loadTs('../server/kickx/prototype.ts',{'server-only':{},'./http':http});
+const squadRules=loadTs('../lib/kickx/squad.ts');
+const prototype=loadTs('../server/kickx/prototype.ts',{'server-only':{},'./http':http,'@/lib/kickx/squad':squadRules});
 const parse=q=>helpers.parseCommunityQuery(new URLSearchParams(q));
 test('community lists select exactly one scope and reject invalid filters',()=>{
  assert.equal(parse('').scope,'player');assert.equal(parse('scope=club').scope,'club');

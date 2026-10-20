@@ -1,10 +1,10 @@
 "use client";
-import { Select } from "./select";
 import { useState, useRef, type CSSProperties } from "react";
 import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
 import { Plus, RotateCcw, Save, X } from "lucide-react";
 import { apiRequest } from "@/lib/kickx/client";
 import { money, score } from "@/lib/kickx/data";
+import { fixedSquadSlots, positionCapacity, SQUAD_FORMATION } from "@/lib/kickx/squad";
 import type { Player, Position } from "@/lib/kickx/types";
 import { usePlatform } from "./provider";
 import { Change, DataEmpty, MemberNotice, PageHeading, PlayerPortrait, PositionBadge, Tabs } from "./ui";
@@ -55,10 +55,9 @@ export function Pitch({
   selected?: number | null;
   onSelect?: (i: number) => void;
 }) {
-  const { data, getPlayer, getTeam } = usePlatform();
-  const rule = data.formations.find((f) => f.id === formation);
-  // Unselected illustration: a neutral 4-3-3 silhouette, not a saved or default formation.
-  const positions: Position[] = rule?.positions ?? ["GK", "DF", "DF", "DF", "DF", "MF", "MF", "MF", "FW", "FW", "FW"];
+  const { getPlayer, getTeam } = usePlatform();
+  const rule = formation === SQUAD_FORMATION.id ? SQUAD_FORMATION : undefined;
+  const positions: Position[] = SQUAD_FORMATION.positions;
   return (
     <div className={`pitch ${compact ? "compact" : ""} ${rule ? "" : "is-empty"}`}>
       <PitchMarkings />
@@ -100,7 +99,7 @@ export function Pitch({
       </div>
       {!rule && !compact && (
         <div className="pitch-overlay">
-          <strong>{data.formations.length ? "포메이션을 선택해 주세요" : "스쿼드 준비 중"}</strong>
+          <strong>4-3-3 스쿼드</strong>
           <span>보유 선수로 나만의 베스트 11을 구성합니다.</span>
         </div>
       )}
@@ -118,12 +117,15 @@ export function SquadScreen() {
   const [draft, setDraft] = useState<{ formationId: string; slots: (string | null)[] } | null>(null),
     [selected, setSelected] = useState<number | null>(null),
     [filter, setFilter] = useState("전체");
-  const formation = draft?.formationId || member?.squad?.formationId || "";
+  const formation = SQUAD_FORMATION.id;
+  const legacyFormation = !!member?.squad && member.squad.formationId !== formation;
+  const changed = !!draft || legacyFormation;
   const slots = draft?.slots || member?.squad?.slots || [];
-  const rule = data.formations.find((f) => f.id === formation),
+  const rule = SQUAD_FORMATION,
     target = selected == null ? null : rule?.positions[selected];
   const owned = (member?.holdings.map(h=>getPlayer(h.playerId)).filter(Boolean) ?? []) as Player[];
-  const safeSlots = slots.map((id) => (owned.some((p) => p.id === id) ? id : null));
+  const safeSlots = fixedSquadSlots(slots, draft?.formationId || member?.squad?.formationId || formation,
+    id => owned.find(p => p.id === id));
   const filled = safeSlots.filter(Boolean).length;
   const lineup = safeSlots.map((id) => getPlayer(id)).filter(Boolean) as Player[];
   const visible = owned.filter((p) => (filter === "전체" || p.position === filter) && (!target || p.position === target));
@@ -131,34 +133,17 @@ export function SquadScreen() {
   function captureRevision(){if(baseRevision.current==null)baseRevision.current=member?.squad?.revision??0;setSavedAt(null);}
   function discardDraft(){setDraft(null);baseRevision.current=null;setSelected(null);setSaveError(null);reload();}
   async function save(){
-    if(!draft || lock.current)return;
+    if(!changed || lock.current)return;
     if(mock){notify("스쿼드 저장 예시입니다. 실제로 저장되지 않습니다.");return;}
     lock.current=true;setSaving(true);
     setSaveError(null);
-    try{await apiRequest("/api/kickx/squad","PUT",{formationId:draft.formationId,slots:draft.slots,revision:baseRevision.current??member?.squad?.revision??0});setDraft(null);baseRevision.current=null;setSavedAt(Date.now());reload();notify("스쿼드를 저장했습니다.");}
+    try{await apiRequest("/api/kickx/squad","PUT",{formationId:formation,slots:safeSlots,revision:baseRevision.current??member?.squad?.revision??0});setDraft(null);baseRevision.current=null;setSavedAt(Date.now());reload();notify("스쿼드를 저장했습니다.");}
     catch(e){
       const message=e instanceof Error?e.message:"저장하지 못했습니다.";
       // A stale revision means another tab saved first; the draft stays so the user can compare before discarding.
       setSaveError({message,stale:/다른 창/.test(message)});notify(message,"error");
     }
     finally{lock.current=false;setSaving(false);}
-  }
-  function changeFormation(id: string) {
-    captureRevision();
-    const next = data.formations.find((f) => f.id === id);
-    if (!next) return;
-    const pool = [...safeSlots];
-    setDraft({
-      formationId: id,
-      slots: next.positions.map((pos) => {
-        const i = pool.findIndex((playerId) => playerId && getPlayer(playerId)?.position === pos);
-        if (i < 0) return null;
-        const found = pool[i];
-        pool[i] = null;
-        return found;
-      }),
-    });
-    setSelected(null);
   }
   function place(p: Player) {
     captureRevision();
@@ -174,13 +159,13 @@ export function SquadScreen() {
       <PageHeading
         eyebrow="BUILD YOUR STARTING XI"
         title="내 스쿼드"
-        description="보유 선수 중 최대 11명으로 나만의 라인업을 완성하세요."
+        description="4-3-3으로 라인업을 구성하세요. GK 1명 · DF 4명 · MF 3명 · FW 3명까지 보유할 수 있습니다."
         action={
           <>
-            <button className="button secondary" disabled={!draft} onClick={discardDraft}>
+            <button className="button secondary" disabled={!changed} onClick={discardDraft}>
               <RotateCcw size={16} />되돌리기
             </button>
-            <button className="button primary" disabled={!draft || saving || !data.session} onClick={()=>void save()}><Save size={17} />{saving?"저장 중…":"스쿼드 저장"}</button>
+            <button className="button primary" disabled={!changed || saving || !data.session} onClick={()=>void save()}><Save size={17} />{saving?"저장 중…":"스쿼드 저장"}</button>
           </>
         }
       />
@@ -190,18 +175,18 @@ export function SquadScreen() {
           <div className="squad-toolbar">
             <div className="squad-team">
               <strong>{data.session?.profile?.nickname ? `${data.session.profile.nickname} FC` : "내 라인업"}</strong>
-              {draft ? <span className="tag yellow">편집 중 · 미저장</span> : savedAt && <span className="tag outline">저장됨</span>}
+              {changed ? <span className="tag yellow">편집 중 · 미저장</span> : savedAt && <span className="tag outline">저장됨</span>}
             </div>
             <div className="squad-count">
               <span>등록 선수</span>
               <strong className="num">{rule ? filled : "—"}<small> / {MAX_SQUAD}</small></strong>
               <span className="meter yellow" aria-hidden="true"><i style={{ width: `${(filled / MAX_SQUAD) * 100}%` }} /></span>
             </div>
-            <label className="squad-formation">
-              <span className="sr-only">포메이션</span>
-              <Select label="포메이션" value={formation} disabled={saving || !data.formations.length} onChange={changeFormation} placeholder="포메이션 선택" options={data.formations.map((f) => ({ value: f.id, label: f.name, hint: `GK 1 · DF ${f.positions.filter((p) => p === "DF").length} · MF ${f.positions.filter((p) => p === "MF").length} · FW ${f.positions.filter((p) => p === "FW").length}` }))} />
-            </label>
+            <div className="squad-formation">
+              <span>포메이션</span> <strong>4-3-3</strong>
+            </div>
           </div>
+          {legacyFormation && <p className="slot-hint">기존 라인업을 4-3-3에 맞춰 표시합니다. 확인 후 스쿼드를 저장해 주세요. 보유 선수는 유지됩니다.</p>}
           {saveError && (
             <div className={`squad-alert ${saveError.stale ? "stale" : ""}`} role="alert">
               <span><b>{saveError.stale ? "다른 창에서 스쿼드가 먼저 저장되었습니다." : "스쿼드를 저장하지 못했습니다."}</b>{saveError.stale ? " 편집 중인 라인업은 그대로 두었습니다. 최신 스쿼드를 불러오면 편집 내용은 사라집니다." : ` ${saveError.message}`}</span>
@@ -235,6 +220,10 @@ export function SquadScreen() {
             <p className="slot-hint">피치에서 자리를 먼저 선택하면 해당 포지션 선수만 표시됩니다.</p>
           )}
           {!target && <Tabs items={["전체", "FW", "MF", "DF", "GK"]} value={filter} onChange={setFilter} variant="segment" label="포지션 필터" />}
+          <p className="fine-print" aria-label="포지션별 보유 정원">{(["GK", "DF", "MF", "FW"] as const).map(pos => {
+            const capacity = positionCapacity(member, pos, id => owned.find(p => p.id === id))!;
+            return `${pos} ${capacity.count}/${capacity.limit}${capacity.full ? " · 정원 마감" : ""}`;
+          }).join(" / ")}. 라인업에서 선수를 빼도 보유 정원은 비워지지 않습니다.</p>
           <ul className="bench-list">
             {visible.map((p) => {
               const inLineup = safeSlots.includes(p.id);

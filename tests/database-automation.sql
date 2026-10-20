@@ -66,6 +66,8 @@ do $$declare r uuid;begin
  update public.football_event_sources set lineups='{"changed":true}' where fixture_id='bsd-100';
  if (select revision from public.calculation_queue where player_id='bsd-10')=r then raise exception 'Lineup update not queued';end if;
 end $$;
+-- A verified market position is required for a purchase; the earlier name-mapping fixture was unknown.
+update public.players set position='FW' where id='bsd-10';
 set local role authenticated;
 set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000001';
 select public.kickx_open_wallet();

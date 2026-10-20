@@ -4,7 +4,8 @@ import {loadTs} from './load-ts.mjs';
 const validation=loadTs('../lib/kickx/validation.ts');
 const community=loadTs('../lib/kickx/community.ts',{'./validation':validation});
 const http=loadTs('../server/kickx/http.ts',{'server-only':{},'@/lib/kickx/validation':validation,'./config':{},'./supabase':{}});
-const prototype=loadTs('../server/kickx/prototype.ts',{'server-only':{},'./http':http});
+const squadRules=loadTs('../lib/kickx/squad.ts');
+const prototype=loadTs('../server/kickx/prototype.ts',{'server-only':{},'./http':http,'@/lib/kickx/squad':squadRules});
 const req=(data,origin='https://kickx.invalid')=>new Request('https://kickx.invalid/api/kickx',{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify(data)});
 test('trade quote and settlement ignore client price, quantity, user and policy fields',async()=>{
  const calls=[];const injected={...http,authenticatedClient:async()=>({user:{id:'verified'},client:{rpc:async(name,args)=>{calls.push({name,args});return {data:{id:'result'},error:null};}}})};

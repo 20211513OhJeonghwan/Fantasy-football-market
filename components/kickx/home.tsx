@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowRight, BookOpen, ChevronDown, Search, Shield, TrendingUp, X } from "lucide-react";
 import { dateText, money, score } from "@/lib/kickx/data";
+import { fixedSquadSlots, SQUAD_FORMATION } from "@/lib/kickx/squad";
 import { fixtureGroup, fixtureStatus, selectFeaturedFixtures } from "@/lib/kickx/fixtures";
 import type { Player } from "@/lib/kickx/types";
 import { clubIdentity } from "@/lib/kickx/club-identity";
@@ -62,18 +63,19 @@ function AssetsPanel() {
   );
 }
 function SquadPanel() {
-  const { data } = usePlatform();
+  const { data, getPlayer } = usePlatform();
   const squad = data.member?.squad;
-  const formation = data.formations.find(item => item.id === squad?.formationId);
-  const filled = squad?.slots.filter(Boolean).length ?? 0;
+  const formation = SQUAD_FORMATION;
+  const slots = squad ? fixedSquadSlots(squad.slots, squad.formationId, getPlayer) : [];
+  const filled = slots.filter(Boolean).length;
   return (
     <section className="dash-panel dash-squad" aria-labelledby="dash-squad">
       <PanelHead title="내 스쿼드" href="/squad" label="스쿼드 관리" />
       <div className="dash-squad-body">
-        {formation && squad ? <Pitch slots={squad.slots} formation={formation.id} compact /> : <Pitch slots={[]} formation={null} compact />}
+        {formation && squad ? <Pitch slots={slots} formation={formation.id} compact /> : <Pitch slots={[]} formation={null} compact />}
         <div className="dash-squad-side">
-          <div className="dash-field"><span>포메이션</span><strong>{formation?.name || "—"}</strong></div>
-          <div className="dash-field"><span>등록 선수</span><strong className="num">{formation ? `${filled} / 11` : "—"}</strong></div>
+          <div className="dash-field"><span>포메이션</span><strong>{formation.name}</strong></div>
+          <div className="dash-field"><span>등록 선수</span><strong className="num">{`${filled} / 11`}</strong></div>
           <div className="dash-field"><span>평균 Performance</span><strong className="num">{score(squad?.performance)}</strong></div>
           <Link href="/squad" className="button primary full">스쿼드 편집</Link>
         </div>
