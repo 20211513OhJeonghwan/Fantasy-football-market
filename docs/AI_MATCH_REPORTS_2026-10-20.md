@@ -19,9 +19,16 @@
 
 무료 티어는 무제한이 아니다. 프로젝트·계정별 RPM/TPM/RPD는 AI Studio에서 확인해야 한다. 무료 티어의 제출 내용은 Google 제품 개선에 사용될 수 있으므로 유저·보유 자산·커뮤니티 내용은 전달하지 않는다. 공개 경기의 산정 숫자와 짧은 지표명만 전달한다.
 
-Vercel의 해당 프로젝트에 서버 환경변수 `GEMINI_API_KEY`를 추가하고 재배포한다. Google AI Studio에서 **Free tier 프로젝트의 키**를 사용한다. 이 기능을 위해 결제 계정을 연결할 필요는 없다. 키를 저장소나 채팅에 올리지 않는다. 선택 환경변수 `GEMINI_REPORT_MODEL`의 기본값은 `gemini-3.5-flash-lite`다. 서버의 기존 `SUPABASE_SERVICE_ROLE_KEY`도 사용한다.
+운영 활성화 순서:
+
+1. `supabase/migrations/20261020062505_match_ai_reports.sql` 전체를 Supabase SQL Editor에서 한 번 실행한다.
+2. Vercel의 해당 프로젝트 서버 환경변수에 `GEMINI_API_KEY`와 `SUPABASE_SERVICE_ROLE_KEY`를 설정하고 재배포한다. GitHub Actions의 비밀변수는 Vercel에 자동 공유되지 않는다.
+
+Google AI Studio에서 **Free tier 프로젝트의 키**를 사용한다. 이 기능을 위해 결제 계정을 연결할 필요는 없다. 키를 저장소나 채팅에 올리지 않는다. 선택 환경변수 `GEMINI_REPORT_MODEL`의 기본값은 `gemini-3.5-flash-lite`다.
 
 이 작업 환경에는 Gemini 키가 없으므로 실제 공급자 호출 검증은 키 설정 뒤 필요하다. 키가 없는 상태에서는 외부 모델 호출·생성용 DB 쓰기가 발생하지 않는다.
+
+코드는 PR #23으로 main에 병합했고 Vercel 배포 성공을 확인했다. 운영 DB 적용 도구는 `Invalid or expired requestState` 오류를 두 번 반환했고, 이후 읽기 검사에서도 마이그레이션과 리포트 RPC가 없음을 확인했다. 따라서 운영 DB는 아직 미적용이다. 배포된 리포트 GET도 서버용 Supabase 키 설정을 요구하는 503을 반환했다. 위 두 설정을 완료하기 전에는 운영 AI 리포트가 활성화된 상태가 아니다.
 
 ## 전송량과 DB 크기 제한
 
@@ -74,3 +81,4 @@ Vercel의 해당 프로젝트에 서버 환경변수 `GEMINI_API_KEY`를 추가�
 - SQL 통합 테스트: 같은 경기 재사용, 생성 권한, 잘못된 토큰, 실제 정정 무효화, 입력 해시만 바뀐 재산정 재사용, 한도·보관 상한, 구형 행 보존, 익명/회원 권한 분리.
 - 브라우저 테스트: 최초 로딩 요청 없음, 버튼에서 생성, 재열기 추가 호출 없음, 모바일 모달, Escape 닫기.
 - 실제 모델의 한국어 품질과 계정 무료 한도는 운영 키 설정 후 확인한다.
+- 최종 검증: 단위 테스트 **188개**, 실제 PostgreSQL **17**의 전체 마이그레이션·권한 테스트, 데스크톱 **1440px**·모바일 **390px** 브라우저 테스트, lint·빌드 모두 통과. CI: https://github.com/hyun1290/kick-x-test/actions/runs/39382813857
