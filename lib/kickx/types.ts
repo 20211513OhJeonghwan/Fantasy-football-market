@@ -15,6 +15,8 @@ export type PlayerRecord = {
   /** Fixture and competition of the record when the server provides them. */
   fixtureId?: string | null;
   leagueId?: string | null;
+  /** True only when a finished match has its own published price change. */
+  reportAvailable?: boolean;
   playedAt: string;
   opponent: string;
   result: string | null;

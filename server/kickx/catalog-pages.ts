@@ -60,14 +60,16 @@ export async function readPlayerDetail(client: SupabaseClient, id: string): Prom
   const fixtureIds = [...new Set((records.data ?? []).map(row => row.fixture_id).filter(Boolean))];
   const [teamNames,competitions]=await Promise.all([
     opponents.length ? client.from("teams").select("name,name_ko").in("name",opponents) : {data:[],error:null},
-    fixtureIds.length ? client.from("fixtures").select("id,league_id").in("id",fixtureIds) : {data:[],error:null},
+    fixtureIds.length ? client.from("fixtures").select("id,league_id,status").in("id",fixtureIds) : {data:[],error:null},
   ]);
   if (teamNames.error) throw teamNames.error;
   if (competitions.error) throw competitions.error;
   const localized = new Map((teamNames.data ?? []).map(row => [row.name,row.name_ko || row.name]));
   const leagueOf = new Map((competitions.data ?? []).map(row => [row.id,row.league_id]));
+  const finished = new Set((competitions.data ?? []).filter(row => ["FT","AET","PEN"].includes(row.status)).map(row => row.id));
+  const priced = new Set(priceSteps.error ? [] : (priceSteps.data ?? []).map(row => row.fixture_id));
   player.history=(history.data||[]).reverse().map(row=>({at:row.recorded_at,value:Number(row.value)}));
-  player.records=(records.data||[]).map(row=>({id:row.id,fixtureId:row.fixture_id ?? null,leagueId:leagueOf.get(row.fixture_id) ?? null,playedAt:row.played_at,opponent:localized.get(row.opponent) || row.opponent,result:row.result,minutes:row.minutes,goals:row.goals,assists:row.assists,performance:row.performance == null ? null : Number(row.performance)}));
+  player.records=(records.data||[]).map(row=>({id:row.id,fixtureId:row.fixture_id ?? null,leagueId:leagueOf.get(row.fixture_id) ?? null,reportAvailable:finished.has(row.fixture_id) && priced.has(row.fixture_id) && row.minutes>0 && row.performance!=null,playedAt:row.played_at,opponent:localized.get(row.opponent) || row.opponent,result:row.result,minutes:row.minutes,goals:row.goals,assists:row.assists,performance:row.performance == null ? null : Number(row.performance)}));
   if(!migrationMissing(scores.error)){checkDatabase(scores.error);player.scoreDetails=scores.data??[];}
   for(const result of [baseline,priceSteps])if(!migrationMissing(result.error))checkDatabase(result.error);
   if (!migrationMissing(baseline.error) && !migrationMissing(priceSteps.error)) {

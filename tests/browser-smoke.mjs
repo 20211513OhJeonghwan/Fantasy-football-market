@@ -176,18 +176,20 @@ try {
   report.checks.push("BSD missing photo falls back; imported-match totals are labeled explicitly");
   // Opening a match report is the only trigger; reopening shares the cached result.
   const reportFacts={playerName:"CI-only player",opponent:"리포트 상대",playedAt:"2026-10-18T12:00:00Z",minutes:90,score:57,scoreStatus:"provisional",ruleVersion:"form-v2",contributions:[{metric:"minutes",value:90,points:30},{metric:"goals",value:1,points:30},{metric:"yellow_cards",value:1,points:-3}],warningCount:1,priceBefore:100000,priceAfter:92000,targetPrice:80000,formScore:40,changePercent:-8,windowSize:5};
-  state.players[0].records=[{id:"report-record",fixtureId:"test-fixture",playedAt:reportFacts.playedAt,opponent:reportFacts.opponent,result:"승",minutes:90,goals:1,assists:0,performance:57}];
+  state.players[0].records=[{id:"report-record",fixtureId:"test-fixture",reportAvailable:true,playedAt:reportFacts.playedAt,opponent:reportFacts.opponent,result:"승",minutes:90,goals:1,assists:0,performance:57}];
   let reportGets=0,reportPosts=0;
   await mock.route("**/api/kickx/players/test-player/matches/test-fixture/report",route=>{
     const creating=route.request().method()==="POST";
     if(creating)reportPosts++;else reportGets++;
-    return route.fulfill({json:{status:creating||reportPosts?"ready":"missing",facts:reportFacts,text:creating||reportPosts?{performance:"득점과 출전이 가점에 반영되었습니다.",value:"목표 가격이 낮아 하락 방향으로 반영됐습니다."}:null,generatedAt:"2026-10-20T00:00:00Z",canGenerate:true}});
+    return route.fulfill({json:{status:creating||reportPosts?"ready":"missing",facts:reportFacts,text:creating||reportPosts?{performance:"출전 시간과 득점 기록이 경기력 점수의 중심을 이뤘습니다. 출전에 따른 기본 점수와 직접적인 득점 기여가 함께 총점을 끌어올렸습니다. 경고로 인한 감점도 있었지만, 주요 가점에 비해 차감 영향은 작았습니다."}:null,generatedAt:"2026-10-20T00:00:00Z",canGenerate:true}});
   });
   await mockPage.goto(base+"/players/test-player",{waitUntil:"networkidle"});
   assert.equal(reportGets+reportPosts,0,"Player detail fetched a report eagerly");
   await mockPage.getByRole("button",{name:"리포트 상대 경기 리포트",exact:true}).click();
   await mockPage.getByRole("heading",{name:"AI 경기력 설명",exact:true}).waitFor();
   assert.equal(reportGets,1);assert.equal(reportPosts,1);
+  assert.ok((await mockPage.locator('.modal-heading').innerText()).includes('2026. 10. 18.'));
+  assert.ok(!(await mockPage.getByRole('dialog').innerText()).match(/AI 가치 변동 설명|경기별 Performance와 가치 변동|미확인 통계|추후 정정/));
   assert.ok((await mockPage.getByRole("dialog").innerText()).includes("92,000"));
   await mockPage.getByRole("button",{name:"닫기",exact:true}).click();
   await mockPage.getByRole("button",{name:"리포트 상대 경기 리포트",exact:true}).click();
@@ -224,18 +226,31 @@ try {
   assert.equal(failedReportPosts,2,"Manual retry did not issue a fresh generation request");
   await mockPage.keyboard.press("Escape");
   state.players[0].records[0].fixtureId="history-report-fixture";
+  state.players[0].records[0].reportAvailable=false;
   let historyReportPosts=0;
   await mock.route("**/api/kickx/players/test-player/matches/history-report-fixture/report",route=>{
     if(route.request().method()==="POST")historyReportPosts++;
     return route.fulfill({json:{status:"unavailable",unavailableReason:"baseline-history",facts:null,text:null,generatedAt:null,canGenerate:true}});
   });
   await mockPage.goto(base+"/players/test-player",{waitUntil:"networkidle"});
-  await mockPage.getByRole("button",{name:"리포트 상대 경기 리포트",exact:true}).click();
-  await mockPage.getByText("이 경기는 초기 가격을 산정할 때 반영된 과거 경기입니다.",{exact:false}).waitFor();
-  assert.equal(historyReportPosts,0,"Historical initial-price input generated a report");
-  assert.ok((await mockPage.getByRole("dialog").innerText()).includes("57"));
-  await mockPage.keyboard.press("Escape");
-  report.checks.push("Failed report generation preserves figures with manual retry; initial-price history has a distinct explanation");
+  assert.equal(await mockPage.getByRole("button",{name:"리포트 상대 경기 리포트",exact:true}).count(),0);
+  await mockPage.getByRole('button',{name:'가치 분석',exact:true}).click();
+  assert.equal(await mockPage.locator('.analysis button').count(),0);
+  assert.equal(historyReportPosts,0,"Historical initial-price input requested a report");
+  // Even an eligible match must not expose report actions or requests to guests.
+  const memberSession=state.session;
+  state.session=null;
+  state.players[0].records[0].fixtureId='guest-report-fixture';
+  state.players[0].records[0].reportAvailable=true;
+  let guestReportRequests=0;
+  await mock.route('**/api/kickx/players/test-player/matches/guest-report-fixture/report',route=>{guestReportRequests++;return route.fulfill({status:401,json:{error:'로그인이 필요합니다.'}});});
+  await mockPage.goto(base+'/players/test-player',{waitUntil:'networkidle'});
+  assert.equal(await mockPage.getByRole('button',{name:'리포트 상대 경기 리포트',exact:true}).count(),0);
+  await mockPage.getByRole('button',{name:'가치 분석',exact:true}).click();
+  assert.equal(await mockPage.locator('.analysis button').count(),0);
+  assert.equal(guestReportRequests,0,'Guest view fetched a report');
+  state.session=memberSession;
+  report.checks.push("Failed generation preserves figures; baseline and guest report buttons are hidden without requests");
   await mockPage.goto(base+"/transactions",{waitUntil:"networkidle"});
   const totals=await mockPage.locator(".transaction-stats strong").allTextContents();
   assert.ok(totals.length===3&&totals.every(text=>text.includes("—")));

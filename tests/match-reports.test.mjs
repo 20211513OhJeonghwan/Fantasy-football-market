@@ -4,22 +4,23 @@ import { loadTs } from './load-ts.mjs';
 const labels=loadTs('../lib/kickx/score-labels.ts');
 const model=loadTs('../server/kickx/report-model.ts',{'server-only':{},'@/lib/kickx/score-labels':labels});
 const facts={playerName:'테스트 선수',opponent:'테스트 팀',playedAt:'2026-10-18T12:00:00Z',minutes:90,score:57,scoreStatus:'provisional',ruleVersion:'form-v2',contributions:[{metric:'minutes',value:90,points:30},{metric:'goals',value:1,points:30},{metric:'yellow_cards',value:1,points:-3}],warningCount:2,priceBefore:100000,priceAfter:92000,targetPrice:80000,formScore:40,changePercent:-8,windowSize:5};
-const text={performance:'득점과 출전 시간이 가점에 기여했고 경고가 일부 감점으로 반영됐습니다.',value:'목표 가격이 직전 가격보다 낮아 하락 방향으로 반영됐습니다.'};
+const text={performance:'득점과 출전 시간이 가점에 기여했고 경고가 일부 감점으로 반영됐습니다.'};
 const response=(value,reason='STOP')=>Response.json({candidates:[{finishReason:reason,content:{parts:[{text:JSON.stringify(value)}]}}]});
 test('free model is explicit and an absent key cannot issue model requests',()=>{
  assert.equal(model.reportModelConfig({}),null);
  assert.deepEqual(model.reportModelConfig({GEMINI_API_KEY:' test '}),{key:'test',model:'gemini-3.5-flash-lite'});
  assert.equal(model.reportModelConfig({GEMINI_API_KEY:'test',GEMINI_REPORT_MODEL:'../other'}),null);
 });
-test('positive performance does not imply price rises, and the prompt excludes identities/raw payloads',()=>{
+test('the prompt contains performance facts without prices, uncertainty boilerplate or identities',()=>{
  const prompt=JSON.parse(model.reportPrompt({...facts,raw:'private',portfolio:{balance:1000},userId:'secret'}));
- assert.equal(prompt.direction,'하락');assert.equal(prompt.score,57);
- for(const field of ['playerName','opponent','raw','portfolio','userId','playedAt'])assert.equal(prompt[field],undefined);
+ assert.equal(prompt.score,57);
+ for(const field of ['playerName','opponent','raw','portfolio','userId','playedAt','priceBefore','priceAfter','targetPrice','weightedForm','usedAppearances','direction','provisional','unverifiedItems'])assert.equal(prompt[field],undefined);
  assert.equal(prompt.contributions[1].item,'득점');
 });
 test('model output cannot replace exact numbers, inject HTML, return excess text, or skip a section',()=>{
  assert.deepEqual(model.parseReportText(text),text);
- for(const value of [{...text,value:'가격이 8% 상승했습니다.'},{...text,performance:'<script>잘못된 내용입니다.</script>'},{...text,value:'가'.repeat(221)},{performance:text.performance},{...text,value:'가격이 ９% 상승했습니다.'}])assert.throws(()=>model.parseReportText(value),/invalid-output/);
+ assert.equal(model.parseReportText({performance:'가'.repeat(350)}).performance.length,350);
+ for(const value of [{...text,performance:'가격이 8% 상승했습니다.'},{...text,performance:'<script>잘못된 내용입니다.</script>'},{...text,performance:'가'.repeat(421)},{},{...text,performance:'가격이 ９% 상승했습니다.'}])assert.throws(()=>model.parseReportText(value),/invalid-output/);
 });
 test('provider request is bounded, has no search tools, and keeps credentials out of URLs',async()=>{
  let calls=0;
@@ -27,6 +28,7 @@ test('provider request is bounded, has no search tools, and keeps credentials ou
   calls++;assert.ok(!url.includes('private-key'));
   assert.equal(init.headers['x-goog-api-key'],'private-key');
   const body=JSON.parse(init.body);assert.equal(body.generationConfig.maxOutputTokens,650);
+  assert.deepEqual(body.generationConfig.responseFormat.text.schema.required,['performance']);assert.ok(!body.systemInstruction.parts[0].text.includes('정정될 수 있다고'));
   assert.equal(body.tools,undefined);assert.equal(init.cache,'no-store');assert.ok(init.signal instanceof AbortSignal);
   return response(text);
  });
@@ -42,23 +44,23 @@ class HttpError extends Error {constructor(status,message){super(message);this.s
 function handlers({existing={status:'missing',facts},claim={status:'claimed',facts,inputHash:'hash',claimToken:'token'},configured=true,providerFailure=false,originAllowed=true,authenticated=true}={}) {
  const calls=[];let generated=0;let completed=false;
  const db={rpc:async(name,args)=>{calls.push({name,args});
-  if(name==='kickx_read_match_report')return {data:completed?{status:'ready',facts,text,generatedAt:'2026-10-20'}:existing,error:null};
-  if(name==='kickx_claim_match_report')return {data:claim,error:null};
+  if(name==='kickx_read_match_report')return {data:{promptVersion:model.REPORT_PROMPT_VERSION,...(completed?{status:'ready',facts,text,generatedAt:'2026-10-20'}:existing)},error:null};
+  if(name==='kickx_claim_match_report')return {data:{promptVersion:model.REPORT_PROMPT_VERSION,...claim},error:null};
   if(name==='kickx_finish_match_report'){completed=!!args.p_body;return {data:completed,error:null};}
   throw new Error('Unexpected RPC');
  }};
  const api=loadTs('../server/kickx/match-reports.ts',{
   'server-only':{},'./admin-db':{createAdminDatabase:()=>db},
-  './http':{authenticatedClient:async()=>{if(!authenticated)throw new HttpError(401,'AUTH');return {user:{id:'verified-user'}};},requireOrigin:()=>{if(!originAllowed)throw new HttpError(403,'ORIGIN');},failure:error=>Response.json({error:error.message},{status:error.status||500}),json:data=>Response.json(data)},
+  './http':{authenticatedClient:async()=>{if(!authenticated)throw new HttpError(401,'AUTH');return {user:{id:'verified-user'}};},requireOrigin:()=>{if(!originAllowed)throw new HttpError(403,'ORIGIN');},failure:error=>Response.json({error:error.message},{status:error.status||500}),json:data=>Response.json(data,{headers:{'Cache-Control':'private, no-store'}})},
   './prototype':{identity:id=>{if(!/^[a-zA-Z0-9_-]{1,100}$/.test(id))throw new HttpError(400,'ID');return id;},checkDatabase:error=>{if(error)throw new Error('DB');}},
-  './report-model':{ReportModelError:model.ReportModelError,reportModelConfig:()=>configured?{key:'test',model:'free-model'}:null,generateReport:async()=>{generated++;if(providerFailure)throw new model.ReportModelError('rate-limit');return text;}},
+  './report-model':{REPORT_PROMPT_VERSION:model.REPORT_PROMPT_VERSION,ReportModelError:model.ReportModelError,reportModelConfig:()=>configured?{key:'test',model:'free-model'}:null,generateReport:async()=>{generated++;if(providerFailure)throw new model.ReportModelError('rate-limit');return text;}},
  });
  return {...api,calls,generated:()=>generated};
 }
 test('a page/report read never generates or writes; its public response omits lease and requester data',async()=>{
  const api=handlers({existing:{status:'ready',facts,text,inputHash:'private-hash',claimToken:'private-token',requestedBy:'private-user'}});
  const response=await api.readMatchReport('player','fixture');const body=await response.json();
- assert.match(response.headers.get('Cache-Control'),/s-maxage=60/);assert.equal(api.generated(),0);
+ assert.equal(response.headers.get('Cache-Control'),'private, no-store');assert.equal(api.generated(),0);
  assert.deepEqual(api.calls.map(c=>c.name),['kickx_read_match_report']);
  for(const key of ['inputHash','claimToken','requestedBy'])assert.equal(body[key],undefined);
 });
@@ -84,10 +86,18 @@ test('generation finalizes with a lease and then re-reads current facts; failure
  const failed=handlers({providerFailure:true});await failed.createMatchReport(new Request('https://kickx.test'),'player','fixture');
  assert.equal(failed.calls[1].args.p_body,null);assert.equal(failed.calls[1].args.p_error,'rate-limit');
 });
-test('cross-origin, invalid IDs and signed-out writes never reach the DB or model',async()=>{
+test('cross-origin, invalid IDs and signed-out reads/writes never reach the DB or model',async()=>{
  for(const options of [{originAllowed:false},{authenticated:false}]){
   const api=handlers(options);const r=await api.createMatchReport(new Request('https://kickx.test'),'player','fixture');
   assert.ok([401,403].includes(r.status));assert.equal(api.calls.length,0);assert.equal(api.generated(),0);
  }
+ const guest=handlers({authenticated:false});assert.equal((await guest.readMatchReport('player','fixture')).status,401);assert.equal(guest.calls.length,0);
  const api=handlers();assert.equal((await api.readMatchReport('../bad','fixture')).status,400);assert.equal(api.calls.length,0);
+});
+
+test('an unapplied prompt migration never serves old AI text or starts a new model call',async()=>{
+ const api=handlers({existing:{status:'ready',facts,text,promptVersion:'match-report-v1'},claim:{status:'claimed',facts,promptVersion:'match-report-v1'}});
+ const data=await (await api.readMatchReport('player','fixture')).json();
+ assert.equal(data.text,null);assert.equal(data.status,'missing');assert.equal(data.canGenerate,false);
+ await api.createMatchReport(new Request('https://kickx.test'),'player','fixture');assert.equal(api.generated(),0);
 });

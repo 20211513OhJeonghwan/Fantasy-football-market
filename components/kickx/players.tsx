@@ -312,6 +312,7 @@ export function PlayerDetail() {
   const [period, setPeriod] = useState("1개월"),
     [tab, setTab] = useState("최근 경기");
   const [reportRecord, setReportRecord] = useState<PlayerRecord | null>(null);
+  const canReadReports = !!data.session?.profile;
   const owned = data.member?.holdings.find((h) => h.playerId === p?.id);
   const team = getTeam(p?.team);
   const detailClub = useClub(p?.team);
@@ -411,7 +412,7 @@ export function PlayerDetail() {
                         <th className="numeric">골</th>
                         <th className="numeric">도움</th>
                         <th className="numeric">Performance</th>
-                        <th>리포트</th>
+                        {canReadReports && <th>리포트</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -428,7 +429,7 @@ export function PlayerDetail() {
                           <td className="numeric">{money(r.goals)}</td>
                           <td className="numeric">{money(r.assists)}</td>
                           <td className="numeric"><span className={`score-chip ${r.performance == null ? "none" : ""}`}>{score(r.performance)}</span></td>
-                          <td><button type="button" className="button secondary small report-button" disabled={!r.fixtureId || r.performance == null} onClick={() => setReportRecord(r)} aria-label={`${r.opponent} 경기 리포트`}><Sparkles size={14} />{r.performance == null ? "산정 대기" : "리포트"}</button></td>
+                          {canReadReports && <td>{r.reportAvailable && <button type="button" className="button secondary small report-button" onClick={() => setReportRecord(r)} aria-label={`${r.opponent} 경기 리포트`}><Sparkles size={14} />리포트</button>}</td>}
                         </tr>
                       ))}
                     </tbody>
@@ -441,10 +442,10 @@ export function PlayerDetail() {
             ) : (
               <div className="analysis">
                 <span className="tag ink"><Sparkles size={13} />경기별 AI 리포트</span>
-                <h3>경기력과 가치가 달라진 이유를 확인하세요.</h3>
-                <p>최근 경기의 리포트에서 Performance 가점·감점과 최근 출전 기록에 따른 가치 변동을 함께 설명합니다.</p>
-                {p.records.filter(r => r.fixtureId && r.performance != null).slice(0, 3).map(r => <button key={r.id} className="button secondary small" onClick={() => setReportRecord(r)}><Sparkles size={14} />{dateText(r.playedAt, false)} · vs {r.opponent}</button>)}
-                {!p.records.some(r => r.fixtureId && r.performance != null) && <p className="fine-print">경기 종료 후 산정이 반영되면 리포트를 볼 수 있습니다.</p>}
+                <h3>경기력 점수가 어떻게 나왔는지 확인하세요.</h3>
+                <p>출전 시간과 공격·수비 기록이 Performance에 기여한 내용을 설명합니다.</p>
+                {canReadReports && p.records.filter(r => r.reportAvailable).slice(0, 3).map(r => <button key={r.id} className="button secondary small" onClick={() => setReportRecord(r)}><Sparkles size={14} />{dateText(r.playedAt, false)} · vs {r.opponent}</button>)}
+                {!canReadReports ? <p className="fine-print">로그인 후 경기별 AI 리포트를 볼 수 있습니다.</p> : !p.records.some(r => r.reportAvailable) && <p className="fine-print">리포트를 제공할 수 있는 최근 경기가 없습니다.</p>}
               </div>
             )}
           </section>
@@ -487,7 +488,7 @@ export function PlayerDetail() {
           </section>
         </aside>
       </div>
-      {reportRecord && <MatchReportDialog key={`${p.id}:${reportRecord.fixtureId}`} playerId={p.id} record={reportRecord} onClose={() => setReportRecord(null)} />}
+      {canReadReports && reportRecord?.reportAvailable && <MatchReportDialog key={`${p.id}:${reportRecord.fixtureId}`} playerId={p.id} record={reportRecord} onClose={() => setReportRecord(null)} />}
       <PerformanceDetails player={p}/>
     </>
   );
