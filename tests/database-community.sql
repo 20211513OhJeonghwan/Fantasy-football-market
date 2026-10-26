@@ -2,7 +2,8 @@
 begin;
 update public.kickx_policy set version='prototype-v1';
 insert into auth.users values('00000000-0000-0000-0000-000000000001'),('00000000-0000-0000-0000-000000000002');
-insert into public.teams(id,name) values('bsd-1','Home'),('bsd-2','Away');
+insert into public.leagues(id,name) values('bsd-1','Test League') on conflict do nothing;
+insert into public.teams(id,name,league_id) values('bsd-1','Home','bsd-1'),('bsd-2','Away','bsd-1');
 insert into public.players(id,name,position,provider) values('bsd-10','Player','FW','bsd');
 insert into public.profiles(id,nickname,team_id) values('00000000-0000-0000-0000-000000000001','Author','bsd-1'),('00000000-0000-0000-0000-000000000002','Moderator','bsd-2');
 insert into public.user_roles values('00000000-0000-0000-0000-000000000002','admin');

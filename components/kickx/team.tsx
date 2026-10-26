@@ -94,7 +94,7 @@ export function TeamScreen() {
       </section>
       <section className="panel flush team-section">
         <div className="panel-head">
-          <h2>경기 일정 · 결과</h2>
+          <h2>경기 일정 · 결과 <span className="muted">전체 대회</span></h2>
           <Link className="text-link" href="/fixtures">전체 일정 <ArrowRight size={14} /></Link>
         </div>
         {matches.length > 0 && <ul className="match-list">{matches.map((f) => <MatchRow fixture={f} key={f.id} showDate />)}</ul>}

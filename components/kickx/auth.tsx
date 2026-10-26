@@ -13,6 +13,7 @@ import { apiRequest } from "@/lib/kickx/client";
 import { dateText, money } from "@/lib/kickx/data";
 import { parseProfile, PROFILE_LIMITS, safeReturnPath } from "@/lib/kickx/validation";
 import type { Profile } from "@/lib/kickx/types";
+import { DOMESTIC_LEAGUES, supportedTeams } from '@/lib/kickx/support';
 
 function AuthVisual() {
   return (
@@ -95,23 +96,24 @@ export function LoginScreen() {
 function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
   const { data, status, mock, updateProfile, notify } = usePlatform();
   const search = useSearchParams(), router = useRouter();
-  const [draftName, setDraftName] = useState<string | null>(null), [draftTeam, setDraftTeam] = useState<string | null>(null);
+  const [draftName, setDraftName] = useState<string | null>(null), [draftTeams, setDraftTeams] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const lock = useRef(false);
   const nickname = draftName ?? data.session?.profile?.nickname ?? "";
-  const team = draftTeam ?? data.session?.profile?.team ?? "";
+  const teams = draftTeams ?? supportedTeams(data.session?.profile);
+  const leagues = data.leagues.filter(l => DOMESTIC_LEAGUES.includes(l.id as typeof DOMESTIC_LEAGUES[number]) || !l.id.startsWith('bsd-') && data.teams.some(t=>t.leagueId===l.id));
   const teamOptions = useTeamOptions("나중에 선택", "all", "");
   const canSave = status === "ready" && !!data.session;
-  const dirty = !data.session?.profile || nickname !== data.session.profile.nickname || team !== (data.session.profile.team || "");
+  const dirty = !data.session?.profile || nickname !== data.session.profile.nickname || JSON.stringify(teams) !== JSON.stringify(supportedTeams(data.session.profile));
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!canSave || lock.current) return;
     setError("");
     try {
-      const values = parseProfile({ nickname, team });
+      const values = parseProfile({ nickname, teams });
       lock.current = true; setBusy(true);
       const profile = mock ? values : (await apiRequest<{ profile: Profile }>("/api/kickx/profile", "POST", values)).profile;
-      updateProfile(profile); setDraftName(null); setDraftTeam(null);
+      updateProfile(profile); setDraftName(null); setDraftTeams(null);
       notify(mock ? "프로필을 저장했습니다. (예시 모드 · 저장되지 않음)" : "프로필을 저장했습니다.");
       if (onboarding) { router.replace(safeReturnPath(search.get("next"))); router.refresh(); }
     } catch (error) { setError(error instanceof Error ? error.message : "프로필을 저장하지 못했습니다."); }
@@ -125,11 +127,14 @@ function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
         <input id="profile-nickname" aria-labelledby="profile-nickname-label" value={nickname} onChange={(event) => setDraftName(event.target.value)} placeholder="사용할 닉네임을 입력하세요" autoComplete="nickname" required minLength={PROFILE_LIMITS.min} maxLength={PROFILE_LIMITS.max} disabled={busy} aria-describedby="nickname-help" aria-invalid={!!error} />
         <small id="nickname-help">2–20자 · 문자, 숫자, 공백, 밑줄, 하이픈</small>
       </label>
-      <label htmlFor="profile-team">
-        <span id="profile-team-label">응원 구단</span>
-        <Select id="profile-team" describedBy="team-help" value={team} disabled={busy || !data.teams.length} onChange={setDraftTeam} options={teamOptions} placeholder="나중에 선택" />
-        <small id="team-help">{data.teams.length ? "응원 구단 라운지에서 글과 댓글을 작성할 수 있습니다." : "구단 정보가 준비되면 선택할 수 있습니다."}</small>
-      </label>
+      <fieldset className="supported-club-fields" disabled={busy}><legend>응원 구단 <small>{teams.length} / 5</small></legend>
+        <p id="team-help">리그별 1개씩 최대 5개를 선택할 수 있습니다. 선택한 구단 게시판에서 글과 댓글을 작성할 수 있습니다.</p>
+        {leagues.map(league=><div className="supported-club-field" key={league.id}><label htmlFor={`profile-team-${league.id}`}>{league.name}</label>
+          <Select id={`profile-team-${league.id}`} label={`${league.name} 응원 구단`} describedBy="team-help" value={teams.find(id=>data.teams.find(t=>t.id===id)?.leagueId===league.id)??''} disabled={busy || !data.teams.length}
+            onChange={id=>setDraftTeams([...teams.filter(team=>data.teams.find(t=>t.id===team)?.leagueId!==league.id),...(id?[id]:[])])}
+            options={[{value:'',label:'선택 안 함'},...teamOptions.filter(o=>data.teams.some(t=>t.id===o.value&&t.leagueId===league.id))]} placeholder="선택 안 함"/>
+        </div>)}
+      </fieldset>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="form-actions">
         {!canSave && <p className="fine-print">{data.session ? "서비스 연결 후 저장할 수 있습니다." : "로그인 후 프로필을 저장할 수 있습니다."}</p>}
@@ -181,7 +186,7 @@ export function MyPageScreen() {
             <MockBadge compact />
           </div>
           <h2>{profile?.nickname || (data.session ? "프로필을 완성해 주세요" : "로그인이 필요합니다")}</h2>
-          <div className="profile-club"><TeamBadge id={profile?.team || null} /><div><span>응원 구단</span><strong>{getTeam(profile?.team)?.name || "미선택"}</strong></div></div>
+          <div className="profile-supported-clubs" aria-label="선택한 응원 구단">{supportedTeams(profile).length ? supportedTeams(profile).map(id=><div className="profile-club" key={id}><TeamBadge id={id}/><strong>{getTeam(id)?.name||'구단 정보 없음'}</strong></div>) : <div className="profile-club">응원 구단 미선택</div>}</div>
           <dl className="profile-facts">
             <div><dt>보유 선수</dt><dd className="num">{member ? `${new Set(member.holdings.map((h) => h.playerId)).size}명` : "—"}</dd></div>
             <div><dt>거래 기록</dt><dd className="num">{member ? `${member.transactions.length}건` : "—"}</dd></div>

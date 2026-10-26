@@ -7,6 +7,7 @@ import type { Comment, Post } from "@/lib/kickx/types";
 import { apiRequest } from "@/lib/kickx/client";
 import { dateText, money, relativeTime } from "@/lib/kickx/data";
 import {postHeading} from "@/lib/kickx/community";
+import { supportsTeam } from '@/lib/kickx/support';
 import { usePlatform, useResource } from "./provider";
 import { BackLink, ClubCrest, DataEmpty, Empty, Modal, PlayerPortrait } from "./ui";
 
@@ -45,10 +46,10 @@ export function PostDetail() {
   const [action, setAction] = useState<Action | null>(null), [reason, setReason] = useState("");
   const lock = useRef(false), requestId = useRef("");
   const owner = !!post && post.authorId === data.session?.userId;
-  const fan = post?.scope === "player" || data.session?.profile?.team === post?.target;
+  const fan = post?.scope === "player" || !!post && supportsTeam(data.session?.profile,post.target);
   const canWrite = !!data.session?.profile && fan;
   const lounge = post ? `/community/${post.scope === "club" ? "clubs" : "players"}/${post.target}` : "/community/clubs";
-  const hub = post?.scope === "player" ? "/community/players" : "/community/clubs";
+  const hub = post?.scope === "player" ? `/players/${post.target}` : "/community/clubs";
   const targetPlayer = post?.scope === "player" ? getPlayer(post.target) : undefined;
   const targetName = post ? post.targetName ?? (post.scope === "club" ? getTeam(post.target)?.name : targetPlayer?.name) ?? null : null;
   const pages = Math.max(1, Math.ceil((post?.commentCount ?? 0) / COMMENT_PAGE));

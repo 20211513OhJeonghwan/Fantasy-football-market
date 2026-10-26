@@ -1,18 +1,18 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
-import { clubIdentity } from "@/lib/kickx/club-identity";
-import { ChevronLeft, ChevronRight, Heart, LoaderCircle, Lock, MessageCircle, Pencil, Search, Send, X } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { supportsTeam, supportedTeams } from "@/lib/kickx/support";
+import { Pagination } from "./pagination";
+import { LoaderCircle, Lock, Paperclip, Pencil, Search, Send, X } from "lucide-react";
 import type { Player, Post } from "@/lib/kickx/types";
-import { dateText, money, relativeTime } from "@/lib/kickx/data";
+import { dateText, money } from "@/lib/kickx/data";
 import { apiRequest } from "@/lib/kickx/client";
-import { COMMUNITY_PATHS, postHeading, postTitle, type CommunityScope } from "@/lib/kickx/community";
+import { COMMUNITY_PATHS, postTitle, type CommunityScope } from "@/lib/kickx/community";
 import { POST_LIMITS, validatePost } from "@/lib/kickx/validation";
 import { usePlatform, useResource } from "./provider";
 import { useCatalogPage, useCatalogPlayer } from "./catalog";
-import { usePost } from "./community-detail";
 import { Select } from "./select";
-import { Change, ClubCrest, DataEmpty, PlayerPortrait } from "./ui";
+import { DataEmpty, PlayerPortrait } from "./ui";
 
 const SIZE = 20;
 const emptyFeed = () => ({ items: [] as Post[], total: 0, page: 1, size: SIZE });
@@ -34,7 +34,7 @@ function PlayerPicker({ value, onChange }: { value: string; onChange: (id: strin
 /** Fixed scope and, inside a lounge, fixed target. Requests retain their UUID on retry. */
 function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: CommunityScope; target?: string; targetName?: string; onSaved: () => void; onClose: () => void }) {
   const { data, mock, notify, getTeam, getPlayer } = usePlatform();
-  const [selected, setSelected] = useState(target ?? (scope === "club" ? data.session?.profile?.team ?? "" : ""));
+  const [selected, setSelected] = useState(target ?? (scope === "club" ? supportedTeams(data.session?.profile)[0] ?? "" : ""));
   const [body, setBody] = useState(""), [title, setTitle] = useState(""), [transaction, setTransaction] = useState("");
   const [advanced, setAdvanced] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const request = useRef(""), lock = useRef(false), id = useId();
@@ -44,7 +44,7 @@ function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: 
     event.preventDefault();
     if (lock.current) return;
     const draft = { scope, target: selected, title: postTitle(title, body), body, transaction };
-    const errors = validatePost(draft, { myTeam: data.session?.profile?.team ?? null, targets: selected ? [selected] : [], transactions: data.member?.transactions.map(t => t.id) ?? [] });
+    const errors = validatePost(draft, { myTeam: data.session?.profile?.team ?? null, myTeams: supportedTeams(data.session?.profile), targets: selected ? [selected] : [], transactions: data.member?.transactions.map(t => t.id) ?? [] });
     if (Object.keys(errors).length) { setError(Object.values(errors).join(" ")); return; }
     if (mock) { notify("예시 모드 · 실제로 저장되지 않습니다."); return; }
     lock.current = true; setBusy(true); setError(""); request.current ||= crypto.randomUUID();
@@ -73,107 +73,40 @@ function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: 
 export function CommunityComposer(props: { scope: CommunityScope; target?: string; targetName?: string; onSaved: () => void }) {
   const { data, status, reload: reloadPlatform } = usePlatform();
   const [open, setOpen] = useState(false);
-  const fan = props.scope === "player" || !!data.session?.profile?.team && (!props.target || data.session.profile.team === props.target);
+  const fan = props.scope === "player" || supportedTeams(data.session?.profile).length>0 && (!props.target || supportsTeam(data.session?.profile,props.target));
   const canWrite = !!data.session?.profile && fan;
   return <section className="feed-composer panel" aria-label={`${props.scope === "club" ? "구단" : "선수"} 빠른 글쓰기`}>
     {status !== "ready" ? <DataEmpty entity="커뮤니티" status={status} retry={reloadPlatform} rows={1} /> : !canWrite ? <div className="feed-composer-locked"><Lock size={16} aria-hidden="true" /><p>{!data.session ? "로그인하고 이야기를 나눠보세요." : !data.session.profile ? "프로필을 설정하면 이야기를 작성할 수 있습니다." : "구단 이야기는 해당 구단의 응원 팬만 작성할 수 있습니다."}</p><Link className="button secondary small" href={!data.session ? "/login" : "/mypage"}>{!data.session ? "로그인" : "프로필 설정"}</Link></div> : open ? <ComposerForm {...props} onSaved={() => { setOpen(false); props.onSaved(); }} onClose={() => setOpen(false)} /> : <button className="feed-composer-open" onClick={() => setOpen(true)}><span className="rank-avatar" aria-hidden="true">{data.session?.profile?.nickname.slice(0, 1) ?? "?"}</span><span className="feed-composer-prompt">{props.target && props.targetName ? `${props.targetName}에 대한 이야기를 남겨보세요` : props.scope === "club" ? "응원 구단에 대한 이야기를 남겨보세요" : "선수에 대한 생각을 나눠보세요"}</span><span className="feed-composer-cta"><Pencil size={15} /></span></button>}
   </section>;
 }
 
-function FeedCard({ post, showTarget }: { post: Post; showTarget: boolean }) {
-  const { data, mock, notify, getPlayer, getTeam } = usePlatform();
-  const [reaction, setReaction] = useState({ likes: post.likes, liked: !!post.liked, comments: post.commentCount });
-  const [expanded, setExpanded] = useState(false), [commentsOpen, setCommentsOpen] = useState(false), [commentPage, setCommentPage] = useState(1);
-  const [body, setBody] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState("");
-  const lock = useRef(false), request = useRef("");
-  const comments = usePost(commentsOpen ? post.id : null, commentPage);
-  const fan = post.scope === "player" || data.session?.profile?.team === post.target;
-  const player = post.scope === "player" ? getPlayer(post.target) : undefined;
-  const name = post.targetName || (post.scope === "club" ? getTeam(post.target)?.name : player?.name) || "대상 정보 없음";
-  const lounge = `${COMMUNITY_PATHS[post.scope]}/${encodeURIComponent(post.target)}`;
-  const heading = postHeading(post.title, post.body);
-  async function like() {
-    if (lock.current || !data.session) return;
-    if (mock) { notify("예시 모드 · 실제로 저장되지 않습니다."); return; }
-    lock.current = true; setBusy(true); setError("");
-    const liked = !reaction.liked;
-    try { await apiRequest("/api/kickx/community", "POST", { action: "like", postId: post.id, liked }); setReaction(v => ({ ...v, liked, likes: Math.max(0, v.likes + (liked ? 1 : -1)) })); }
-    catch (e) { setError(e instanceof Error ? e.message : "공감하지 못했습니다."); }
-    finally { lock.current = false; setBusy(false); }
-  }
-  async function comment(event: React.FormEvent) {
-    event.preventDefault(); if (lock.current || !body.trim()) return;
-    if (mock) { notify("예시 모드 · 실제로 저장되지 않습니다."); return; }
-    lock.current = true; setBusy(true); setError(""); request.current ||= crypto.randomUUID();
-    try {
-      await apiRequest("/api/kickx/community", "POST", { action: "comment", postId: post.id, body, requestId: request.current });
-      setCommentPage(Math.ceil((reaction.comments + 1) / 50)); comments.reload(); setReaction(v => ({ ...v, comments: v.comments + 1 })); setBody(""); request.current = ""; notify("댓글을 등록했습니다.");
-    } catch (e) { setError(e instanceof Error ? e.message : "댓글을 등록하지 못했습니다."); }
-    finally { lock.current = false; setBusy(false); }
-  }
-  const long = [...post.body].length > 400;
-  const chipTeam = getTeam(post.scope === "club" ? post.target : player?.team);
-  return <article className="community-feed-card" data-scope={post.scope} aria-label={`${post.author}의 ${post.scope === "club" ? "구단" : "선수"} 이야기`}>
-    <span className="feed-avatar" aria-hidden="true">{post.author.slice(0, 1)}</span>
-    <div className="feed-main">
-    <header className="feed-card-header">
-      <strong className="feed-author">{post.author}</strong>
-      <time dateTime={post.date} title={dateText(post.date)}>{relativeTime(post.date)}</time>
-    </header>
-    {showTarget && (
-      <Link className="feed-card-target" href={lounge} style={{ "--club": clubIdentity(chipTeam)?.primary } as CSSProperties}>
-        {player ? <PlayerPortrait player={player} size="sm" /> : <ClubCrest id={post.scope === "club" ? post.target : null} size="small" />}
-        <span>{name}</span>
-        {player?.change != null && <Change value={player.change} />}
-      </Link>
-    )}
-    {heading && <h3><Link href={`/community/posts/${post.id}`}>{heading}</Link></h3>}
-    <p className="feed-card-body">{expanded || !long ? post.body : [...post.body].slice(0, 400).join("") + "…"}</p>
-    {long && <button type="button" className="feed-more" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>{expanded ? "접기" : "더 보기"}</button>}
-    {post.transaction && <div className="feed-trade-card">
-      <span className={`trade-type ${post.transaction.type}`}>{post.transaction.type === "buy" ? "매입" : "매각"}</span>
-      <strong>{post.transaction.playerName}</strong>
-      <span className="num">{money(post.transaction.price)} P</span>
-      <time dateTime={post.transaction.date}>{dateText(post.transaction.date)} 체결</time>
-    </div>}
-    <div className="feed-card-actions">
-      <button type="button" className={`feed-action ${reaction.liked ? "on" : ""}`} aria-label={`피드 공감 ${reaction.likes}`} aria-pressed={reaction.liked} disabled={!data.session || busy} title={data.session ? undefined : "로그인 후 공감할 수 있습니다."} onClick={() => void like()}><Heart size={18} fill={reaction.liked ? "currentColor" : "none"} /><b className="num">{money(reaction.likes)}</b></button>
-      <button type="button" className={`feed-action ${commentsOpen ? "open" : ""}`} aria-label={`댓글 ${reaction.comments}`} aria-expanded={commentsOpen} onClick={() => setCommentsOpen(v => !v)}><MessageCircle size={18} /><b className="num">{money(reaction.comments)}</b></button>
-      <span className="feed-card-links">
-        {post.scope === "player" && <Link href={`/players/${encodeURIComponent(post.target)}`}>선수 정보</Link>}
-        <Link href={`/community/posts/${post.id}`}>상세</Link>
-      </span>
-    </div>
-    {error && <p className="field-error" role="alert">{error}</p>}
-    {commentsOpen && <section className="feed-comments" aria-label="피드 댓글">
-      {comments.status !== "ready" ? <DataEmpty entity="댓글" status={comments.status} retry={comments.reload} rows={2} /> : <>{comments.data.comments.length > 0 && <ul>{comments.data.comments.slice(-3).map(c => <li key={c.id}><span className="rank-avatar" aria-hidden="true">{c.author.slice(0, 1)}</span><div><strong>{c.author}</strong><p>{c.body}</p></div></li>)}</ul>}{!comments.data.comments.length && <p className="feed-comments-empty">첫 댓글을 남겨보세요.</p>}</>}
-      {!!data.session?.profile && fan ? <form onSubmit={comment}><label className="sr-only" htmlFor={`feed-comment-${post.id}`}>피드 댓글 내용</label><textarea id={`feed-comment-${post.id}`} rows={2} maxLength={1000} value={body} disabled={busy} placeholder="의견을 남겨보세요" onChange={e => { request.current = ""; setBody(e.target.value); }} /><button className="button primary small" disabled={busy || !body.trim()}>{busy ? <LoaderCircle size={14} className="kx-spin" /> : <Send size={14} />}댓글 등록</button></form> : <p className="feed-comments-lock">{post.scope === "club" && data.session?.profile ? "해당 구단 응원 팬만 댓글을 작성할 수 있습니다." : "로그인하고 프로필을 설정하면 댓글을 작성할 수 있습니다."}</p>}
-      <Link className="text-link" href={`/community/posts/${post.id}`}>댓글 전체 보기 · 답글 작성 <ChevronRight size={14} /></Link>
-    </section>}
-    </div>
-  </article>;
-}
-
-export function CommunityFeed({ scope, target, targetName, title = "이야기", compose = true }: { scope: CommunityScope; target?: string; targetName?: string; title?: string; compose?: boolean }) {
-  const { data, mock, status, reload: reloadPlatform } = usePlatform();
-  const [query, setQuery] = useState(""), [sort, setSort] = useState("new"), [page, setPage] = useState(1);
-  const [search,setSearch]=useState("");
+/** Compact bulletin board. Mutations remain on the post detail page. */
+export function CommunityFeed({ scope, target, targetName, title = "게시글", compose = true }: { scope: CommunityScope; target?: string; targetName?: string; title?: string; compose?: boolean }) {
+  const { data, mock, status, reload: reloadPlatform, getTeam, getPlayer } = usePlatform();
+  const [query,setQuery]=useState(''),[search,setSearch]=useState(''),[sort,setSort]=useState('new'),[page,setPage]=useState(1);
   useEffect(()=>{const timer=setTimeout(()=>setSearch(query.trim()),250);return()=>clearTimeout(timer);},[query]);
-  const params = new URLSearchParams({ scope, q: search, sort, page: String(page) });
-  if (target) params.set("target", target);
-  const remote = useResource(!mock && status === "ready" ? `/api/kickx/community?${params}` : null, emptyFeed);
-  const local = data.posts.filter(p => p.scope === scope && (!target || p.target === target) && `${p.title} ${p.body}`.toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => sort === "popular" ? b.likes - a.likes : Date.parse(b.date) - Date.parse(a.date));
-  const items = (mock ? local.slice((page - 1) * SIZE, page * SIZE) : remote.data.items).filter(p => p.scope === scope && (!target || p.target === target));
-  const total = mock ? local.length : remote.data.total, pages = Math.max(1, Math.ceil(total / SIZE));
-  const feedStatus = status !== "ready" ? status : mock ? status : remote.status;
-  const ready = feedStatus === "ready";
+  const params=new URLSearchParams({scope,q:search,sort,page:String(page)});if(target)params.set('target',target);
+  const remote=useResource(!mock&&status==='ready'?`/api/kickx/community?${params}`:null,emptyFeed);
+  const local=data.posts.filter(p=>p.scope===scope&&(!target||p.target===target)&&`${p.title} ${p.body}`.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>sort==='popular'?b.likes-a.likes:Date.parse(b.date)-Date.parse(a.date));
+  const items=(mock?local.slice((page-1)*SIZE,page*SIZE):remote.data.items).filter(p=>p.scope===scope&&(!target||p.target===target));
+  const total=mock?local.length:remote.data.total;
+  const feedStatus=status!=='ready'?status:mock?status:remote.status;
   return <div className="community-feed" data-scope={scope}>
-    {compose && <CommunityComposer key={`${scope}:${target ?? "hub"}`} scope={scope} target={target} targetName={targetName} onSaved={() => { setPage(1); remote.reload(); }} />}
-    <section className="panel flush" aria-label={`${scope === "club" ? "구단" : "선수"} 이야기 피드`}>
-      <div className="post-browser-title"><h2>{title}{ready && <span className="num">{money(total)}건</span>}</h2></div>
-      <div className="toolbar post-tools"><label className="input-search"><Search size={16} /><input aria-label="피드 검색" maxLength={100} value={query} placeholder="내용·제목 검색" onChange={e => { setQuery(e.target.value); setPage(1); }} /></label><Select label="피드 정렬" value={sort} onChange={v => { setSort(v); setPage(1); }} options={[{ value: "new", label: "최신순" }, { value: "popular", label: "공감순", hint: "누적 공감" }]} variant="compact" />{query && <button type="button" className="button ghost small" onClick={() => { setQuery(""); setPage(1); }}>초기화</button>}</div>
-      {!ready ? <DataEmpty entity="게시글" status={feedStatus} retry={status === "ready" ? remote.reload : reloadPlatform} /> : items.length ? <div className="feed-cards">{items.map(p => <FeedCard key={p.id} post={p} showTarget={!target} />)}</div> : <div className="feed-empty"><h3>{query ? "조건에 맞는 이야기가 없습니다" : "아직 이야기가 없습니다"}</h3><p>{query ? "검색어를 바꿔보세요." : "첫 이야기를 남겨보세요."}</p></div>}
-      {ready && pages > 1 && <div className="panel-foot pagination"><span>{money(total)}건 · {page} / {pages}</span><div><button aria-label="이전 피드 페이지" disabled={page === 1} onClick={() => setPage(v => v - 1)}><ChevronLeft size={17} /></button><button aria-label="다음 피드 페이지" disabled={page >= pages} onClick={() => setPage(v => v + 1)}><ChevronRight size={17} /></button></div></div>}
+    {compose&&<CommunityComposer key={`${scope}:${target??'hub'}`} scope={scope} target={target} targetName={targetName} onSaved={()=>{setPage(1);remote.reload();}}/>}
+    <section className="panel flush community-board" aria-label={`${scope==='club'?'구단':'선수'} 게시글 목록`}>
+      <div className="post-browser-title"><h2>{title}{feedStatus==='ready'&&<span className="num">{money(total)}건</span>}</h2></div>
+      <div className="toolbar post-tools"><label className="input-search"><Search size={16}/><input aria-label="게시글 검색" maxLength={100} value={query} placeholder="제목·내용 검색" onChange={e=>{setQuery(e.target.value);setPage(1);}}/></label><Select label="게시글 정렬" value={sort} onChange={v=>{setSort(v);setPage(1);}} options={[{value:'new',label:'최신순'},{value:'popular',label:'추천순'}]} variant="compact"/></div>
+      {feedStatus!=='ready'?<DataEmpty entity="게시글" status={feedStatus} retry={status==='ready'?remote.reload:reloadPlatform}/>:items.length?<div className="board-list-scroll"><table className="community-board-table"><thead><tr><th className="board-number">번호</th><th className="board-subject">제목</th><th>작성자</th><th>작성일</th><th className="board-views">조회</th><th className="board-likes">추천</th></tr></thead><tbody>
+        {items.map((post,index)=>{
+          const name=post.targetName||(scope==='club'?getTeam(post.target)?.name:getPlayer(post.target)?.name)||'—';
+          return <tr key={post.id} data-scope={post.scope}><td className="board-number num">{total-(page-1)*SIZE-index}</td>
+            <td className="board-subject">{!target&&<Link className="board-target" href={`${COMMUNITY_PATHS[scope]}/${post.target}`}>{name}</Link>}
+              <Link className="board-post-link" href={`/community/posts/${post.id}`}>{post.title||postTitle('',post.body)}{post.transaction&&<Paperclip size={13} aria-label="거래 첨부"/>}{post.commentCount>0&&<b className="board-comment-count num">[{post.commentCount}]</b>}</Link>
+              <span className="board-mobile-meta">{post.author} · {dateText(post.date,false)} · 조회 {money(post.views)} · 추천 {money(post.likes)}</span>
+            </td><td className="board-author">{post.author}</td><td className="board-date"><time dateTime={post.date}>{dateText(post.date,false)}</time></td><td className="board-views num">{money(post.views)}</td><td className="board-likes num">{money(post.likes)}</td></tr>;
+        })}
+      </tbody></table></div>:<div className="feed-empty"><h3>{query?'조건에 맞는 게시글이 없습니다':'아직 게시글이 없습니다'}</h3><p>{query?'검색어를 바꿔보세요.':'첫 게시글을 작성해 보세요.'}</p></div>}
+      {feedStatus==='ready'&&<Pagination page={page} total={total} size={SIZE} onPage={setPage} label="게시글"/>}
     </section>
   </div>;
 }

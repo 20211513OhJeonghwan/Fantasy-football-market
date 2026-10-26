@@ -2,6 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadTs } from './load-ts.mjs';
 const labels=loadTs('../lib/kickx/score-labels.ts');
+const {reportSentences}=loadTs('../lib/kickx/match-report.ts');
+test('cached AI prose separates sentences without splitting decimal statistics',()=>{
+ assert.deepEqual(reportSentences('기여도는 2.5점입니다. 득점이 가점을 만들었습니다.\n경고는 감점입니다.'),['기여도는 2.5점입니다.','득점이 가점을 만들었습니다.','경고는 감점입니다.']);
+ assert.deepEqual(reportSentences('  '),[]);
+});
 const model=loadTs('../server/kickx/report-model.ts',{'server-only':{},'@/lib/kickx/score-labels':labels});
 const facts={playerName:'테스트 선수',opponent:'테스트 팀',playedAt:'2026-10-18T12:00:00Z',minutes:90,score:57,scoreStatus:'provisional',ruleVersion:'form-v2',contributions:[{metric:'minutes',value:90,points:30},{metric:'goals',value:1,points:30},{metric:'yellow_cards',value:1,points:-3}],warningCount:2,priceBefore:100000,priceAfter:92000,targetPrice:80000,formScore:40,changePercent:-8,windowSize:5};
 const text={performance:'득점과 출전 시간이 가점에 기여했고 경고가 일부 감점으로 반영됐습니다.'};

@@ -3,7 +3,8 @@ import { Select } from "./select";
 import { POSITION_OPTIONS, useTeamOptions } from "./options";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowRight, BookOpen, ChevronDown, Search, Shield, TrendingUp, X } from "lucide-react";
+import { ArrowRight, BookOpen, Search, Shield, TrendingUp, X } from "lucide-react";
+import { Pagination } from './pagination';
 import { dateText, money, score } from "@/lib/kickx/data";
 import { fixedSquadSlots, SQUAD_FORMATION } from "@/lib/kickx/squad";
 import { fixtureGroup, fixtureStatus, selectFeaturedFixtures } from "@/lib/kickx/fixtures";
@@ -166,7 +167,8 @@ export function HomeScreen() {
   const [position, setPosition] = useState("all");
   const [team, setTeam] = useState("all");
   const [sort, setSort] = useState("default");
-  const [limit, setLimit] = useState(10);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
   const [guideOpen, setGuideOpen] = useState(false);
   const teamOptions = useTeamOptions("소속 구단 전체");
   const member = data.member?.financialReady === false ? null : data.member;
@@ -182,18 +184,19 @@ export function HomeScreen() {
     if (right == null) return -1;
     return sort === "low" ? left - right : right - left;
   }), [data.players, data.teams, search, position, team, sort]);
-  const remote=useCatalogPage<Player>("players",{q:search,position:position === "all" ? undefined : position,team,sort:sort === "low" ? "price-asc" : sort === "change" || sort === "performance" ? sort : "price",size:Math.min(limit,50)});
+  const remote=useCatalogPage<Player>("players",{q:search,position:position === "all" ? undefined : position,team,sort:sort === "low" ? "price-asc" : sort === "change" || sort === "performance" ? sort : "price",size:pageSize,page});
   const status=remote.enabled ? remote.status : platformStatus;
   const total=remote.enabled ? remote.data.total : results.length;
-  const visible=remote.enabled ? (remote.status === "ready" ? remote.data.items : []) : results.slice(0,limit);
+  const current=remote.enabled ? page : Math.min(page,Math.max(1,Math.ceil(total/pageSize)));
+  const visible=remote.enabled ? (remote.status === "ready" ? remote.data.items : []) : results.slice((current-1)*pageSize,current*pageSize);
   // Value columns only when any visible player has a computed value; otherwise show real imported stats.
   const valued = !visible.length || visible.some(p => p.price != null);
   const known = data.players.filter(p => p.change != null);
   const rising = [...known].filter(p => (p.change ?? 0) > 0).sort((a, b) => (b.change ?? 0) - (a.change ?? 0)).slice(0, 5);
   const falling = [...known].filter(p => (p.change ?? 0) < 0).sort((a, b) => (a.change ?? 0) - (b.change ?? 0)).slice(0, 5);
   const trades = member?.transactions.slice(0, 5) ?? [];
-  const reset = () => { setQuery(""); setSearch(""); setPosition("all"); setTeam("all"); setSort("default"); setLimit(10); };
-  const update = (fn: () => void) => { fn(); setLimit(10); };
+  const reset = () => { setQuery(""); setSearch(""); setPosition("all"); setTeam("all"); setSort("default"); setPage(1); };
+  const update = (fn: () => void) => { fn(); setPage(1); };
   return (
     <>
       <div className="home-grid">
@@ -283,12 +286,7 @@ export function HomeScreen() {
             </table>
           </div>
           {!visible.length && <DataEmpty entity="선수" status={status} retry={remote.enabled ? remote.reload : undefined} filtered={filtered} rows={6} />}
-          {total > limit && limit < 50 && (
-            <button className="board-more" disabled={status === "loading"} onClick={() => setLimit(value => Math.min(value + 8,50))}>
-              선수 더 보기 <span className="num">+{Math.min(8, total - limit)}</span><ChevronDown size={16} />
-            </button>
-          )}
-          {total > 50 && limit === 50 && <Link className="board-more" href="/players">전체 선수 탐색 <ArrowRight size={16} /></Link>}
+          {status==='ready' && <Pagination page={current} total={total} size={pageSize} onPage={setPage} label="홈 선수"/>}
           {total > 0 && <p className="board-foot">가격 적용 {dateText(data.updatedAt)} · 가치와 Performance는 KICK-X 내부 지표입니다.</p>}
         </section>
         <aside className="home-side" aria-label="나의 축구 대시보드">

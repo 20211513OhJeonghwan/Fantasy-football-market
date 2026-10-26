@@ -1,4 +1,2 @@
-import { CommunityHub } from "@/components/kickx/community";
-export default function Page() {
-  return <CommunityHub kind="player" />;
-}
+import { redirect } from "next/navigation";
+export default function Page(){redirect("/players");}

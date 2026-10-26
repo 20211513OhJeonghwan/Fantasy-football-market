@@ -26,7 +26,8 @@ export async function readPlayerPage(client: SupabaseClient, input: CatalogQuery
   return {items:await attachTradeWindows(client,rows.map(row=>mapPlayer(row, row))),total:count,page:input.page,size:input.size};
 }
 export async function readFixturePage(client: SupabaseClient, input: CatalogQuery): Promise<CatalogPage<Fixture>> {
-  let query = client.from("fixture_catalog").select(FIXTURE_COLUMNS, {count:"exact"});
+  let query = client.from(input.team ? "club_fixture_catalog" : "fixture_catalog").select(FIXTURE_COLUMNS, {count:"exact"});
+  if (!input.team) query = query.in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']);
   if (input.q) query = query.ilike("search_text", `%${literalLike(input.q)}%`);
   if (input.league) query = query.eq("league_id", input.league);
   if (input.team) query = query.or(`home_team_id.eq.${input.team},away_team_id.eq.${input.team}`);
@@ -34,6 +35,12 @@ export async function readFixturePage(client: SupabaseClient, input: CatalogQuer
   if (input.day) {
     const start = new Date(input.day+"T00:00:00+09:00");
     query = query.gte("starts_at",start.toISOString()).lt("starts_at",new Date(start.getTime()+86400000).toISOString());
+  }
+  if (input.month) {
+    const start = new Date(input.month+'-01T00:00:00+09:00');
+    const [year,month] = input.month.split('-').map(Number);
+    const end = new Date(Date.UTC(year,month,1)-9*3600000);
+    query = query.gte('starts_at',start.toISOString()).lt('starts_at',end.toISOString());
   }
   const {data,error,count} = await query.order("starts_at").order("id").range((input.page-1)*input.size,input.page*input.size-1);
   if (error) throw error;

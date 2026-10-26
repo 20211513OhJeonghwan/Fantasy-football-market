@@ -40,7 +40,8 @@ async function readCatalogPage(request: Request, kind: "players" | "fixtures") {
     }) : data.fixtures.filter(f=>{
       const h=data.teams.find(t=>t.id === f.home),a=data.teams.find(t=>t.id === f.away);
       return matches([h?.name,h?.english,a?.name,a?.english].join(" ")) && (!input.league || f.leagueId === input.league) && (!input.team || f.home === input.team || f.away === input.team)
-        && (!input.day || koreanDay(f.startsAt) === input.day) && (input.state === "all" || fixtureGroup(f.status)===input.state);
+        && (!!input.team || !f.leagueId?.startsWith('bsd-') || ['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6'].includes(f.leagueId))
+        && (!input.day || koreanDay(f.startsAt) === input.day) && (!input.month || koreanDay(f.startsAt).startsWith(input.month)) && (input.state === "all" || fixtureGroup(f.status)===input.state);
     }).sort((a,b)=>Date.parse(a.startsAt)-Date.parse(b.startsAt)||a.id.localeCompare(b.id));
     return json({status:"ready",source:"mock",data:{...empty,items:items.slice((input.page-1)*input.size,input.page*input.size),total:items.length}});
   } catch(error) { return error instanceof CatalogInputError ? json({error:error.message},400) : failure(error); }

@@ -59,7 +59,7 @@ export async function processBulkTask(api, job, today) {
       throw new SyncError("CURRENT_SEASON_UNAVAILABLE");
     }
     const seasons = { league_id: p.league, seasons: [selected] };
-    const context = { league: p.league, seasonId: selected.id, seasonYear: selected.year, leagueName: p.detail.name, ...(p.automatic ? { automatic: true } : {}),...(p.supplemental?{supplemental:true,scopeTeamIds:p.scopeTeamIds}:{}) };
+    const context = { league: p.league, seasonId: selected.id, seasonYear: selected.year, leagueName: p.detail.name, ...(p.automatic ? { automatic: true } : {}),...(p.supplemental?{supplemental:true,scopeTeamIds:p.scopeTeamIds,schedulesOnly:p.schedulesOnly===true}:{}) };
     const batch = normalizeBatch("leagues", { ...p.detail, season: seasons }, context);
     if(p.supplemental && p.displayName)batch.leagues[0].name=p.displayName;
     return result(batch, [...(p.supplemental?[]:[task(`teams:${p.league}:0`, "teams", 10, { context, offset: 0, seen: [] }, `${p.detail.name} 구단`)]), ...windows.filter(w=>w.from<=w.to).map(w => fixtureTask(context, w)),...(backfill?[task(`club:complete:${p.league}:${selected.id}`,'club-complete',99,{context},'대회 최초 수집 완료')]:[])], {
@@ -91,7 +91,7 @@ export async function processBulkTask(api, job, today) {
     const page = await api.page("/api/v2/events/", { league_id: c.league, season_id: c.seasonId, date_from: p.from, date_to: p.to, limit: 200, offset: p.offset });
     const fixtures=c.supplemental?page.results.filter(f=>c.scopeTeamIds.includes(f.home_team_id)||c.scopeTeamIds.includes(f.away_team_id)):page.results;
     const batch = normalizeBatch("fixtures", fixtures, c);
-    const children = fixtures.filter(f => ended(f)).map(f => task(`match:${f.id}`, "match", 40, { context: c, eventId: f.id, phase: "detail" }, `${f.home_team} · ${f.away_team}`));
+    const children = c.schedulesOnly ? [] : fixtures.filter(f => ended(f)).map(f => task(`match:${f.id}`, "match", 40, { context: c, eventId: f.id, phase: "detail" }, `${f.home_team} · ${f.away_team}`));
     if (page.next != null) children.push(fixtureTask(c, p, page.next));
     return result(batch, children);
   }

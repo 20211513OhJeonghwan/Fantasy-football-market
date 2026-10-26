@@ -2,7 +2,8 @@
 begin;
 update public.kickx_policy set version='prototype-v1',club_competitions_enabled=false;
 insert into auth.users(id) values('00000000-0000-0000-0000-000000000091');
-insert into public.teams(id,name) values('capacity-team','Capacity');
+insert into public.leagues(id,name) values('bsd-1','Test League') on conflict do nothing;
+insert into public.teams(id,name,league_id) values('capacity-team','Capacity','bsd-1');
 insert into public.profiles(id,nickname,team_id) values('00000000-0000-0000-0000-000000000091','Capacity','capacity-team');
 insert into public.players(id,name,provider,position,team_id)
 select 'capacity-'||p||'-'||n,'Capacity '||p||n,'bsd',p,'capacity-team'

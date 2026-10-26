@@ -1,9 +1,11 @@
 "use client";
 import { Select } from "./select";
+import { Pagination } from "./pagination";
+import { DOMESTIC_LEAGUES } from "@/lib/kickx/support";
 import { useLeagueOptions } from "./options";
 import Link from "next/link";
-import { useId, useMemo, useState, type CSSProperties } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, RotateCcw, Search } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
+import { CalendarDays, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { usePlatform } from "./provider";
 import { useCatalogPage } from "./catalog";
 import type { Fixture } from "@/lib/kickx/types";
@@ -67,78 +69,56 @@ export function MatchRow({ fixture, showDate = false }: { fixture: Fixture; show
   );
 }
 export function FixturesScreen() {
-  const { data, status:platformStatus } = usePlatform();
-  const [league, setLeague] = useState("all"), [state, setState] = useState("all");
-  const [day, setDay] = useState(""), [query, setQuery] = useState(""), [page, setPage] = useState(1);
-  const leagueOptions = useLeagueOptions('모든 대회',true);
-  const results = useMemo(() => data.fixtures.filter((fixture) => {
-    const home = data.teams.find((t) => t.id === fixture.home), away = data.teams.find((t) => t.id === fixture.away);
-    return (league === "all" || fixture.leagueId === league) && (state === "all" || fixtureGroup(fixture.status) === state)
-      && (!day || koreanDay(fixture.startsAt) === day)
-      && (!query.trim() || [home?.name, home?.english, away?.name, away?.english].filter(Boolean).join(" ").toLowerCase().includes(query.trim().toLowerCase()));
-  }).sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt)), [data.fixtures, data.teams, league, state, day, query]);
-  const remote=useCatalogPage<Fixture>("fixtures",{league,state,day,q:query,page,size:20});
-  const status=remote.enabled ? remote.status : platformStatus;
-  const total=remote.enabled ? remote.data.total : results.length;
-  const count=Math.max(1,Math.ceil(total/20)),current=remote.enabled ? page : Math.min(page,count);
-  const visible=remote.enabled ? (status === "ready" ? remote.data.items : []) : results.slice((current-1)*20,current*20);
-  const groups = new Map<string, typeof results>();
-  for (const fixture of visible) {
-    const key = koreanDay(fixture.startsAt);
-    groups.set(key, [...(groups.get(key) || []), fixture]);
-  }
-  const today = koreanDay(new Date().toISOString());
-  const filtered = league !== "all" || state !== "all" || !!day || !!query;
-  const reset = () => { setLeague("all"); setState("all"); setDay(""); setQuery(""); setPage(1); };
-  const stateLabel = STATES.find(([value]) => value === state)?.[1] ?? "전체";
-  return (
-    <>
-      <PageHeading
-        eyebrow="MATCH CENTRE"
-        title="경기 일정"
-        description={data.policy?.clubCompetitionsEnabled ? '5대 리그와 소속 구단의 공식 컵대회·유럽 대항전. 검증된 경기 기록을 점수와 가치에 반영합니다.' : '5대 리그의 경기 일정과 결과. 검증된 경기 기록을 점수와 가치에 반영합니다.'}
-        action={<span className="tag outline"><CalendarDays size={14} />대한민국 시간 · KST</span>}
-      />
-      <section className="panel flush">
-        <div className="panel-head">
-          <Tabs items={STATES.map(([, label]) => label)} value={stateLabel} onChange={(label) => { setState(STATES.find(([, l]) => l === label)?.[0] ?? "all"); setPage(1); }} label="경기 상태" />
-        </div>
-        <div className="toolbar fixture-tools">
-          <label className="input-search"><Search size={17} /><input aria-label="경기 구단 검색" placeholder="구단 이름 검색" maxLength={100} value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} /></label>
-          <Select label="경기 대회" value={league} onChange={(v) => { setLeague(v); setPage(1); }} options={leagueOptions} />
-          <input type="date" aria-label="경기 날짜 (대한민국 시간)" value={day} onChange={(e) => { setDay(e.target.value); setPage(1); }} />
-          <button className="button secondary" disabled={!filtered} onClick={reset}><RotateCcw size={15} />초기화</button>
-        </div>
-        <p className="fixture-summary" role="status">
-          {status === "ready" ? <><b className="num">{total}</b>경기</> : "경기 정보를 준비하고 있습니다."}
-          <span>진행 상태는 마지막 수집 기록을 기준으로 표시합니다.</span>
-        </p>
-        {[...groups].map(([date, fixtures]) => (
-          <section className="match-day" key={date}>
-            <h2>
-              <span className="match-day-date num">{date.slice(5).replace("-", ".")}</span>
-              <span className={`match-day-week ${["토", "일"].includes(weekday(date)) ? "weekend" : ""}`}>{weekday(date)}요일</span>
-              <span className="match-day-year num">{date.slice(0, 4)}</span>
-              {date === today && <span className="tag yellow">오늘</span>}
-              <small className="num">{fixtures.length}경기</small>
-            </h2>
-            <ul>
-              {fixtures.map((fixture) => <MatchRow fixture={fixture} key={fixture.id} />)}
-            </ul>
-          </section>
-        ))}
-        {!visible.length && <DataEmpty entity="경기 일정" status={status} retry={remote.enabled ? remote.reload : undefined} filtered={filtered} />}
-        {total > 0 && (
-          <div className="panel-foot pagination">
-            <span>{`${(current - 1) * 20 + 1}–${Math.min(current * 20, total)} / ${total}`}</span>
-            <div>
-              <button aria-label="이전 경기 페이지" disabled={current === 1} onClick={() => setPage(current - 1)}><ChevronLeft size={17} /></button>
-              <span className="num">{current} / {count}</span>
-              <button aria-label="다음 경기 페이지" disabled={current === count} onClick={() => setPage(current + 1)}><ChevronRight size={17} /></button>
-            </div>
-          </div>
-        )}
-      </section>
-    </>
-  );
+  const {data,status:platformStatus}=usePlatform();
+  const today=koreanDay(new Date().toISOString()),todayMonth=today.slice(0,7);
+  const [month,setMonth]=useState(todayMonth),[league,setLeague]=useState('all'),[state,setState]=useState('all'),[query,setQuery]=useState(''),[page,setPage]=useState(1),[jump,setJump]=useState(0);
+  const [year,monthNumber]=month.split('-').map(Number);
+  const todayRef=useRef<HTMLElement>(null),scrolled=useRef('');
+  const leagueOptions=useLeagueOptions('5대 리그 전체');
+  const results=useMemo(()=>data.fixtures.filter(f=>{
+    const home=data.teams.find(t=>t.id===f.home),away=data.teams.find(t=>t.id===f.away);
+    return !!f.leagueId && (DOMESTIC_LEAGUES.includes(f.leagueId as typeof DOMESTIC_LEAGUES[number]) || !f.leagueId.startsWith('bsd-'))
+      && koreanDay(f.startsAt).startsWith(month) && (league==='all'||f.leagueId===league) && (state==='all'||fixtureGroup(f.status)===state)
+      && (!query.trim()||[home?.name,home?.english,away?.name,away?.english].join(' ').toLowerCase().includes(query.trim().toLowerCase()));
+  }).sort((a,b)=>Date.parse(a.startsAt)-Date.parse(b.startsAt)),[data.fixtures,data.teams,month,league,state,query]);
+  const remote=useCatalogPage<Fixture>('fixtures',{month,league,state,q:query,page,size:500});
+  const status=remote.enabled?remote.status:platformStatus,total=remote.enabled?remote.data.total:results.length;
+  const visible=remote.enabled?(status==='ready'?remote.data.items:[]):results.slice((page-1)*500,page*500);
+  const groups=new Map<string,Fixture[]>();
+  for(const f of visible){const day=koreanDay(f.startsAt);groups.set(day,[...(groups.get(day)??[]),f]);}
+  if(month===todayMonth&&!groups.has(today))groups.set(today,[]);
+  const days=[...groups.entries()].sort(([a],[b])=>a.localeCompare(b));
+  useEffect(()=>{
+    const key=`${month}:${jump}`;
+    if(status!=='ready'||month!==todayMonth||scrolled.current===key)return;
+    const frame=requestAnimationFrame(()=>{if(todayRef.current){todayRef.current.scrollIntoView({block:'start',behavior:'instant'});scrolled.current=key;}});
+    return()=>cancelAnimationFrame(frame);
+  },[status,month,todayMonth,jump]);
+  const changeMonth=(value:string)=>{setMonth(value);setPage(1);};
+  const shift=(delta:number)=>{const d=new Date(Date.UTC(year,monthNumber-1+delta,1));changeMonth(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`);};
+  const latest=()=>{setMonth(todayMonth);setPage(1);setJump(n=>n+1);};
+  const stateLabel=STATES.find(([v])=>v===state)?.[1]??'전체';
+  return <>
+    <PageHeading eyebrow="MATCH CENTRE" title="경기 일정" description="5대 정규 리그의 월별 일정과 결과를 확인하세요. 구단 상세페이지에서는 모든 대회의 일정을 볼 수 있습니다." action={<span className="tag outline"><CalendarDays size={14}/>대한민국 시간 · KST</span>}/>
+    <section className="panel flush schedule-calendar">
+      <div className="schedule-controls">
+        <div className="schedule-year"><button aria-label="이전 연도" onClick={()=>changeMonth(`${year-1}-${String(monthNumber).padStart(2,'0')}`)} disabled={year<=2000}><ChevronLeft size={20}/></button>
+          <Select label="일정 연도" value={String(year)} onChange={y=>changeMonth(`${y}-${String(monthNumber).padStart(2,'0')}`)} options={Array.from({length:Number(today.slice(0,4))-2000+6},(_,i)=>({value:String(2000+i),label:`${2000+i}년`}))}/>
+          <button aria-label="다음 연도" onClick={()=>changeMonth(`${year+1}-${String(monthNumber).padStart(2,'0')}`)} disabled={year>=Number(today.slice(0,4))+5}><ChevronRight size={20}/></button>
+        </div><button className="button secondary small" onClick={latest}>최신</button>
+      </div>
+      <nav className="schedule-months" aria-label="일정 월 선택">{Array.from({length:12},(_,i)=>i+1).map(m=><button key={m} aria-current={m===monthNumber?'date':undefined} className={m===monthNumber?'active':''} onClick={()=>changeMonth(`${year}-${String(m).padStart(2,'0')}`)}>{m}월</button>)}</nav>
+      <div className="schedule-filter-bar"><Select label="경기 대회" value={league} onChange={v=>{setLeague(v);setPage(1);}} options={leagueOptions}/>
+        <label className="input-search"><Search size={16}/><input aria-label="경기 구단 검색" placeholder="구단 이름 검색" maxLength={100} value={query} onChange={e=>{setQuery(e.target.value);setPage(1);}}/></label>
+      </div>
+      <div className="panel-head"><Tabs items={STATES.map(([,label])=>label)} value={stateLabel} onChange={label=>{setState(STATES.find(([,l])=>l===label)?.[0]??'all');setPage(1);}} label="경기 상태"/></div>
+      <div className="schedule-month-heading"><button aria-label="이전 월" onClick={()=>shift(-1)} disabled={year<=2000&&monthNumber===1}><ChevronLeft size={18}/></button><h2>{year}년 {monthNumber}월 <span className="muted num">{status==='ready'?`${total}경기`:'불러오는 중'}</span></h2><button aria-label="다음 월" onClick={()=>shift(1)} disabled={year>=Number(today.slice(0,4))+5&&monthNumber===12}><ChevronRight size={18}/></button></div>
+      {status==='ready'?days.map(([day,fixtures])=><section className={`match-day${day===today?' today':''}`} key={day} ref={day===today?todayRef:undefined} data-date={day}>
+        <h2><span className="match-day-date num">{Number(day.slice(5,7))}월 {Number(day.slice(8))}일</span><span className={`match-day-week ${['토','일'].includes(weekday(day))?'weekend':''}`}>({weekday(day)})</span>{day===today&&<span className="tag yellow">오늘</span>}<small className="num">{fixtures.length}경기</small></h2>
+        {fixtures.length?<ul>{fixtures.map(f=><MatchRow key={f.id} fixture={f}/>)}</ul>:<p className="schedule-no-match">오늘은 선택한 조건에 맞는 경기가 없습니다.</p>}
+      </section>):<DataEmpty entity="경기 일정" status={status} retry={remote.enabled?remote.reload:undefined}/>}
+      {status==='ready'&&!total&&<p className="schedule-no-match">{year}년 {monthNumber}월에 수집된 경기가 없습니다.</p>}
+      {total>500&&<Pagination page={page} total={total} size={500} onPage={setPage} label="경기"/>}
+    </section>
+  </>;
 }

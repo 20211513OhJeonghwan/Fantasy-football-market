@@ -25,9 +25,9 @@ export async function POST(request:Request){try{
    if(!current.data?.post)throw new HttpError(404,"게시글을 찾을 수 없습니다.");
    if(current.data.post.scope!==input.scope || current.data.post.target!==input.target)throw new HttpError(409,"게시글의 선수·구단 대상을 변경할 수 없습니다.");
   }
-  const profile=await client.from("profiles").select("team_id").eq("id",user.id).maybeSingle();checkDatabase(profile.error);
+  const profile=await client.from("profiles").select("team_id,team_ids").eq("id",user.id).maybeSingle();checkDatabase(profile.error);
   const target=await client.from(input.scope==="club"?"teams":"players").select("id").eq("id",identity(input.target)).maybeSingle();checkDatabase(target.error);
-  const errors=validatePost(input as unknown as Parameters<typeof validatePost>[0],{myTeam:profile.data?.team_id??null,targets:target.data?[target.data.id]:[],transactions:input.transaction?[String(input.transaction)]:[]});
+  const errors=validatePost(input as unknown as Parameters<typeof validatePost>[0],{myTeam:profile.data?.team_id??null,myTeams:profile.data?.team_ids,targets:target.data?[target.data.id]:[],transactions:input.transaction?[String(input.transaction)]:[]});
   if(Object.keys(errors).length)throw new HttpError(400,Object.values(errors).join(" "));
  }
  const {data,error}=await client.rpc("kickx_community_write",{p_action:action,p_input:{...input,category:"자유"}});checkDatabase(error);return json(data);

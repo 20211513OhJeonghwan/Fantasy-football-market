@@ -1,0 +1,102 @@
+/* Monthly fixtures and compact boards. Loaded after the established polish. */
+.schedule-calendar { overflow: visible; }
+.schedule-controls { display:flex; align-items:center; justify-content:center; gap:20px; padding:18px 24px; background:var(--surface); position:sticky; top:56px; z-index:22; border-bottom:1px solid var(--line); border-radius:12px 12px 0 0; }
+.schedule-year { display:flex; align-items:center; gap:8px; }
+.schedule-year>.kx-select { width:150px; }
+.schedule-year>button,.schedule-month-heading>button { display:grid; place-items:center; min-width:34px; min-height:34px; border-radius:6px; }
+.schedule-year>button:hover,.schedule-month-heading>button:hover { background:var(--yellow); }
+.schedule-year>button:disabled,.schedule-month-heading>button:disabled { opacity:.3; }
+.schedule-months { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); background:var(--surface); position:sticky; top:130px; z-index:21; border-bottom:1px solid var(--line-2); }
+.schedule-months button { min-height:48px; font-weight:800; color:var(--text-2); border-bottom:3px solid transparent; }
+.schedule-months button.active { background:var(--yellow); color:var(--ink); border-bottom-color:var(--ink); }
+.schedule-months button:hover { background:#fff8c9; }
+.schedule-filter-bar { display:flex; flex-wrap:wrap; gap:12px; padding:20px 24px 0; }
+.schedule-filter-bar>.input-search { flex:1; min-width:180px; }
+.schedule-month-heading { display:flex; align-items:center; justify-content:center; gap:20px; padding:18px 12px; border-bottom:2px solid var(--ink); }
+.schedule-month-heading h2 { font-size:19px; }
+.schedule-month-heading h2 span { margin-left:12px; font-size:12px; font-weight:500; }
+.schedule-calendar .match-day { padding:0; margin:0; scroll-margin-top:210px; }
+.schedule-calendar .match-day>h2 { display:flex; align-items:center; padding:14px 24px; gap:8px; margin:0; background:#f7f7f3; border-bottom:1px solid var(--line); border-radius:0; }
+.schedule-calendar .match-day.today>h2 { background:#fff6b2; }
+.schedule-calendar .match-day-date { font-size:16px; }
+.schedule-calendar .match-day>h2 small { margin-left:auto; }
+.schedule-calendar .match-day ul { padding:0; margin:0; border:0; border-radius:0; }
+.schedule-calendar .match-day .match-row { border-radius:0; box-shadow:none; }
+.schedule-calendar .match-day .match-row::before,.schedule-calendar .match-day .match-row::after { display:none; }
+.schedule-no-match { padding:24px; text-align:center; color:var(--text-2); font-size:14px; }
+.supported-board-clubs { border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin-bottom:18px; }
+.supported-board-clubs>div { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+.supported-board-clubs>div a { display:flex; align-items:center; gap:6px; color:var(--text-2); font-size:12px; }
+.supported-board-clubs nav { display:flex; flex-wrap:wrap; gap:8px; }
+.supported-board-clubs nav button { display:flex; align-items:center; gap:7px; min-height:40px; padding:7px 12px; border:1px solid var(--line-2); border-radius:6px; font-weight:700; font-size:13px; }
+.supported-board-clubs nav button.active { border-color:var(--ink); background:var(--yellow); }
+.community-board-filter { display:flex; justify-content:flex-end; margin-bottom:12px; }
+.community-board { border-top:2px solid var(--ink); border-radius:0; }
+.community-board .post-browser-title { padding:18px 20px 10px; }
+.community-board .post-tools { padding:10px 20px 18px; }
+.community-board .post-tools .input-search { flex:1; }
+.board-list-scroll { width:100%; overflow-x:auto; }
+.community-board-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:13px; }
+.community-board-table th { height:43px; font-size:12px; font-weight:700; background:#f7f7f3; border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2); text-align:center; }
+.community-board-table td { padding:13px 12px; border-bottom:1px solid var(--line); text-align:center; color:var(--text-2); }
+.community-board-table tr:hover td { background:#fdfcf6; }
+.community-board-table th.board-number { width:64px; }
+.community-board-table th:nth-child(3) { width:120px; }
+.community-board-table th:nth-child(4) { width:130px; }
+.community-board-table th.board-views,.community-board-table th.board-likes { width:65px; }
+.community-board-table td.board-subject { text-align:left; color:var(--ink); overflow:hidden; }
+.board-target { display:inline-block; font-size:11px; color:var(--text-2); margin-right:10px; }
+.board-post-link { font-size:14px; font-weight:600; overflow-wrap:anywhere; }
+.board-post-link:hover { text-decoration:underline; }
+.board-post-link svg { display:inline; vertical-align:middle; margin-left:5px; }
+.board-comment-count { color:#a77900; margin-left:6px; font-size:12px; }
+.board-mobile-meta { display:none; }
+.community-board-table .board-author { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.numbered-pagination { gap:14px; flex-wrap:wrap; }
+.numbered-pagination>div { display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
+.numbered-pagination button { min-width:32px; min-height:32px; padding:4px; border:1px solid var(--line); border-radius:4px; font-size:12px; }
+.numbered-pagination button.active { background:var(--ink); color:var(--yellow); border-color:var(--ink); font-weight:800; }
+.numbered-pagination button:disabled { opacity:.3; }
+.supported-club-fields { border:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; min-width:0; }
+.supported-club-fields legend { font-size:16px; font-weight:800; padding-bottom:10px; }
+.supported-club-fields legend small { font-size:12px; margin-left:10px; color:var(--text-2); }
+.supported-club-fields>p { grid-column:1/-1; font-size:12px; color:var(--text-2); margin:0 0 4px; }
+.supported-club-field { min-width:0; display:grid; gap:8px; }
+.supported-club-field>label { font-size:13px; font-weight:700; }
+.supported-club-fields .kx-select { width:100%; max-width:100%; }
+.profile-supported-clubs { display:grid; gap:8px; }
+.profile-supported-clubs .profile-club { margin:0; padding:10px; font-size:13px; }
+.report-explanation { display:grid; gap:10px; margin:14px 0; }
+.report-explanation p { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.8; }
+@media(max-width:800px) {
+  .community-board-table th:nth-child(4) { width:112px; }
+  .community-board-table th:nth-child(3) { width:100px; }
+  .community-board-table th.board-views,.community-board-table th.board-likes { width:50px; }
+}
+@media(max-width:640px) {
+  .schedule-controls { top:0; padding:12px; gap:12px; }
+  .schedule-months { top:64px; grid-template-columns:repeat(6,minmax(0,1fr)); }
+  .schedule-months button { min-height:38px; font-size:12px; }
+  .schedule-calendar .match-day { scroll-margin-top:160px; }
+  .schedule-calendar .match-day>h2 { padding:12px 14px; }
+  .schedule-filter-bar { padding:14px 14px 0; gap:8px; }
+  .schedule-filter-bar>.kx-select { width:100%; }
+  .schedule-month-heading { gap:10px; }
+  .schedule-month-heading h2 { font-size:16px; }
+  .schedule-month-heading h2 span { margin-left:6px; }
+  .supported-board-clubs { padding:14px; }
+  .supported-board-clubs nav button { max-width:100%; font-size:12px; padding:6px 9px; }
+  .community-board .post-browser-title { padding:14px 12px 6px; }
+  .community-board .post-tools { padding:8px 12px 12px; flex-wrap:wrap; }
+  .community-board .post-tools .input-search { flex-basis:100%; }
+  .community-board-table th:not(.board-subject),.community-board-table td:not(.board-subject) { display:none; }
+  .community-board-table th.board-subject { text-align:left; padding-left:14px; }
+  .community-board-table td.board-subject { padding:13px 14px; }
+  .board-target { display:block; margin-bottom:4px; }
+  .board-post-link { display:block; font-size:14px; }
+  .board-mobile-meta { display:block; font-size:11px; color:var(--text-3); margin-top:7px; }
+  .numbered-pagination { padding:14px 10px; justify-content:center; }
+  .numbered-pagination>span { flex-basis:100%; text-align:center; font-size:12px; }
+  .numbered-pagination button { min-width:29px; }
+  .supported-club-fields { grid-template-columns:1fr; }
+}
