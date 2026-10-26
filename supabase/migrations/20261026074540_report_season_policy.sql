@@ -260,6 +260,7 @@ declare p public.kickx_policy%rowtype;expected jsonb;combined jsonb;answer jsonb
  -- Equal scores can still produce different prices after minutes/date/season corrections.
  -- Hash semantic pricing inputs as well as the score evidence, not poll timestamps.
  select md5(jsonb_build_array(p.version,p.pricing_reference_at,p.pricing_reference_season,p.club_competitions_enabled,
+  case when p.version='report-v3' then p.report_parameters end,case when p.version='report-v3' then p.report_reference->>'hash' end,
   coalesce(jsonb_agg(x||jsonb_build_object('startedAt',f.starts_at,'season',f.season,'minutes',m.stats->'minutes_played') order by f.starts_at,f.id),'[]'))::text)
  into hash from jsonb_array_elements(combined) x join public.football_match_stats m on m.player_id=p_player and m.fixture_id=x->>'fixtureId'
  join public.fixtures f on f.id=m.fixture_id;

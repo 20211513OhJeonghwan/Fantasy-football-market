@@ -18,7 +18,7 @@ insert into public.football_match_stats(player_id,fixture_id,team_id,stats)
  select 'report-policy-player',id,'report-policy-home','{"minutes_played":97}' from public.fixtures where id like 'report-policy-%';
 insert into public.football_match_stats(player_id,fixture_id,team_id,stats) select 'report-policy-support',id,'report-policy-home','{"minutes_played":97}' from public.fixtures where id like 'report-policy-%';
 insert into public.player_market_snapshots(id,price,pricing_rule_version,pricing_status) values('report-policy-player',100000,'form-v2','pending');
-do $$declare input jsonb;results jsonb;answer jsonb;first_hash text;begin
+do $$declare input jsonb;results jsonb;answer jsonb;first_hash text;old_input_hash text;begin
  input:=public.kickx_calculation_input('report-policy-player');first_hash:=input->>'token';
  select jsonb_agg(jsonb_build_object('fixtureId',f.id,'position','FW','score',case when f.id='report-policy-1' then 8 when f.id='report-policy-2' then 10 else null end,
   'status',case when f.id='report-policy-cup' then 'blocked' else 'provisional' end,'ruleVersion','report-v3','breakdown','[]'::jsonb,'warnings','[]'::jsonb)) into results
@@ -31,6 +31,12 @@ do $$declare input jsonb;results jsonb;answer jsonb;first_hash text;begin
  if (public.kickx_publish_calculation_delta(null,'report-policy-player',first_hash,'[]')->>'unchanged')::boolean is distinct from true then raise exception 'Unchanged source was replayed';end if;
  update public.kickx_policy set report_parameters=jsonb_set(report_parameters,'{beta}','0.31');
  perform pg_temp.report_error(format('select public.kickx_publish_calculation_delta(null,%L,%L,%L)','report-policy-player',first_hash,results),'SOURCE_CHANGED');
+ select input_hash into old_input_hash from public.player_calculation_state where player_id='report-policy-player';
+ answer:=public.kickx_publish_calculation_delta(null,'report-policy-player',public.kickx_calculation_token('report-policy-player'),'[]');
+ if (answer->>'unchanged')::boolean is distinct from false or
+  (select input_hash from public.player_calculation_state where player_id='report-policy-player')=old_input_hash then
+  raise exception 'Changed pricing parameters reused the old calculation';
+ end if;
 end $$;
 select pg_temp.report_error('select public.kickx_save_report_reference(0,''{}'')','REFERENCE_ALREADY_ACTIVE');
 do $$begin
