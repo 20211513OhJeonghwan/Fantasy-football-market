@@ -49,8 +49,8 @@ export async function readPlayerDetail(client: SupabaseClient, id: string): Prom
   const player=mapPlayer(snapshot,snapshot);
   const [history,records,scores,baseline,priceSteps]=await Promise.all([
     client.from("price_history").select("recorded_at,value").eq("player_id",id).gte("recorded_at",since).order("recorded_at",{ascending:false}).limit(1000),
-    client.from("player_match_records").select("id,fixture_id,played_at,opponent,result,minutes,goals,assists,performance").eq("player_id",id).order("played_at",{ascending:false}).limit(20),
-    client.from("performance_results").select("fixture_id,score,status,rule_version,breakdown,warnings").eq("player_id",id).order("calculated_at",{ascending:false}).limit(20),
+    client.from("scoped_player_match_records").select("id,fixture_id,played_at,opponent,result,minutes,goals,assists,performance").eq("player_id",id).order("played_at",{ascending:false}).limit(20),
+    client.from("scoped_performance_results").select("fixture_id,score,status,rule_version,breakdown,warnings").eq("player_id",id).order("played_at",{ascending:false}).limit(20),
     client.from("player_initial_values").select("detail").eq("player_id",id).maybeSingle(),
     client.from("player_price_results").select("fixture_id,played_at,price_before,price_after,target_price,form_score,change_percent,window_fixture_ids").eq("player_id",id).order("played_at",{ascending:false}).order("fixture_id").limit(20),
     attachTradeWindows(client,[player]),

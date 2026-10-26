@@ -25,7 +25,7 @@ test("catalog failures stay failures instead of fabricated empty data",async()=>
 test("real zero values survive while missing market data remains unknown",async()=>{
   const catalog=await readCatalog(clientFor({
     player_catalog:[{id:"test-1",name:"Test-only player",team_id:null,price:0,change_percent:"0",performance:0,goals:0,assists:0,minutes:0,volume:0},{id:"test-2",name:"Test-only unknown"}],
-    fixtures:[{id:"fixture",home_team_id:"h",away_team_id:"a",starts_at:"2026-10-01T12:00:00Z",status:"FT",home_score:0,away_score:0}]
+    fixture_catalog:[{id:"fixture",home_team_id:"h",away_team_id:"a",starts_at:"2026-10-01T12:00:00Z",status:"FT",home_score:0,away_score:0}]
   }));
   assert.equal(catalog.players[0].price,0);
   assert.equal(catalog.players[0].performance,0);
@@ -43,7 +43,7 @@ test("large bootstrap catalogs stay bounded and never read every price history o
  const calls=[],rows=Array.from({length:1800},(_,i)=>({id:"test-"+i,name:"Test-only "+i}));
  const result=await readCatalog(clientFor({players:rows,player_catalog:rows},calls));
  assert.equal(result.playerTotal,1800);assert.equal(result.players.length,24);
- assert.equal(calls.some(c=>["price_history","player_match_records","player_analyses"].includes(c[0])),false);
+ assert.equal(calls.some(c=>["price_history","scoped_player_match_records","player_analyses"].includes(c[0])),false);
 });
 test("BSD photos and partial imported-match scope cross the public catalog contract",async()=>{
  const result=await readCatalog(clientFor({player_catalog:[{id:'bsd-9',name:'BSD player',photo:'https://sports.bzzoiro.com/img/player/9/?sor=true&bg=transparent',stats_scope:'imported_matches',matches_imported:2,season:2026,goals:null,minutes:180}]}));

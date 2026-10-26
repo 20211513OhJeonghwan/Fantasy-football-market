@@ -339,8 +339,8 @@ try {
   state.member.ownedPlayers=Array.from({length:3},(_,i)=>({...state.players[0],id:`held-forward-${i}`}));
   state.member.holdings=state.member.ownedPlayers.map(p=>({playerId:p.id,quantity:1,cost:100000}));
   await mockPage.reload({waitUntil:'networkidle'});
-  assert.equal(await mockPage.getByRole('button',{name:'FW 정원 마감',exact:true}).isDisabled(),true);
-  assert.equal(quoteCalls,1,'Full position requested a quote');
+  assert.equal(await mockPage.getByRole('button',{name:'매입하기',exact:true}).isEnabled(),true);
+  assert.equal(quoteCalls,1,'Opening a detail must not request a quote');
   state.players[0].position='MF';
   await mockPage.reload({waitUntil:'networkidle'});
   assert.equal(await mockPage.getByRole('button',{name:'매입하기',exact:true}).isEnabled(),true);
@@ -348,7 +348,7 @@ try {
   await mockPage.reload({waitUntil:'networkidle'});
   assert.equal(await mockPage.getByRole('button',{name:'매입하기',exact:true}).isEnabled(),true);
   state.member.holdings=originalHoldings;state.member.ownedPlayers=originalOwned;
-  report.checks.push('A full position disables buys without requesting quotes; other positions and a freed place stay available');
+  report.checks.push('Holdings above lineup positional counts keep new buys available; duplicate holding remains blocked');
   let squadCalls=0;
   await mock.route('**/api/kickx/squad',async route=>{
     squadCalls++;const body=route.request().postDataJSON();assert.equal(body.revision,0);assert.equal(body.formationId,'4-3-3');assert.equal(body.slots.length,11);assert.equal(body.slots[8],'test-player');
@@ -468,6 +468,12 @@ try {
     await mockPage.getByText(/연장전은 최대 120분/).waitFor();
   }
   report.checks.push('Cup stages, separate shootout score, partial reflection and 120-minute rules render on desktop and mobile');
+  state.policy={...state.policy,version:'report-v3',clubCompetitionsEnabled:false};
+  await mockPage.goto(base+'/rules',{waitUntil:'networkidle'});
+  assert.equal(await mockPage.getByRole('heading',{name:'시즌 누적 가격',exact:true}).isVisible(),true);
+  assert.equal(await mockPage.getByRole('heading',{name:'초기 가격',exact:true}).isVisible(),true);
+  assert.ok((await mockPage.locator('body').innerText()).includes('보유 인원에는 제한이 없으며'));
+  report.checks.push('Report rules explain cumulative seasons, positional baselines and unlimited holdings');
   await mock.close();
   assert.deepEqual(errors,[],"Browser JavaScript errors");
   report.checks.push("No browser JavaScript errors");

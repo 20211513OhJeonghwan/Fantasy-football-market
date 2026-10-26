@@ -1,5 +1,4 @@
 "use client";
-import { positionCapacity } from "@/lib/kickx/squad";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -595,7 +594,7 @@ export function Modal({
 }
 type TradeState = "loading" | "review" | "submitting" | "done" | "failed";
 function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | "sell"; onClose: () => void }) {
-  const { data, mock, getTeam, getPlayer, notify, reload } = usePlatform();
+  const { data, mock, getTeam, notify, reload } = usePlatform();
   const service = tradeService(mock);
   const [quote, setQuote] = useState<TradeQuote | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -614,8 +613,7 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
   const lock = useRef(false);
   const label = side === "buy" ? "매입" : "매각";
   const insufficient = side === "buy" && quote?.balanceAfter != null && quote.balanceAfter < 0;
-  const capacity = side === "buy" ? positionCapacity(data.member, player.position, getPlayer) : null;
-  const positionBlocked = side === "buy" && (!player.position || !!capacity?.full);
+  const positionBlocked = side === "buy" && !player.position;
   const expiresAt = quote?.expiresAt ? Date.parse(quote.expiresAt) : null;
   const quotedAt = quote?.quotedAt ? Date.parse(quote.quotedAt) : null;
   const remaining = expiresAt == null ? null : Math.max(0, Math.floor((expiresAt - now) / 1000));
@@ -698,7 +696,7 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
             </div>
           )}
           {insufficient && <p className="trade-state error" role="alert">보유 포인트가 부족합니다. 거래 후 잔액이 0P보다 작을 수 없습니다.</p>}
-          {positionBlocked && <p className="trade-state error" role="alert">{player.position ? `${player.position} 보유 정원이 찼습니다. 같은 포지션 선수를 매각한 뒤 다시 매입해 주세요.` : "포지션 정보를 확인한 뒤 매입할 수 있습니다."}</p>}
+          {positionBlocked && <p className="trade-state error" role="alert">{"포지션 정보를 확인한 뒤 매입할 수 있습니다."}</p>}
           {state === "failed" && (
             <div className="trade-state error" role="alert">
               <span>{error || "거래를 처리하지 못했습니다."}</span>
@@ -739,16 +737,14 @@ export function TradeButton({
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const {data, getPlayer}=usePlatform();
-  const capacity = side === "buy" && player ? positionCapacity(data.member, player.position, getPlayer) : null;
-  const full = capacity?.full;
+  const {data}=usePlatform();
   const unknownPosition = side === "buy" && !!player && !player.position;
   const locked=player?.tradeWindow?.locked;
   const duplicate=side==="buy" && data.member?.holdings.some(h=>h.playerId===player?.id);
   return (
     <>
-      <button type="button" className={className} disabled={locked || duplicate || full || unknownPosition || !player || !!player.status || player.price == null} title={locked ? "경기 시작 90분 전부터 종료 확인 후 10분까지 거래할 수 없습니다." : full ? `${player?.position} 보유 정원 ${capacity.count}/${capacity.limit}명입니다. 같은 포지션 선수를 매각하면 다시 매입할 수 있습니다.` : unknownPosition ? "포지션 정보가 없어 매입할 수 없습니다." : player?.status || undefined} onClick={() => setOpen(true)}>
-        {locked ? "경기 거래 제한" : duplicate ? "보유 중" : full ? `${player?.position} 정원 마감` : unknownPosition ? "포지션 확인 중" : player?.status || label || (side === "buy" ? "매입" : "매각")}
+      <button type="button" className={className} disabled={locked || duplicate || unknownPosition || !player || !!player.status || player.price == null} title={locked ? "경기 시작 90분 전부터 종료 확인 후 10분까지 거래할 수 없습니다." : unknownPosition ? "포지션 정보가 없어 매입할 수 없습니다." : player?.status || undefined} onClick={() => setOpen(true)}>
+        {locked ? "경기 거래 제한" : duplicate ? "보유 중" : unknownPosition ? "포지션 확인 중" : player?.status || label || (side === "buy" ? "매입" : "매각")}
       </button>
       {open && player && <TradeDialog player={player} side={side} onClose={() => setOpen(false)} />}
     </>
@@ -756,7 +752,7 @@ export function TradeButton({
 }
 /** Visible reason for a blocked trade, so touch users see what the disabled button's tooltip says. */
 export function TradeNotice({ player }: { player: Player }) {
-  const { data, getPlayer } = usePlatform();
+  const { data } = usePlatform();
   const lock = player.tradeWindow;
   if (lock?.locked) return (
     <p className="trade-notice lock" role="note">
@@ -766,14 +762,7 @@ export function TradeNotice({ player }: { player: Player }) {
   );
   if (data.member?.holdings.some(h => h.playerId === player.id)) return null;
   if (!player.position) return <p className="trade-notice" role="note"><b>포지션 확인 중</b><span>포지션 정보가 없는 선수는 매입할 수 없습니다.</span></p>;
-  const capacity = positionCapacity(data.member, player.position, getPlayer);
-  if (!capacity?.full) return null;
-  return (
-    <p className="trade-notice full" role="note">
-      <b>{player.position} {capacity.count}/{capacity.limit} · 정원 마감</b>
-      <span>같은 포지션 선수를 매각하면 다시 매입할 수 있습니다. <Link className="text-link" href="/assets">보유 자산 보기</Link></span>
-    </p>
-  );
+  return null;
 }
 export function BackLink({ href = "/players", label = "선수 목록" }: { href?: string; label?: string }) {
   return (

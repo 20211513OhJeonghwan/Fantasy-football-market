@@ -4,13 +4,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { calculatePerformance, RULE_VERSION } from "./performance";
 import { calculatePerformance as calculateLegacy } from "./legacy-performance";
 import { calculatePricing } from "./pricing";
+import { calculatePerformance as calculateReport } from "./report-performance";
+import { RULE_VERSION as REPORT_VERSION } from "./report-policy";
 import { HttpError } from "../http";
 import { checkDatabase } from "../prototype";
 type ScoringJson = Record<string, unknown>;
 type CalculationRecord = {
  player_id:string;fixture_id:string;team_id:string;updated_at:string;
  stats:ScoringJson & {minutes_played?:number|null};legacy_stats:ScoringJson|null;
- fixtures:{id:string;starts_at:string;season:number|null;status:string;home_team_id:string;away_team_id:string;
+ fixtures:{id:string;starts_at:string;season:number|null;status:string;league_id?:string;durationMinutes?:number;home_team_id:string;away_team_id:string;
   home_score:number|null;away_score:number|null;updated_at:string;
   football_event_sources:{detail:ScoringJson|null;lineups:ScoringJson|null;incidents:ScoringJson|null;updated_at:string}|null};
 };
@@ -21,13 +23,15 @@ export async function calculatePlayer(db: SupabaseClient, playerId: string, acto
   const input=await db.rpc("kickx_calculation_input",{p_player:playerId});
   // Rolling deploys and the legacy scoring policy retain the full reference path.
   if (input.error && !["PGRST202","42883"].includes(input.error.code)) checkDatabase(input.error);
-  if (!input.error && input.data?.policy.version===RULE_VERSION) {
+  if (!input.error && [RULE_VERSION,REPORT_VERSION].includes(input.data?.policy.version)) {
    const records=input.data.records as CalculationRecord[];
    const clubs=input.data.policy.club_competitions_enabled===true;
-   const results=records.map(m=>({...calculatePerformance({fixtureId:m.fixture_id,playerId,teamId:m.team_id,
+   const report=input.data.policy.version===REPORT_VERSION;
+   const calculator=report?calculateReport:calculatePerformance;
+   const results=records.map(m=>({...((report && !["bsd-1","bsd-3","bsd-4","bsd-5","bsd-6"].includes(m.fixtures.league_id??"")) ? {fixtureId:m.fixture_id,position:null,minutes:null,score:null,status:"blocked",breakdown:[],warnings:["OUTSIDE_COMPETITION_SCOPE"]} : calculator({fixtureId:m.fixture_id,playerId,teamId:m.team_id,
     status:m.fixtures.status,homeTeam:m.fixtures.home_team_id,awayTeam:m.fixtures.away_team_id,
     homeScore:m.fixtures.home_score,awayScore:m.fixtures.away_score,stats:m.stats,legacy:m.legacy_stats,
-    source:m.fixtures.football_event_sources??{},clubCompetitions:clubs}),ruleVersion:RULE_VERSION,
+    source:m.fixtures.football_event_sources??{},clubCompetitions:clubs,durationMinutes:m.fixtures.durationMinutes})),ruleVersion:report?REPORT_VERSION:RULE_VERSION,
     ...(clubs?{scoringRevision:'club-competitions-v1'}:{})}));
    const saved=await db.rpc("kickx_publish_calculation_delta",{p_actor:actor,p_player:playerId,
     p_token:input.data.token,p_results:results});

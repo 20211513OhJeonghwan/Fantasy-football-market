@@ -4,7 +4,7 @@ import { checked, errorCode } from './automatic-football.mjs';
 /** Separate persistent queue: a cup backfill resumes across midnight and runner restarts.
  * Current domestic rosters remain the only authority for market membership. */
 export async function runClubCollection(db,api,claim,deadline,emit=()=>{}) {
-  const policy=checked(await db.from('kickx_policy').select('*').single());
+  const policy=checked(await db.from('kickx_policy').select('club_competitions_enabled').single());
   if(!policy.club_competitions_enabled)return {enabled:false};
   if(api.remaining!=null && api.remaining<1500)return {enabled:true,deferred:'PROVIDER_BUDGET_RESERVED_FOR_NEW_MATCHES'};
   const scope=checked(await db.from('teams').select('external_id').eq('provider','bsd').in('league_id',DOMESTIC_LEAGUE_IDS.map(id=>`bsd-${id}`))).map(t=>Number(t.external_id));

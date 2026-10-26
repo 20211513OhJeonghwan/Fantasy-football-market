@@ -47,7 +47,7 @@ test('player history, scores, pricing and trading restrictions run together afte
   const {readPlayerDetail}=loadTs('../server/kickx/catalog-pages.ts',{'server-only':{},'./catalog':base,'./prototype':{checkDatabase,migrationMissing},'./trading':{attachTradeWindows:async(_db,players)=>{started.push('windows');return players;}},'@/lib/kickx/catalog-query':{}});
   const operation=readPlayerDetail(db,'test-player');
   await new Promise(resolve=>setImmediate(resolve));
-  for(const name of ['price_history','player_match_records','performance_results','player_initial_values','player_price_results','windows'])assert.ok(started.includes(name),name);
+  for(const name of ['price_history','scoped_player_match_records','scoped_performance_results','player_initial_values','player_price_results','windows'])assert.ok(started.includes(name),name);
   historyGate.resolve();
   const player=await operation;
   assert.equal(player.id,'test-player');assert.deepEqual(player.records,[]);assert.deepEqual(player.pricing.recent,[]);
