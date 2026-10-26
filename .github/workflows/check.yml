@@ -7,7 +7,8 @@ permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Match the supported OS for the pinned Playwright browser package.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       KICKX_DATABASE_ENABLED: "false"
