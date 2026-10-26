@@ -33,8 +33,8 @@ test("KST day filter includes UTC previous evening and excludes next midnight bo
 });
 test("detail marks only ended matches with their own price result as reportable without extra report reads",async()=>{
  const rows={
-  player_catalog:{id:'report-player',name:'Report Player'},price_history:[],teams:[],performance_results:[],player_initial_values:null,
-  player_match_records:[
+  player_catalog:{id:'report-player',name:'Report Player'},price_history:[],teams:[],scoped_performance_results:[],player_initial_values:null,
+  scoped_player_match_records:[
    {id:'priced',fixture_id:'priced',performance:0,minutes:90,opponent:'Away'},
    {id:'baseline',fixture_id:'baseline',performance:70,minutes:90,opponent:'Away'},
    {id:'live',fixture_id:'live',performance:30,minutes:45,opponent:'Away'},

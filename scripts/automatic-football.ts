@@ -1,3 +1,4 @@
+import { prepareReportReference } from './lib/report-reference';
 import { loadEnvConfig } from '@next/env';
 import { createClient } from '@supabase/supabase-js';
 import { calculatePlayer } from '../server/kickx/engine/service';
@@ -15,6 +16,11 @@ async function main() {
   const archivesOnly = process.argv.includes('--archives-only');
   if (!url || new URL(url).protocol !== 'https:' || !key || (!bsd && !archivesOnly)) throw new Error('AUTOMATION_CONFIG_REQUIRED');
   const db = createClient(url, key, { global: { fetch: nameImportFetch(key) }, auth: { persistSession: false, autoRefreshToken: false } });
+  if (!archivesOnly && (process.argv.includes('--maintenance') || process.argv.includes('--report-reference'))) {
+    const reference = await prepareReportReference(db, bsd!, {budget:process.argv.includes('--report-reference')?1500:600,deadline:Date.now()+240000,emit:v=>console.log(JSON.stringify(v))});
+    console.log(JSON.stringify({stage:'report-reference-result',...reference}));
+    if(process.argv.includes('--report-reference'))return;
+  }
   let footballFailure: unknown;
   if (!archivesOnly) try { await runAutomaticFootball(db, bsd, {
     maintenance: process.argv.includes('--maintenance'),

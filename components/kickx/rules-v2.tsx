@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePlatform } from "./provider";
 import LegacyRules from "./rules-legacy";
+import ReportRules from "./rules-report";
 import { SCORING as S, PRICING as P, RULE_VERSION } from "@/server/kickx/engine/policy";
 import { calculatePerformance } from "@/server/kickx/engine/performance";
 import { METRIC_LABELS } from "@/lib/kickx/score-labels";
@@ -21,6 +22,7 @@ const ROWS = [
 export default function Rules() {
  const {data} = usePlatform();
  // Until the DB migration is applied, the page continues to explain the live v1 rule.
+ if (data.policy?.version === "report-v3") return <ReportRules />;
  if (data.policy?.version !== RULE_VERSION) return <LegacyRules />;
  const rows=ROWS.map(([label,...values])=>[label,...values.map(value=>data.policy?.clubCompetitionsEnabled && label.startsWith('팀') ? value.replace('출전분/90','출전분/경기길이') : value)]);
  const players=Array.from({length:11},(_,i)=>({id:i+1,position:'D'}));

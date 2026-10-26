@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/lib/calculation-archives.mjs'
+      - 'scripts/lib/report-reference.ts'
       - 'supabase/migrations/*_verified_checkpoint_archives.sql'
   schedule:
     - cron: '7,22,37,52 * * * *'
@@ -32,6 +33,9 @@ jobs:
         run: |
           node -e 'for (const key of ["SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY","BSD_API_KEY"]) { if (!process.env[key]) { console.error("Missing repository secret: " + key); process.exitCode = 1; } }'
       - run: npm ci
+      - name: Prepare report reference using the shared provider budget
+        if: github.event_name == 'push'
+        run: npm run data:automatic -- --report-reference
       - name: Verify and archive completed work after archive-code deployment
         if: github.event_name == 'push'
         run: npm run data:automatic -- --archives-only

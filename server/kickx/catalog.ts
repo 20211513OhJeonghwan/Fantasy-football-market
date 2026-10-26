@@ -69,7 +69,7 @@ export async function readCatalog(client: SupabaseClient): Promise<PublicData> {
   const previews=Promise.all([
     readRows(client,"leagues","id,name"),readRows(client,"teams","id,name,name_ko,english,code,color,league_id"),
     query("player_catalog","price"),query("player_catalog","change_percent",false,5),query("player_catalog","change_percent",true,5),
-    query("fixtures","starts_at",true,20,new Date(Date.now()-86400000).toISOString()),
+    query("fixture_catalog","starts_at",true,20,new Date(Date.now()-86400000).toISOString()),
     client.from("player_catalog").select("id",{count:"exact",head:true}).in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']),
   ]).then(async ([leagues,teams,price,rising,falling,fixtures,summary])=>{
     if(summary.error || summary.count == null) throw summary.error || new Error("Missing player count");
@@ -79,7 +79,7 @@ export async function readCatalog(client: SupabaseClient): Promise<PublicData> {
   });
   const [{leagues,teams,players,fixtures,total},prototype]=await Promise.all([previews,readPrototypePublic(client)]);
   return {...emptyPublicData(),...prototype,
-    leagues:leagues.map(row=>({id:required(row.id),name:required(row.name)})),
+    leagues:leagues.filter(row=>prototype.policy?.version!=="report-v3" || ["bsd-1","bsd-3","bsd-4","bsd-5","bsd-6"].includes(String(row.id))).map(row=>({id:required(row.id),name:required(row.name)})),
     teams:teams.map(row=>({id:required(row.id),name:text(row.name_ko)||required(row.name),english:text(row.english)||required(row.name),code:text(row.code),color:text(row.color),leagueId:text(row.league_id)})),
     players,fixtures:fixtures.map(mapFixture),playerTotal:total,
     updatedAt:prototype.freshness?.priceUpdatedAt??players.map(p=>p.updatedAt).filter((v):v is string=>!!v).sort().at(-1)??null,

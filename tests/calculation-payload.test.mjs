@@ -4,9 +4,11 @@ import {createHash} from 'node:crypto';
 import {loadTs} from './load-ts.mjs';
 const policy=loadTs('../server/kickx/engine/policy.ts');
 const performance=loadTs('../server/kickx/engine/performance.ts',{'./policy':policy});
+const reportPolicy=loadTs('../server/kickx/engine/report-policy.ts');
+const reportPerformance=loadTs('../server/kickx/engine/report-performance.ts',{'./report-policy':reportPolicy});
 const legacy=loadTs('../server/kickx/engine/legacy-performance.ts');
 const pricing=loadTs('../server/kickx/engine/pricing.ts',{'./policy':policy});
-const {calculatePlayer}=loadTs('../server/kickx/engine/service.ts',{'server-only':{},'node:crypto':{createHash},'./performance':performance,'./legacy-performance':legacy,'./pricing':pricing,'../http':{HttpError:class extends Error{}},'../prototype':{checkDatabase:error=>{if(error)throw Error(error.message);}}});
+const {calculatePlayer}=loadTs('../server/kickx/engine/service.ts',{'server-only':{},'node:crypto':{createHash},'./performance':performance,'./report-performance':reportPerformance,'./report-policy':reportPolicy,'./legacy-performance':legacy,'./pricing':pricing,'../http':{HttpError:class extends Error{}},'../prototype':{checkDatabase:error=>{if(error)throw Error(error.message);}}});
 
 test('removing event-wide raw payloads preserves legacy/v2 scores, prices, hashes and correction revisions',async()=>{
  const source={detail:{home_score:0,away_score:0},lineups:{lineup_status:'confirmed',lineups:{home:{team_id:1,players:Array.from({length:11},(_,i)=>({id:i+1,position:'D'}))},away:{team_id:3,players:Array.from({length:11},(_,i)=>({id:i+12,position:'D'}))}}},incidents:{incidents:[]},updated_at:'2026-10-19T00:00:00Z'};
