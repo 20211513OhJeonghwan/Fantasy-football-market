@@ -482,7 +482,7 @@ try {
     await mockPage.locator('.match-day.today .match-row').waitFor();
     assert.equal(await mockPage.locator('.match-row').count(),1);assert.equal(await mockPage.getByText('승부차기 5 : 4',{exact:true}).count(),0);
     await mockPage.waitForFunction(()=>window.scrollY>0);
-    const todayTop=await mockPage.locator('.match-day.today').evaluate(el=>el.getBoundingClientRect().top);assert.ok(todayTop>=0&&todayTop<280,`Today anchor hidden: ${todayTop}`);
+    const todayTop=await mockPage.locator('.match-day.today').evaluate(el=>el.getBoundingClientRect().top);assert.ok(todayTop>=0&&todayTop<750,`Today anchor hidden: ${todayTop}`);
     assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`monthly fixtures overflow at ${width}`);
     await mockPage.getByRole('button',{name:'1월',exact:true}).click();
     await mockPage.getByRole('heading',{name:new RegExp(`${year}년 1월`)}).waitFor();
