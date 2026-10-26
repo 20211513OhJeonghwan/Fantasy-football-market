@@ -58,7 +58,7 @@ try {
   const disconnected=await context.request.put(base+"/api/kickx/watchlist",{headers:{origin:base},data:{playerId:"test-player",watched:true}});
   assert.equal(disconnected.status(),503);
   report.checks.push("Disconnected services and cross-origin writes stay blocked");
-  for (const path of ["/community/players", "/community/clubs"]) {
+  for (const path of ["/community/clubs"]) {
     await page.goto(base + path, {waitUntil:"networkidle"});
     assert.ok(await page.locator(".community-feed").getByRole("heading", {name:"게시글 정보를 준비하고 있습니다",exact:true}).isVisible());
     assert.equal(await page.locator(".community-feed .loading-state").count(),0);
@@ -123,9 +123,13 @@ try {
     const id=new URL(route.request().url()).pathname.split("/").at(-1);
     return route.fulfill({json:{status:"ready",data:{player:[...state.players,...extra].find(p=>p.id===id)||null}}});
   });
+  const fixtureRequests=[];
   await mock.route(/\/api\/kickx\/fixtures\?/,route=>{
-    const params=new URL(route.request().url()).searchParams;
-    return route.fulfill({json:{status:"ready",data:{items:state.fixtures,total:state.fixtures.length,page:Number(params.get("page")||1),size:20}}});
+    const params=new URL(route.request().url()).searchParams;fixtureRequests.push(params.toString());
+    const {koreanDay}=loadTs('../lib/kickx/fixtures.ts');
+    const teams=params.get('team');
+    const fixtures=state.fixtures.filter(f=>(teams?(f.home===teams||f.away===teams):['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6'].includes(f.leagueId))&&(!params.get('month')||koreanDay(f.startsAt).startsWith(params.get('month'))));
+    return route.fulfill({json:{status:'ready',data:{items:fixtures,total:fixtures.length,page:Number(params.get('page')||1),size:Number(params.get('size')||20)}}});
   });
   let watchCalls=0;
   await mock.route("**/api/kickx/watchlist",async route=>{
@@ -165,6 +169,13 @@ try {
   await mockPage.goto(base+"/players/catalog-23",{waitUntil:"networkidle"});
   await mockPage.getByRole("heading",{name:"목록 선수 23",exact:true}).waitFor();
   report.checks.push("Server search, second page, retry and direct detail outside bootstrap");
+  await mockPage.goto(base,{waitUntil:'networkidle'});
+  await mockPage.getByLabel('선수 이름 검색',{exact:true}).fill('서버에서만 조회');await mockPage.locator('.yb-search-button').click();
+  await mockPage.locator('.board-table').getByText('목록 선수 0',{exact:true}).waitFor();
+  assert.equal(await mockPage.locator('.board-table tbody tr').count(),10);assert.equal(await mockPage.locator('.board-more').count(),0);
+  await mockPage.getByRole('button',{name:'다음 홈 선수 페이지',exact:true}).click();await mockPage.locator('.board-table').getByText('목록 선수 10',{exact:true}).waitFor();
+  assert.equal(await mockPage.locator('.board-table tbody tr').count(),10);
+  report.checks.push('Home uses fixed ten-row server pages instead of expanding the board');
   state.players[0].photo="https://sports.bzzoiro.com/img/player/9/";
   state.players[0].statsScope="imported_matches";
   state.players[0].importedMatches=2;
@@ -191,6 +202,7 @@ try {
   assert.ok((await mockPage.locator('.modal-heading').innerText()).includes('2026. 10. 18.'));
   assert.ok(!(await mockPage.getByRole('dialog').innerText()).match(/AI 가치 변동 설명|경기별 Performance와 가치 변동|미확인 통계|추후 정정/));
   assert.ok((await mockPage.getByRole("dialog").innerText()).includes("92,000"));
+  assert.ok(await mockPage.locator('.report-explanation p').count()>=3);
   await mockPage.getByRole("button",{name:"닫기",exact:true}).click();
   await mockPage.getByRole("button",{name:"리포트 상대 경기 리포트",exact:true}).click();
   await mockPage.getByRole("heading",{name:"AI 경기력 설명",exact:true}).waitFor();
@@ -395,28 +407,26 @@ try {
   assert.ok(['createPost','comment','like','report'].every(action=>communityActions.includes(action)));
   report.checks.push('Post creation, direct detail, comment, desired-state like and report use real endpoint contracts');
   // Separate, body-first feeds and titleless composer use the existing write contract.
-  state.session.profile.team='test-team';
+  state.session.profile.team='test-team';state.session.profile.teams=['test-team'];
   savedPosts.push({...savedPost,id:'44444444-4444-4444-4444-444444444444',scope:'club',target:'test-team',targetName:'테스트 구단',title:'구단 전용 제목',body:'구단에서만 보여야 하는 이야기입니다.',likes:0,liked:false,commentCount:0});
   await mockPage.goto(base+'/community',{waitUntil:'networkidle'});
-  assert.equal(new URL(mockPage.url()).pathname,'/community');assert.equal(await mockPage.locator('.community-entry-card').count(),2);
-  await mockPage.goto(base+'/community/players',{waitUntil:'networkidle'});
-  assert.ok(await mockPage.locator('.feed-card-body').filter({hasText:'저장 흐름을 점검하는 테스트 게시글 내용입니다.'}).isVisible());
-  assert.equal(await mockPage.locator('.community-feed-card[data-scope=club]').count(),0);
+  assert.equal(await mockPage.locator('.community-switch').count(),0);assert.equal(await mockPage.locator('.popular-list').count(),0);assert.equal(await mockPage.locator('.explorer').count(),0);assert.equal(await mockPage.locator('.feed-composer').count(),0);
+  await mockPage.getByRole('link',{name:'구단 전용 제목',exact:true}).waitFor();
+  await mockPage.goto(base+'/community/players',{waitUntil:'networkidle'});assert.equal(new URL(mockPage.url()).pathname,'/players');
+  await mockPage.goto(base+'/players/test-player',{waitUntil:'networkidle'});await mockPage.getByRole('button',{name:'커뮤니티',exact:true}).click();
+  await mockPage.getByRole('link',{name:/^테스트 경기 후기/}).first().waitFor();
+  assert.equal(await mockPage.locator('.community-board-table tr[data-scope=club]').count(),0);
   await mockPage.locator('.feed-composer-open').click();
-  await mockPage.getByRole('combobox',{name:'이야기할 선수'}).click();await mockPage.getByRole('option',{name:/CI-only player/}).click();
+  assert.equal(await mockPage.getByRole('combobox',{name:'이야기할 선수'}).count(),0);
   await mockPage.getByLabel('빠른 글 내용',{exact:true}).fill('실패해도 유지되는 선수 이야기입니다.');
   await mockPage.getByRole('button',{name:'게시하기',exact:true}).click();await mockPage.getByRole('alert').filter({hasText:'글 저장 테스트 오류'}).waitFor();
   assert.equal(await mockPage.getByLabel('빠른 글 내용',{exact:true}).inputValue(),'실패해도 유지되는 선수 이야기입니다.');
-  await mockPage.getByRole('button',{name:'게시하기',exact:true}).click();await mockPage.locator('.feed-card-body').filter({hasText:'실패해도 유지되는 선수 이야기입니다.'}).waitFor();
+  await mockPage.getByRole('button',{name:'게시하기',exact:true}).click();await mockPage.getByRole('link',{name:'실패해도 유지되는 선수 이야기입니다.',exact:true}).waitFor();
   assert.equal(quickAttempts,2);assert.equal(savedPost.scope,'player');assert.equal(savedPost.target,'test-player');assert.equal(await mockPage.getByLabel('빠른 글 내용',{exact:true}).count(),0);
-  const card=mockPage.locator('.community-feed-card').filter({hasText:'실패해도 유지되는 선수 이야기입니다.'});
-  await card.getByRole('button',{name:'피드 공감 0',exact:true}).click();await card.getByRole('button',{name:'피드 공감 1',exact:true,pressed:true}).waitFor();
-  await card.getByRole('button',{name:'댓글 0',exact:true}).click();await card.getByLabel('피드 댓글 내용').fill('피드에서 작성하는 댓글입니다.');await card.getByRole('button',{name:'댓글 등록',exact:true}).click();await card.getByText('피드에서 작성하는 댓글입니다.',{exact:true}).waitFor();
-  await mockPage.goto(base+'/community/clubs',{waitUntil:'networkidle'});assert.equal(await mockPage.locator('.community-feed-card[data-scope=player]').count(),0);assert.ok(await mockPage.locator('.feed-card-body').filter({hasText:'구단에서만 보여야 하는 이야기입니다.'}).isVisible());
-  await mockPage.goto(base+'/players/test-player',{waitUntil:'networkidle'});await mockPage.getByRole('button',{name:'커뮤니티',exact:true}).click();await mockPage.locator('.feed-card-body').filter({hasText:'실패해도 유지되는 선수 이야기입니다.'}).waitFor();assert.equal(await mockPage.locator('.community-feed-card[data-scope=club]').count(),0);
-  state.session.profile.team=null;
-  await mockPage.goto(base+'/community/clubs/test-team',{waitUntil:'networkidle'});assert.equal(await mockPage.locator('.feed-composer-open').count(),0);assert.ok(await mockPage.locator('.feed-composer-locked').isVisible());
-  state.session.profile.team='test-team';
+  await mockPage.goto(base+'/community/clubs',{waitUntil:'networkidle'});assert.equal(await mockPage.locator('.community-board-table tr[data-scope=player]').count(),0);await mockPage.getByRole('link',{name:'구단 전용 제목',exact:true}).waitFor();
+  state.session.profile.team=null;state.session.profile.teams=[];
+  await mockPage.goto(base+'/community/clubs/test-team',{waitUntil:'networkidle'});assert.equal(await mockPage.locator('.feed-composer').count(),0);
+  state.session.profile.team='test-team';state.session.profile.teams=['test-team'];
   for(const width of [1440,390]){
     await mockPage.setViewportSize({width,height:900});
     for(const path of ['/community','/community/players','/community/clubs','/community/players/test-player','/community/clubs/test-team']){
@@ -425,7 +435,7 @@ try {
     }
     await mockPage.goto(base+'/players/test-player',{waitUntil:'networkidle'});await mockPage.getByRole('button',{name:'커뮤니티',exact:true}).click();assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await mockPage.screenshot({path:`test-artifacts/community-player-tab-${width}.png`,fullPage:true});
   }
-  report.checks.push('Separate community entry and scoped feeds, body preview, titleless quick post retry UUID, inline like/comments, fan gate and player detail community tab');
+  report.checks.push('Compact club board removes switches, popular posts, lounge explorer and quick composer; player discussion is entered from player detail; scoped writes retain retry UUID');
 
   for(const width of [1440,390]){
     await mockPage.setViewportSize({width,height:900});
@@ -453,21 +463,39 @@ try {
   }
   report.checks.push('Active v2 rules and persisted initial/last-five pricing evidence fit desktop and mobile');
   state.policy.clubCompetitionsEnabled=true;
-  state.leagues.push({id:'bsd-7',name:'챔피언스리그'});
-  state.teams.push({id:'bsd-4401',name:'테스트 홈 구단',english:'Home',leagueId:'bsd-1'},{id:'bsd-4402',name:'테스트 원정 구단',english:'Away',leagueId:null});
-  state.fixtures=[{id:'cup-test',leagueId:'bsd-7',home:'bsd-4401',away:'bsd-4402',startsAt:'2026-10-13T12:00:00Z',status:'PEN',homeScore:1,awayScore:1,penaltiesHome:5,penaltiesAway:4,roundLabel:'League phase · Matchday 5',reflectionStatus:'partial'}];
+  const leagueIds=['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6'];
+  state.leagues=leagueIds.map((id,i)=>({id,name:`선택 리그 ${i+1}`}));state.leagues.push({id:'bsd-7',name:'챔피언스리그'});
+  state.teams.push(...leagueIds.map((leagueId,i)=>({id:`selected-club-${i}`,name:`선택 구단 ${i+1}`,english:`Club ${i+1}`,leagueId})),{id:'bsd-4401',name:'테스트 홈 구단',english:'Home',leagueId:'bsd-1'},{id:'bsd-4402',name:'테스트 원정 구단',english:'Away',leagueId:null});
+  state.session.profile.team=null;state.session.profile.teams=[];
+  await mockPage.goto(base+'/mypage',{waitUntil:'networkidle'});
+  for(let i=0;i<5;i++){await mockPage.getByRole('combobox',{name:`선택 리그 ${i+1} 응원 구단`,exact:true}).click();await mockPage.getByRole('option',{name:`선택 구단 ${i+1}`,exact:true}).click();}
+  await mockPage.getByRole('button',{name:'변경사항 저장',exact:true}).click();await mockPage.getByText('프로필을 저장했습니다.',{exact:true}).waitFor();
+  assert.equal(state.session.profile.teams.length,5);assert.equal(new Set(state.session.profile.teams).size,5);
+  await mockPage.goto(base+'/community/clubs',{waitUntil:'networkidle'});assert.equal(await mockPage.locator('.supported-board-clubs nav button').count(),6);
+  const today=loadTs('../lib/kickx/fixtures.ts').koreanDay(new Date().toISOString());
+  const year=today.slice(0,4),month=Number(today.slice(5,7));
+  state.fixtures=[{id:'regular-test',leagueId:'bsd-1',home:'bsd-4401',away:'bsd-4402',startsAt:`${today}T01:00:00+09:00`,status:'FT',homeScore:2,awayScore:1,reflectionStatus:'partial'},
+    {id:'cup-test',leagueId:'bsd-7',home:'bsd-4401',away:'bsd-4402',startsAt:`${today}T02:00:00+09:00`,status:'PEN',homeScore:1,awayScore:1,penaltiesHome:5,penaltiesAway:4,roundLabel:'League phase · Matchday 5'}];
   for(const width of [1440,390]){
     await mockPage.setViewportSize({width,height:900});
     await mockPage.goto(base+'/fixtures',{waitUntil:'networkidle'});
-    await mockPage.getByText('승부차기 5 : 4',{exact:true}).waitFor();
-    const badge=mockPage.locator('.reflect-badge').filter({hasText:'일부 반영'});await badge.waitFor();
-    await badge.hover();await mockPage.getByRole('tooltip').filter({hasText:'일부 선수만 점수가 계산되었습니다.'}).waitFor();
-    assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`cup fixtures overflow at ${width}`);
-    await mockPage.screenshot({path:`test-artifacts/club-fixtures-${width}.png`,fullPage:true});
-    await mockPage.goto(base+'/rules',{waitUntil:'networkidle'});
-    await mockPage.getByText(/연장전은 최대 120분/).waitFor();
+    await mockPage.locator('.match-day.today .match-row').waitFor();
+    assert.equal(await mockPage.locator('.match-row').count(),1);assert.equal(await mockPage.getByText('승부차기 5 : 4',{exact:true}).count(),0);
+    await mockPage.waitForFunction(()=>window.scrollY>0);
+    const todayTop=await mockPage.locator('.match-day.today').evaluate(el=>el.getBoundingClientRect().top);assert.ok(todayTop>=0&&todayTop<280,`Today anchor hidden: ${todayTop}`);
+    assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`monthly fixtures overflow at ${width}`);
+    await mockPage.getByRole('button',{name:'1월',exact:true}).click();
+    await mockPage.getByRole('heading',{name:new RegExp(`${year}년 1월`)}).waitFor();
+    await mockPage.getByRole('button',{name:'최신',exact:true}).click();
+    await mockPage.getByRole('heading',{name:new RegExp(`${year}년 ${month}월`)}).waitFor();
+    await mockPage.locator('.match-day.today .match-row').waitFor();
+    await mockPage.screenshot({path:`test-artifacts/monthly-fixtures-${width}.png`,fullPage:true});
+    await mockPage.goto(base+'/teams/bsd-4401',{waitUntil:'networkidle'});await mockPage.getByText('승부차기 5 : 4',{exact:true}).waitFor();assert.equal(await mockPage.locator('.match-row').count(),2);
+    assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`club all-competition schedule overflow at ${width}`);
+    await mockPage.screenshot({path:`test-artifacts/club-all-fixtures-${width}.png`,fullPage:true});
   }
-  report.checks.push('Cup stages, separate shootout score, partial reflection and 120-minute rules render on desktop and mobile');
+  assert.ok(fixtureRequests.some(q=>q.includes(`month=${year}-${String(month).padStart(2,'0')}`)));assert.ok(fixtureRequests.some(q=>q.includes('team=bsd-4401')));
+  report.checks.push('Five support selectors save independently by league; monthly regular-league schedule scrolls to today and latest resets month; club detail keeps cup fixtures');
   state.policy={...state.policy,version:'report-v3',clubCompetitionsEnabled:false};
   await mockPage.goto(base+'/rules',{waitUntil:'networkidle'});
   assert.equal(await mockPage.getByRole('heading',{name:'시즌 누적 가격',exact:true}).isVisible(),true);
@@ -480,6 +508,7 @@ try {
   await writeFile("test-artifacts/report.json",JSON.stringify(report,null,2));
   console.log(JSON.stringify(report,null,2));
 } catch(error) {
+  if(browser){try{const p=browser.contexts().at(-1)?.pages().at(-1);if(p){await p.screenshot({path:'test-artifacts/failure.png',fullPage:true});console.error('Failed page: '+p.url());}}catch{}}
   console.error(output.slice(-8000));
   throw error;
 } finally {

@@ -14,8 +14,8 @@ test("write requests require the same complete origin including port", () => {
     assert.equal(validation.isSameOrigin(origin,"https://kick-x-test.vercel.app/api/kickx/profile"),false);
 });
 test("profile input is normalized, constrained and cannot supply a role or identity", () => {
-  assert.deepEqual(validation.parseProfile({nickname:"  승현 FC  ",team:"club-1",role:"admin",id:"other"}),{nickname:"승현 FC",team:"club-1"});
-  assert.deepEqual(validation.parseProfile({nickname:"승현",team:""}),{nickname:"승현",team:null});
+  assert.deepEqual(validation.parseProfile({nickname:"  승현 FC  ",team:"club-1",role:"admin",id:"other"}),{nickname:"승현 FC",team:"club-1",teams:["club-1"]});
+  assert.deepEqual(validation.parseProfile({nickname:"승현",team:""}),{nickname:"승현",team:null,teams:[]});
   for (const nickname of ["a","a".repeat(21),"<script>","승현\n관리자","😀😀"]) assert.throws(()=>validation.parseProfile({nickname}), validation.InputError);
   assert.throws(()=>validation.parseProfile({nickname:"승현",team:{id:"other"}}),validation.InputError);
 });
@@ -23,6 +23,14 @@ test("watchlist mutation is an explicit idempotent desired state, not an ambiguo
   assert.deepEqual(validation.parseWatch({playerId:"p-1",watched:false,userId:"other"}),{playerId:"p-1",watched:false});
   for(const input of [{playerId:"p-1"},{playerId:"p-1",watched:"true"},{playerId:"../p-1",watched:true},null])
     assert.throws(()=>validation.parseWatch(input),validation.InputError);
+});
+test('profile supports five unique clubs and post validation accepts every selected club',()=>{
+ const teams=['a','b','c','d','e'];
+ assert.deepEqual(validation.parseProfile({nickname:'Five Clubs',teams}),{nickname:'Five Clubs',team:'a',teams});
+ for(const teams of [['a','a'],['a','b','c','d','e','f'],['../club'],[null],'a'])assert.throws(()=>validation.parseProfile({nickname:'Five Clubs',teams}));
+ const draft={scope:'club',target:'e',title:'다섯 번째 응원 구단',body:'선택한 모든 응원 구단에 작성합니다.',transaction:''};
+ assert.deepEqual(validation.validatePost(draft,{myTeam:'a',myTeams:teams,targets:teams,transactions:[]}),{});
+ assert.ok(validation.validatePost({...draft,target:'other'},{myTeam:'a',myTeams:teams,targets:[...teams,'other'],transactions:[]}).target);
 });
 test("fixture days use Korea's midnight regardless of server timezone", () => {
   assert.equal(fixtures.koreanDay("2026-09-30T15:00:00Z"),"2026-10-01");

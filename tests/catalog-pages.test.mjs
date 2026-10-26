@@ -31,6 +31,18 @@ test("KST day filter includes UTC previous evening and excludes next midnight bo
  assert.deepEqual(calls.find(c=>c[0]==="gte"),["gte","starts_at","2026-09-30T15:00:00.000Z"]);
  assert.deepEqual(calls.find(c=>c[0]==="lt"),["lt","starts_at","2026-10-01T15:00:00.000Z"]);
 });
+test('month schedule uses KST bounds and only top five leagues; club detail keeps cups',async()=>{
+ const calls=[];
+ await readFixturePage(client(calls),query.parseCatalogQuery(new URLSearchParams('month=2026-12&size=500'),'fixtures'));
+ assert.deepEqual(calls.find(c=>c[0]==='gte'),['gte','starts_at','2026-11-30T15:00:00.000Z']);
+ assert.deepEqual(calls.find(c=>c[0]==='lt'),['lt','starts_at','2026-12-31T15:00:00.000Z']);
+ assert.deepEqual(calls.find(c=>c[0]==='in'),['in','league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']]);
+ const club=[];
+ await readFixturePage(client(club),query.parseCatalogQuery(new URLSearchParams('team=bsd-10'),'fixtures'));
+ assert.deepEqual(club[0],['from','club_fixture_catalog']);
+ assert.ok(!club.some(c=>c[0]==='in'&&c[1]==='league_id'));
+ for(const input of ['month=2026-13','month=2026-00','month=2026-1','month=2026-10&day=2026-10-01','size=500'])assert.throws(()=>query.parseCatalogQuery(new URLSearchParams(input),'fixtures'));
+});
 test("detail marks only ended matches with their own price result as reportable without extra report reads",async()=>{
  const rows={
   player_catalog:{id:'report-player',name:'Report Player'},price_history:[],teams:[],scoped_performance_results:[],player_initial_values:null,

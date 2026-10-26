@@ -26,14 +26,14 @@ export class SupabaseKickxRepository implements KickxRepository {
     }
     if (!data.user) return null;
     const [profile, role] = await Promise.all([
-      client.from("profiles").select("nickname,team_id").eq("id", data.user.id).maybeSingle(),
+      client.from("profiles").select("nickname,team_id,team_ids").eq("id", data.user.id).maybeSingle(),
       client.from("user_roles").select("role").eq("user_id", data.user.id).maybeSingle(),
     ]);
     if (profile.error) throw profile.error;
     if (role.error) throw role.error;
     return {
       userId: data.user.id, role: role.data?.role === "admin" ? "admin" : "member",
-      profile: profile.data ? { nickname: profile.data.nickname, team: profile.data.team_id } : null,
+      profile: profile.data ? { nickname: profile.data.nickname, team: profile.data.team_id, teams: profile.data.team_ids ?? (profile.data.team_id ? [profile.data.team_id] : []) } : null,
     };
   }
   async getPublicData() {

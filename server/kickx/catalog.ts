@@ -60,6 +60,7 @@ export async function readCatalog(client: SupabaseClient): Promise<PublicData> {
     const columns: string=table==='player_catalog'?PLAYER_COLUMNS:"id,league_id,home_team_id,away_team_id,starts_at,status,home_score,away_score,stage,round_label,penalties_home,penalties_away";
     let q=client.from(table).select(columns).order(column,{ascending,nullsFirst:false}).order("id").limit(limit);
     if(table==='player_catalog')q=q.in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']);
+    if(table==='fixture_catalog')q=q.in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']);
     if(since) q=q.gte("starts_at",since);
     const {data,error}=await q;
     if(error) throw error;
@@ -79,7 +80,7 @@ export async function readCatalog(client: SupabaseClient): Promise<PublicData> {
   });
   const [{leagues,teams,players,fixtures,total},prototype]=await Promise.all([previews,readPrototypePublic(client)]);
   return {...emptyPublicData(),...prototype,
-    leagues:leagues.filter(row=>prototype.policy?.version!=="report-v3" || ["bsd-1","bsd-3","bsd-4","bsd-5","bsd-6"].includes(String(row.id))).map(row=>({id:required(row.id),name:required(row.name)})),
+    leagues:leagues.map(row=>({id:required(row.id),name:required(row.name)})),
     teams:teams.map(row=>({id:required(row.id),name:text(row.name_ko)||required(row.name),english:text(row.english)||required(row.name),code:text(row.code),color:text(row.color),leagueId:text(row.league_id)})),
     players,fixtures:fixtures.map(mapFixture),playerTotal:total,
     updatedAt:prototype.freshness?.priceUpdatedAt??players.map(p=>p.updatedAt).filter((v):v is string=>!!v).sort().at(-1)??null,

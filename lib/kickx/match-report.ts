@@ -1,5 +1,10 @@
 /** Small public DTO. Source statistics and provider responses are never stored here. */
 export type ReportText = { performance: string };
+/** Presentation only: cached reports never need regeneration for line breaks. */
+export function reportSentences(text: string): string[] {
+  const segmenter = new Intl.Segmenter('ko', {granularity:'sentence'});
+  return text.split(/\r?\n+/u).flatMap(line=>[...segmenter.segment(line)].map(part=>part.segment.trim())).filter(Boolean);
+}
 export type ReportFacts = {
   playerName: string;
   opponent: string;

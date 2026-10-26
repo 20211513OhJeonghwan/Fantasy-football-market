@@ -125,7 +125,7 @@ export type Comment = {
   parentId?: string | null;
   revision?: number;
 };
-export type Profile = { nickname: string; team: string | null };
+export type Profile = { nickname: string; team: string | null; teams?: string[] };
 export type Session = {
   userId: string;
   role: "member" | "admin";
@@ -160,6 +160,7 @@ export type RankingRow = {
   rank: number;
   nickname: string;
   team: string | null;
+  teams?: string[];
   assets: number | null;
   returnRate: number | null;
 };

@@ -6,6 +6,7 @@ import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
 import { dateText, money } from "@/lib/kickx/data";
 import { usePlatform } from "./provider";
 import { Change, DataEmpty, PageHeading, Tabs, TeamBadge } from "./ui";
+import { supportedTeams } from '@/lib/kickx/support';
 const MEDALS = ["GOLD", "SILVER", "BRONZE"];
 /** Avatar tinted with the supporter's club colour (presentation only). */
 function avatarStyle(team: Parameters<typeof clubIdentity>[0]) {
@@ -17,8 +18,8 @@ export function RankingScreen() {
   const [period, setPeriod] = useState("주간"),
     [club, setClub] = useState("전체 구단");
   const result = data.rankings.find((r) => r.id === (period === "주간" ? "weekly" : "monthly"));
-  const myTeam = data.session?.profile?.team;
-  const rows = (result?.rows || []).filter((r) => club === "전체 구단" || (!!myTeam && r.team === myTeam)).sort((a, b) => a.rank - b.rank);
+  const myTeams = supportedTeams(data.session?.profile);
+  const rows = (result?.rows || []).filter((r) => club === "전체 구단" || supportedTeams(r).some(t=>myTeams.includes(t))).sort((a, b) => a.rank - b.rank);
   const mine = result?.rows.find((r) => r.userId === data.session?.userId);
   const top = club === "전체 구단" ? rows.slice(0, 3) : [];
   return (
@@ -68,7 +69,7 @@ export function RankingScreen() {
       <section className="panel flush">
         <div className="panel-head">
           <h2>전체 순위 <span className="muted num">{rows.length ? `${rows.length}명` : ""}</span></h2>
-          <Select label="랭킹 구단 필터" value={club} onChange={setClub} variant="compact" options={[{ value: "전체 구단", label: "전체 구단" }, { value: "내 응원 구단", label: "내 응원 구단", disabled: !myTeam, hint: myTeam ? undefined : "응원 구단 미설정" }]} />
+          <Select label="랭킹 구단 필터" value={club} onChange={setClub} variant="compact" options={[{ value: "전체 구단", label: "전체 구단" }, { value: "내 응원 구단", label: "내 응원 구단", disabled: !myTeams.length, hint: myTeams.length ? undefined : "응원 구단 미설정" }]} />
         </div>
         <div className="table-scroll">
           <table className="data-table ranking-table">

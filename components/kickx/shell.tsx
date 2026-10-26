@@ -15,7 +15,6 @@ const links = [
   { href: "/squad", label: "스쿼드" },
   { href: "/ranking", label: "랭킹" },
   { href: "/community/clubs", label: "구단 커뮤니티" },
-  { href: "/community/players", label: "선수 커뮤니티" },
 ];
 const utility = [
   { href: "/players", label: "선수 탐색" },
@@ -156,7 +155,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav aria-label="커뮤니티 메뉴">
           <strong>커뮤니티</strong>
           <Link href="/community/clubs">구단 커뮤니티</Link>
-          <Link href="/community/players">선수 커뮤니티</Link>
           <Link href="/community/write">글쓰기</Link>
         </nav>
         <nav aria-label="내 계정 메뉴">
