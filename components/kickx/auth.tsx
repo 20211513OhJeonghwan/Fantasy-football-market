@@ -129,11 +129,11 @@ function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
       </label>
       <fieldset className="supported-club-fields" disabled={busy}><legend>응원 구단 <small>{teams.length} / 5</small></legend>
         <p id="team-help">리그별 1개씩 최대 5개를 선택할 수 있습니다. 선택한 구단 게시판에서 글과 댓글을 작성할 수 있습니다.</p>
-        {leagues.map(league=><label key={league.id} htmlFor={`profile-team-${league.id}`}><span>{league.name}</span>
+        {leagues.map(league=><div className="supported-club-field" key={league.id}><label htmlFor={`profile-team-${league.id}`}>{league.name}</label>
           <Select id={`profile-team-${league.id}`} label={`${league.name} 응원 구단`} describedBy="team-help" value={teams.find(id=>data.teams.find(t=>t.id===id)?.leagueId===league.id)??''} disabled={busy || !data.teams.length}
             onChange={id=>setDraftTeams([...teams.filter(team=>data.teams.find(t=>t.id===team)?.leagueId!==league.id),...(id?[id]:[])])}
             options={[{value:'',label:'선택 안 함'},...teamOptions.filter(o=>data.teams.some(t=>t.id===o.value&&t.leagueId===league.id))]} placeholder="선택 안 함"/>
-        </label>)}
+        </div>)}
       </fieldset>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="form-actions">
