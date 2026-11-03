@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { usePlayerPhoto } from './player-photo';
 import { usePathname } from "next/navigation";
 import {
   type CSSProperties,
@@ -198,18 +199,17 @@ export function PlayerPortrait({
   size?: "sm" | "md" | "wide" | "lg" | "xl";
 }) {
   const { identity } = useClub(player.team);
-  const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
-  const photo = player.photo && failedPhoto !== player.photo ? player.photo : null;
+  const { photo, smallSource, sourcePixels, onLoad, onError } = usePlayerPhoto(player.photo);
   return (
     <span
-      className={`portrait ${size} ${photo ? "has-photo" : "no-photo"}`}
-      style={{ "--club": identity?.primary ?? "#8a8a83", "--club-2": identity?.secondary ?? "#ffffff" } as CSSProperties}
+      className={`portrait ${size} ${photo ? "has-photo" : "no-photo"}${smallSource ? " small-source" : ""}`}
+      style={{ "--club": identity?.primary ?? "#8a8a83", "--club-2": identity?.secondary ?? "#ffffff", "--photo-source-size": `${sourcePixels}px` } as CSSProperties}
       aria-hidden="true"
     >
       <span className="portrait-fx" />
       {photo ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={photo} alt="" loading="lazy" decoding="async" onError={() => setFailedPhoto(player.photo ?? null)} />
+        <img src={photo} alt="" loading="lazy" decoding="async" onLoad={onLoad} onError={onError} />
       ) : (
         <svg viewBox="0 6 100 94" preserveAspectRatio="xMidYMax meet">
           <path className="portrait-body" d="M18 104 C19 80 31 70 50 69 C69 70 81 80 82 104 Z" />

@@ -9,9 +9,15 @@ export async function requireAdmin() {
   if (role.data?.role !== "admin") throw new HttpError(403, "관리자 권한이 필요합니다.");
   return user;
 }
-export function createAdminDatabase() {
+export function createAdminDatabase(options?: { requestTimeoutMs: number }) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url || !key) throw new HttpError(503, "서버의 수집용 Supabase 키를 설정해 주세요.");
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    ...(options ? { global: { fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+      const deadline = AbortSignal.timeout(options.requestTimeoutMs);
+      return fetch(input, { ...init, signal: init?.signal ? AbortSignal.any([init.signal, deadline]) : deadline });
+    } } } : {}),
+  });
 }

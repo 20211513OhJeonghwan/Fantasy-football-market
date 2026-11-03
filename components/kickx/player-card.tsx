@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useState, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
+import { usePlayerPhoto } from './player-photo';
 import { money, score } from "@/lib/kickx/data";
 import type { Player } from "@/lib/kickx/types";
 import { usePlatform } from "./provider";
@@ -12,8 +13,7 @@ const POSITION_NAME = { GK: "골키퍼", DF: "수비수", MF: "미드필더", FW
 export function PlayerCard({ player, variant = "grid", rank }: { player: Player; variant?: "grid" | "feature"; rank?: number }) {
   const { data, getLeague } = usePlatform();
   const { team, identity } = useClub(player.team);
-  const [failed, setFailed] = useState<string | null>(null);
-  const photo = player.photo && failed !== player.photo ? player.photo : null;
+  const { photo, smallSource, sourcePixels, onLoad, onError } = usePlayerPhoto(player.photo);
   const owned = data.member?.holdings.some((h) => h.playerId === player.id);
   const league = getLeague(team?.leagueId);
   const valued = player.price != null;
@@ -21,8 +21,8 @@ export function PlayerCard({ player, variant = "grid", rank }: { player: Player;
   const meta = [player.age != null ? `${player.age}세` : null, player.country].filter(Boolean).join(" · ");
   return (
     <article
-      className={`pcard ${variant} ${photo ? "has-photo" : "no-photo"}`}
-      style={{ "--club": identity?.primary ?? "#55554f", "--club-2": identity?.secondary ?? "#ffffff" } as CSSProperties}
+      className={`pcard ${variant} ${photo ? "has-photo" : "no-photo"}${smallSource ? " small-source" : ""}`}
+      style={{ "--club": identity?.primary ?? "#55554f", "--club-2": identity?.secondary ?? "#ffffff", "--photo-source-size": `${sourcePixels}px` } as CSSProperties}
     >
       <Link href={`/players/${player.id}`} className="pcard-stage" aria-label={`${player.name} 상세 보기`}>
         <span className="pcard-bg" aria-hidden="true" />
@@ -35,7 +35,7 @@ export function PlayerCard({ player, variant = "grid", rank }: { player: Player;
         <span className="pcard-crest"><ClubCrest id={player.team} size="normal" /></span>
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img className="pcard-photo" src={photo} alt="" loading="lazy" decoding="async" onError={() => setFailed(player.photo ?? null)} />
+          <img className="pcard-photo" src={photo} alt="" loading="lazy" decoding="async" onLoad={onLoad} onError={onError} />
         ) : (
           <svg className="pcard-photo silhouette" viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
             <path d="M14 100 C15 76 30 64 50 63 C70 64 85 76 86 100 Z" />

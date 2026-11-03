@@ -20,7 +20,7 @@ export async function readMatchReport(playerId: string, fixtureId: string) {
   try {
     const player = identity(playerId), fixture = identity(fixtureId);
     await authenticatedClient();
-    const db = createAdminDatabase();
+    const db = createAdminDatabase({ requestTimeoutMs: 5000 });
     const result = await db.rpc("kickx_read_match_report", { p_player: player, p_fixture: fixture });
     checkDatabase(result.error);
     const data = publicReport(result.data as StoredReport);
@@ -35,7 +35,7 @@ export async function createMatchReport(request: Request, playerId: string, fixt
     requireOrigin(request);
     const player = identity(playerId), fixture = identity(fixtureId);
     const { user } = await authenticatedClient();
-    const db = createAdminDatabase();
+    const db = createAdminDatabase({ requestTimeoutMs: 5000 });
     const config = reportModelConfig();
     if (!config) {
       // No model key: still return the real stored numerical explanation, without a write.

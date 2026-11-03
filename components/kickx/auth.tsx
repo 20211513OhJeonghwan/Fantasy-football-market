@@ -143,9 +143,9 @@ function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
       <fieldset className="avatar-picker" disabled={busy}><legend>프로필 아이콘</legend>
         <p id="avatar-help">커뮤니티와 랭킹에 표시됩니다. 응원 구단 엠블럼도 고를 수 있습니다.</p>
         <div role="radiogroup" aria-describedby="avatar-help">
-          {AVATAR_ICONS.map(icon => { const value = `icon:${icon}`; return <button type="button" role="radio" aria-checked={avatar === value} key={icon} className={avatar === value ? "active" : ""} onClick={() => setDraftAvatar(value)}><UserAvatar className="avatar-option" avatar={value} seed={icon} /><span>{AVATAR_LABELS[icon]}</span></button>; })}
+          {AVATAR_ICONS.map(icon => { const value = `icon:${icon}`; return <button type="button" role="radio" aria-label={AVATAR_LABELS[icon]} aria-checked={avatar === value} key={icon} className={avatar === value ? "active" : ""} onClick={() => setDraftAvatar(value)}><UserAvatar className="avatar-option" avatar={value} seed={icon} /></button>; })}
           {teams.map(id => { const value = `club:${id}`; return <button type="button" role="radio" aria-checked={avatar === value} key={value} className={avatar === value ? "active" : ""} onClick={() => setDraftAvatar(value)}><UserAvatar className="avatar-option" avatar={value} seed={id} /><span>{data.teams.find(t => t.id === id)?.name ?? "응원 구단"}</span></button>; })}
-          <button type="button" role="radio" aria-checked={avatar === null} className={avatar === null ? "active" : ""} onClick={() => setDraftAvatar(null)}><UserAvatar className="avatar-option" avatar={null} seed={data.session?.userId ?? "guest"} /><span>기본</span></button>
+          <button type="button" role="radio" aria-label="기본 아이콘" aria-checked={avatar === null} className={avatar === null ? "active" : ""} onClick={() => setDraftAvatar(null)}><UserAvatar className="avatar-option" avatar={null} seed={data.session?.userId ?? "guest"} /></button>
         </div>
       </fieldset>
       {error && <p className="form-error" role="alert">{error}</p>}
