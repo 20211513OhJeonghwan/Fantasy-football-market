@@ -4,6 +4,7 @@ import { METRIC_LABELS } from "@/lib/kickx/score-labels";
 
 export const REPORT_PROMPT_VERSION = "match-report-performance-v2";
 export const DEFAULT_REPORT_MODEL = "gemini-3.5-flash-lite";
+export const REPORT_MODEL_TIMEOUT_MS = 22000;
 export class ReportModelError extends Error {
   constructor(public code: "rate-limit" | "provider" | "invalid-output" | "timeout") { super(code); }
 }
@@ -20,7 +21,7 @@ export function parseReportText(value: unknown): ReportText {
   const result = {} as ReportText;
   if (Object.keys(row).some(key => key !== "performance")) throw new ReportModelError("invalid-output");
   for (const field of ["performance"] as const) {
-    const text = typeof row[field] === "string" ? row[field].normalize("NFC").trim() : "";
+    const text = typeof row[field] === "string" ? row[field].normalize("NFC").replace(/[\r\n\t]+/gu, ' ').replace(/ {2,}/gu, ' ').trim() : "";
     if (text.length < 10 || [...text].length > 420 || !/[가-힣]/u.test(text) || /[\p{N}<>\u0000-\u001f]/u.test(text) || /https?:|```/i.test(text))
       throw new ReportModelError("invalid-output");
     result[field] = text;
@@ -51,7 +52,7 @@ performance 문자열 하나만 JSON으로 반환한다. 보통 세 문장부터
 export async function generateReport(facts: ReportFacts, config: NonNullable<ReturnType<typeof reportModelConfig>>, fetcher = fetch): Promise<ReportText> {
   try {
     const response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent`, {
-      method: "POST", cache: "no-store", signal: AbortSignal.timeout(12000),
+      method: "POST", cache: "no-store", signal: AbortSignal.timeout(REPORT_MODEL_TIMEOUT_MS),
       headers: { "Content-Type": "application/json", "x-goog-api-key": config.key },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: instruction }] },

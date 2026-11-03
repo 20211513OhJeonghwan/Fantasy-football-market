@@ -25,6 +25,7 @@ test('the prompt contains performance facts without prices, uncertainty boilerpl
 test('model output cannot replace exact numbers, inject HTML, return excess text, or skip a section',()=>{
  assert.deepEqual(model.parseReportText(text),text);
  assert.equal(model.parseReportText({performance:'가'.repeat(350)}).performance.length,350);
+ assert.equal(model.parseReportText({performance:'득점이 가점에 기여했습니다.\n출전 시간도 반영됐습니다.'}).performance,'득점이 가점에 기여했습니다. 출전 시간도 반영됐습니다.');
  for(const value of [{...text,performance:'가격이 8% 상승했습니다.'},{...text,performance:'<script>잘못된 내용입니다.</script>'},{...text,performance:'가'.repeat(421)},{},{...text,performance:'가격이 ９% 상승했습니다.'}])assert.throws(()=>model.parseReportText(value),/invalid-output/);
 });
 test('provider request is bounded, has no search tools, and keeps credentials out of URLs',async()=>{

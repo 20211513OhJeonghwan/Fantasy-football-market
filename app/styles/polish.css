@@ -195,3 +195,19 @@
 .avatar-picker button.active { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); color: var(--ink); }
 .avatar-picker .avatar-option { width: 44px; height: 44px; border-radius: 50%; }
 @media (max-width: 640px) { .avatar-picker button { width: calc(25% - 6px); min-width: 0; } }
+
+/* Use decoded dimensions of the already-loaded image; no probes or image processing API. */
+.portrait.small-source:not(.xl) { background: #f4f3ef; }
+.portrait.small-source:not(.xl) .portrait-fx { display: none; }
+.portrait.small-source:not(.xl) img { transform: none; filter: none; }
+.portrait.xl.small-source img,
+.detail-photo .portrait.xl.small-source img,
+.pcard.small-source .pcard-photo {
+  position: absolute; z-index: 1; left: 50%; bottom: 8%;
+  width: min(var(--photo-source-size), calc(100% - 28px)); height: auto; aspect-ratio: 1;
+  max-height: 84%; object-fit: contain; object-position: center bottom;
+  transform: translateX(-50%); filter: none;
+  border: 8px solid #f4f3ef; border-radius: 50%; background: #f4f3ef;
+  box-shadow: 0 2px 12px #0002;
+}
+.pcard.small-source:hover .pcard-photo { transform: translateX(-50%); }

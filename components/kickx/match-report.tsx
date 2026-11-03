@@ -1,64 +1,30 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
-import type { MatchReport } from "@/lib/kickx/match-report";
 import { reportSentences } from '@/lib/kickx/match-report';
+import { createReportLoader, emptyReportLoad, type ReportLoadState } from '@/lib/kickx/report-client';
 import type { PlayerRecord } from "@/lib/kickx/types";
 import { dateText, money, score } from "@/lib/kickx/data";
 import { METRIC_LABELS } from "@/lib/kickx/score-labels";
 import { Modal, Change } from "./ui";
 import { usePlatform } from "./provider";
 
-// A small in-memory cache avoids rereading a report when its dialog is reopened.
-// No persistent browser storage and no polling, subscriptions, or page-load fetches.
-const readyCache = new Map<string, { at: number; report: MatchReport }>();
-type LoadedReport = { report: MatchReport; generationError?: string };
-const inFlight = new Map<string, Promise<LoadedReport>>();
-async function fetchReport(url: string, method: "GET" | "POST") {
-  const response = await fetch(url, { method, credentials: "same-origin" });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || "리포트를 불러오지 못했습니다.");
-  return result as MatchReport;
-}
-function loadReport(url: string) {
-  const cached = readyCache.get(url);
-  if (cached && Date.now() - cached.at < 60000) return Promise.resolve({ report: cached.report } as LoadedReport);
-  const key = url;
-  const running = inFlight.get(key);
-  if (running) return running;
-  const promise = (async () => {
-    let result = await fetchReport(url, "GET");
-    if (result.canGenerate && result.status === "missing") {
-      try { result = await fetchReport(url, "POST"); }
-      catch { return { report: result, generationError: "AI 설명을 작성하지 못했습니다. 저장된 산정 요약을 확인해 주세요." }; }
-    }
-    if (result.status === "ready") {
-      if (readyCache.size >= 40) readyCache.delete(readyCache.keys().next().value!);
-      readyCache.set(url, { at: Date.now(), report: result });
-    }
-    return { report: result };
-  })().finally(() => inFlight.delete(key));
-  inFlight.set(key, promise);
-  return promise;
-}
+// No persistent browser storage, background polling, or page-load report fetches.
+const loader = createReportLoader();
 
 export function MatchReportDialog({ playerId, record, onClose }: { playerId: string; record: PlayerRecord; onClose: () => void }) {
   const { data } = usePlatform();
-  const [report, setReport] = useState<MatchReport | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [snapshot, setSnapshot] = useState<{ key: string; state: ReportLoadState }>({ key: '', state: emptyReportLoad() });
   const [attempt, setAttempt] = useState(0);
   const signedIn = !!data.session?.profile;
+  const userId = data.session?.userId ?? '';
   const url = `/api/kickx/players/${encodeURIComponent(playerId)}/matches/${encodeURIComponent(record.fixtureId!)}/report`;
+  const key = `${userId}:${url}`;
+  const { report, loading, generating, error } = snapshot.key === key ? snapshot.state : emptyReportLoad();
   useEffect(() => {
     if (!signedIn) return;
-    let active = true;
-    setLoading(true); setError("");
-    loadReport(url).then(result => { if (active) { setReport(result.report); setError(result.generationError ?? ""); } })
-      .catch(error => { if (active) setError(error instanceof Error ? error.message : "리포트를 불러오지 못했습니다."); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [url, signedIn, attempt]);
+    return loader.subscribe(userId, url, state => setSnapshot({ key: `${userId}:${url}`, state }));
+  }, [url, signedIn, userId, attempt]);
   if (!signedIn) return null;
   const facts = report?.facts;
   const text = report?.status === "ready" ? report.text : null;
@@ -82,8 +48,9 @@ export function MatchReportDialog({ playerId, record, onClose }: { playerId: str
             {[...facts.contributions].sort((a, b) => Math.abs(b.points) - Math.abs(a.points)).slice(0, 5).map(c => <div key={c.metric}><dt>{METRIC_LABELS[c.metric] || c.metric}</dt><dd className={`num ${c.points < 0 ? "down" : c.points > 0 ? "up" : ""}`}>{signed(c.points)}점</dd></div>)}
           </dl>}
         </section>}
-        {!loading && !text && !error && <div className="report-notice">
-          {!report.canGenerate ? <p>AI 설명을 준비하고 있습니다. 저장된 산정 요약은 위에서 확인할 수 있습니다.</p>
+        {generating && <p role="status" className="report-notice"><Sparkles size={16} />AI 경기력 설명을 작성하고 있습니다. 산정 요약을 먼저 확인해 주세요.</p>}
+        {!loading && !generating && !text && !error && <div className="report-notice">
+          {!report.canGenerate ? <p>현재 AI 설명을 제공할 수 없습니다. 저장된 산정 요약은 위에서 확인할 수 있습니다.</p>
             : report.status === "pending" ? <p>AI 설명을 작성 중입니다. 잠시 후 다시 확인해 주세요.</p>
             : report.status === "limited" ? <p>현재 생성 가능한 분량을 모두 사용했습니다. 산정 요약을 확인해 주세요.</p>
             : report.status === "cooldown" ? <p>AI 설명 작성이 지연되고 있습니다. 잠시 후 다시 확인해 주세요.</p>

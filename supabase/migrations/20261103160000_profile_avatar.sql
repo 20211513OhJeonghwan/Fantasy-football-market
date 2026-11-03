@@ -15,3 +15,4 @@ create trigger profiles_avatar_club before insert or update of avatar, team_ids 
   for each row execute function public.kickx_profile_avatar_club();
 
 grant insert(avatar), update(avatar) on public.profiles to authenticated;
+notify pgrst, 'reload schema';
