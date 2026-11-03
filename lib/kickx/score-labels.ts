@@ -21,12 +21,12 @@ export const METRIC_LABELS: Record<string, string> = {
 };
 export const SCORE_STATUS: Record<string, { label: string; tone: "ok" | "warn" | "off" }> = {
   ready: { label: "산정 완료", tone: "ok" },
-  provisional: { label: "잠정 산정", tone: "warn" },
+  provisional: { label: "산정 완료", tone: "ok" },
   blocked: { label: "계산 보류", tone: "off" },
   "not-played": { label: "미출전", tone: "off" },
 };
 const WARNINGS: Record<string, string> = {
-  BSD_OPTIONAL_METRICS_PROVISIONAL: "제공되지 않거나 확인되지 않은 세부 통계를 제외한 잠정 점수입니다.",
+  BSD_OPTIONAL_METRICS_PROVISIONAL: "확인된 기록으로 점수를 산정했으며, 제공되지 않은 세부 통계는 제외했습니다.",
   MATCH_NOT_FINISHED: "경기가 아직 끝나지 않았습니다.",
   EXTRA_TIME_REQUIRES_REVIEW: "연장전·승부차기 경기는 세부 규칙 확정 전까지 보류합니다.",
   INVALID_TEAM: "선수의 소속 팀이 경기 양 팀과 맞지 않습니다.",
@@ -48,6 +48,7 @@ const WARNINGS: Record<string, string> = {
   GOAL_BOUNDARY_TIME_AMBIGUOUS: "교체와 같은 분의 득점이라 선후를 확인할 수 없습니다.",
   PLAYER_GOALS_MISMATCH: "선수 득점 수가 사건 기록과 다릅니다.",
   INVALID_PASS_TOTALS: "패스 기록이 올바르지 않습니다.",
+  NON_PARTICIPATION_PRICE_DECAY: "미출전 경기는 점수에 포함하지 않으며 정해진 미출전 가격 정책을 적용합니다.",
   NO_PRICE_CHANGE_FOR_NON_PARTICIPATION: "출전하지 않아 가치가 변하지 않습니다.",
   PROTOTYPE_INCIDENT_COMPLETENESS_ASSUMPTION: "사건 기록이 완전하다고 가정한 잠정 점수입니다.",
 };

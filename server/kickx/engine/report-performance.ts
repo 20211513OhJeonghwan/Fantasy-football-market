@@ -58,7 +58,9 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
  if (input.homeScore == null || input.awayScore == null || goals.some(e => typeof e.is_home !== "boolean" || count(e.minute) == null || !id(e.player_id))) return stop("GOAL_TIMELINE_INCOMPLETE");
  if (goals.filter(e => e.is_home === true).length !== input.homeScore || goals.filter(e => e.is_home === false).length !== input.awayScore) return stop("GOAL_SCORE_MISMATCH");
  for(const e of ordered.filter(e=>e.type==='varDecision')){
-  if(['review','mistakenIdentity'].includes(String(e.decision)))return stop('VAR_REVIEW_REQUIRED');
+  // A completed match can retain an explicitly rejected VAR check. Only
+  // accepted or unresolved reviews need verification; score/card checks remain.
+  if(['review','mistakenIdentity'].includes(String(e.decision))&&e.confirmed!==false)return stop('VAR_REVIEW_REQUIRED');
   if(['cardUpgrade','redCardGiven'].includes(String(e.decision))){
    if(typeof e.confirmed!=='boolean')return stop('VAR_REVIEW_REQUIRED');
    if(e.confirmed===true&&!ordered.some(c=>c.type==='card'&&id(c.player_id)===id(e.player_id)&&['red','redcard','yellowred','secondyellow','secondyellowcard'].includes(cardKind(c))))return stop('VAR_CARD_TIMELINE_REQUIRED');
@@ -87,7 +89,15 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
  const entry = starter ? null : enters[0];
  const exit = exits[0] ?? red[0];
  const start = entry ? count(entry.minute) : 0, end = exit ? count(exit.minute) : observedDuration;
- if (start == null || end == null || start > end || (minutes < Math.min(observedDuration,end)-Math.min(observedDuration,start)-(observedDuration-duration)-2 || minutes > Math.min(observedDuration,end)-Math.min(observedDuration,start)+(observedDuration-duration)+2)) return stop("MINUTES_INTERVAL_MISMATCH");
+ // BSD mixes regulation-clock substitutions with playing minutes including
+ // stoppage time. Bound the discrepancy by the actual announced/boundary
+ // added time, rather than rejecting valid late substitutes and 45+ dismissals.
+ const announced=(at:number)=>Math.max(0,...ordered.filter(e=>e.type==='injuryTime'&&e.minute===at&&count(e.length)!=null&&Number(e.length)<=30).map(e=>Number(e.length)));
+ const boundaryAdded=(at:number)=>Math.max(0,...[entry,exit].filter(e=>e?.minute===at&&count(e.added_time)!=null&&Number(e.added_time)<=30).map(e=>Number(e!.added_time)));
+ const firstAdded=start!=null&&end!=null&&start<45&&end>=45?Math.max(announced(45),boundaryAdded(45)):0;
+ const finalAdded=end!=null&&end>=duration?Math.max(announced(duration),boundaryAdded(duration)):0;
+ const allowance=Math.max(observedDuration-duration,firstAdded+finalAdded);
+ if (start == null || end == null || start > end || (minutes < Math.min(observedDuration,end)-Math.min(observedDuration,start)-allowance-2 || minutes > Math.min(observedDuration,end)-Math.min(observedDuration,start)+allowance+2)) return stop("MINUTES_INTERVAL_MISMATCH");
  // Provider arrays may be newest-first. Equal-minute boundaries need explicit timing.
  const compareTime=(a:Json,b:Json)=>{
   if(Number(a.minute)!==Number(b.minute))return Number(a.minute)-Number(b.minute);

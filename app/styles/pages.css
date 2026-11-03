@@ -360,8 +360,8 @@ a.movers-player:hover strong { text-decoration: underline; text-decoration-color
 .order-balance b { font-size: 18px; font-weight: 900; }
 .perf-bars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; height: 150px; }
 .perf-bars > span { position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
-.perf-bars i { width: 100%; max-width: 34px; background: var(--ink); transform-origin: bottom; animation: kx-grow var(--t-slow) var(--ease) both; }
-.perf-bars > span:last-child i { background: var(--yellow-strong); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.perf-bars i { width: 100%; max-width: 34px; background: #93c5fd; transform-origin: bottom; animation: kx-grow var(--t-slow) var(--ease) both; }
+.perf-bars > span:last-child i { background: #2563eb; box-shadow: none; }
 .perf-bars .negative i { background: var(--down); }
 .perf-bars .negative b { color: var(--down); }
 .perf-bars .dnp i { background: var(--line-2); }
@@ -1529,3 +1529,11 @@ button.pitch-player:hover { transform: translateY(-3px); }
 }
 
 .my-lounges[data-scope] { grid-template-columns:minmax(0,1fr); }
+
+/* Player detail chart colours are independent of the site branding. */
+.player-value-history .chart-wrap { --chart-line:#2563eb; --chart-fill:#93c5fd; }
+.player-value-history .chart-wrap.falling { --chart-line:#dc2626; --chart-fill:#fca5a5; }
+.player-value-history .chart-line { stroke-dasharray:none; animation:none; }
+.detail-hero + .detail-layout { margin-top:var(--s-6); }
+.score-match .score-competition { display:flex; align-items:center; gap:7px; margin-bottom:5px; min-width:0; }
+.score-competition>span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

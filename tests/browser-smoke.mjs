@@ -499,11 +499,13 @@ try {
     assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`v2 rules overflow at ${width}`);
     await mockPage.screenshot({path:`test-artifacts/market-v2-rules-${width}.png`,fullPage:true});
     await mockPage.goto(base+'/players/test-player',{waitUntil:'networkidle'});
-    await mockPage.getByRole('heading',{name:'선수 가치 산정 근거',exact:true}).waitFor();
+    await mockPage.getByRole('heading',{name:'변동 기록',exact:false}).waitFor();
+    assert.equal(await mockPage.locator('.detail-stats,.value-legend,.order-panel').count(),0);
+    assert.equal(await mockPage.getByRole('heading',{name:'선수 가치 산정 근거',exact:true}).count(),0);
     assert.ok(await mockPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`v2 evidence overflow at ${width}`);
     await mockPage.screenshot({path:`test-artifacts/market-v2-detail-${width}.png`,fullPage:true});
   }
-  report.checks.push('Active v2 rules and persisted initial/last-five pricing evidence fit desktop and mobile');
+  report.checks.push('Active v2 rules and simplified player detail fit desktop and mobile');
   state.policy.clubCompetitionsEnabled=true;
   const leagueIds=['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6'];
   state.leagues=leagueIds.map((id,i)=>({id,name:`선택 리그 ${i+1}`}));state.leagues.push({id:'bsd-7',name:'챔피언스리그'});
