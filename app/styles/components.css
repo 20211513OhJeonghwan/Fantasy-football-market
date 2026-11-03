@@ -41,6 +41,7 @@
 /* Change */
 .change { position: relative; display: inline-flex; align-items: center; gap: 3px; font-weight: 800; font-size: var(--fs-small); white-space: nowrap; }
 .change .change-mark { font-size: 0.68em; transform: translateY(-0.5px); }
+.change .change-mark, .change .num { color: inherit; }
 .change.up { color: var(--up); }
 .change.down { color: var(--down); }
 .change.flat { color: var(--text-3); }

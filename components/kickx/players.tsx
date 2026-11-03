@@ -174,9 +174,13 @@ export function PlayerList({ market = false }: { market?: boolean }) {
       return compareNumber(a[key], b[key], ["price-asc"].includes(sort)) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
     });
   const remote=useCatalogPage<Player>("players",{q,league,team,position:pos === "전체" ? undefined : pos,sort,page,size:pageSize,scope:({"관심 선수":"watch","보유 선수":"owned","상승 선수":"rising","하락 선수":"falling"} as Record<string,string>)[tab] ?? "all"});
-  const status=remote.enabled ? remote.status : platformStatus;
   const total=remote.enabled ? remote.data.total : results.length;
-  const pageCount=Math.max(1,Math.ceil(total/pageSize)), current=remote.enabled ? page : Math.min(page,pageCount);
+  const pageCount=Math.max(1,Math.ceil(total/pageSize)), current=Math.min(page,pageCount);
+  const correctingPage=remote.enabled && remote.status === "ready" && page !== current;
+  const status=correctingPage ? "loading" : remote.enabled ? remote.status : platformStatus;
+  useEffect(() => {
+    if (correctingPage) setPage(current);
+  }, [correctingPage, current]);
   const visible=remote.enabled ? (status === "ready" ? remote.data.items : []) : results.slice((current-1)*pageSize,current*pageSize);
   const filtered = !!q || league !== "all" || team !== "all" || pos !== "전체" || tab !== "전체 선수";
   const reset = () => {
@@ -231,7 +235,7 @@ export function PlayerList({ market = false }: { market?: boolean }) {
           )}
         </>
       )}
-      <section className={`browser${market ? " market-browser" : ""}`} ref={browserRef} aria-label="선수 목록">
+      <section className={`browser${market ? " market-browser" : ""}`} ref={browserRef} aria-label="선수 목록" tabIndex={-1} data-pagination-focus-target>
         {market && <MarketLeagues league={league} onLeague={(id) => { setLeague(id); setTeam("all"); setPage(1); }} />}
         <div className="browser-top">
           <Tabs
@@ -302,7 +306,7 @@ export function PlayerList({ market = false }: { market?: boolean }) {
             </table>
           </div>
         ) : null}
-        {!visible.length && <DataEmpty entity="선수" status={status} retry={remote.enabled ? remote.reload : undefined} filtered={filtered} rows={6} />}
+        {remote.inputError ? <Empty title="검색어를 확인해 주세요" description={remote.inputError} /> : !visible.length && <DataEmpty entity="선수" status={status} retry={remote.enabled ? remote.reload : undefined} filtered={filtered} rows={6} />}
         {status === "ready" && <Pagination key={pageSize} page={current} total={total} size={pageSize} onPage={changePage} label="선수 시장" centered allowJump />}
       </section>
     </>

@@ -200,7 +200,7 @@ export function HomeScreen() {
   return (
     <>
       <div className="home-grid">
-        <section className="home-market" aria-labelledby="home-title">
+        <section className="home-market" aria-labelledby="home-title" tabIndex={-1} data-pagination-focus-target>
           <div className="home-hero">
             <div className="home-hero-copy">
               <span className="eyebrow">PLAYER MARKET</span>

@@ -10,6 +10,7 @@ export function Pagination({page,total,size,onPage,label,centered=false,allowJum
   const [error,setError]=useState('');
   const field=useRef<HTMLInputElement>(null);
   const trigger=useRef<HTMLButtonElement|null>(null);
+  const navigation=useRef<HTMLElement>(null);
   const formId=useId();
   const pages=Math.max(1,Math.ceil(total/size));
   useEffect(()=>{if(jumpOpen){field.current?.focus();field.current?.select();}},[jumpOpen]);
@@ -29,12 +30,17 @@ export function Pagination({page,total,size,onPage,label,centered=false,allowJum
     if(!/^\d+$/.test(value)||!Number.isSafeInteger(next)||next<1||next>pages){
       setError(`1~${pages.toLocaleString()} 사이의 페이지 번호를 입력해 주세요.`);field.current?.focus();return;
     }
-    selectPage(next);trigger.current?.focus();
+    // The old gap button and even this nav can disappear while a remote page loads.
+    const target=navigation.current?.closest<HTMLElement>('[data-pagination-focus-target]');
+    selectPage(next);
+    requestAnimationFrame(()=>{
+      if(target?.isConnected)(target.querySelector<HTMLElement>('.numbered-pagination [aria-current="page"]')??target).focus({preventScroll:true});
+    });
   }
   function gap(direction:string){
     return allowJump?<button type="button" className="page-jump-toggle" aria-label={`${label} ${direction} 구간 페이지 직접 입력`} aria-expanded={jumpOpen} aria-controls={formId} onClick={event=>toggleJump(event.currentTarget)}>…</button>:<span aria-hidden="true">…</span>;
   }
-  return <nav className={`panel-foot pagination numbered-pagination${centered?' pagination-centered':''}`} aria-label={`${label} 페이지 선택`}>
+  return <nav ref={navigation} className={`panel-foot pagination numbered-pagination${centered?' pagination-centered':''}`} aria-label={`${label} 페이지 선택`}>
     <span className="num">{(page-1)*size+1}–{Math.min(page*size,total)} / {total.toLocaleString()}</span>
     <div className="pagination-pages"><button type="button" aria-label={`이전 ${label} 페이지`} disabled={page<=1} onClick={()=>selectPage(page-1)}><ChevronLeft size={17}/></button>
       {start>1 && <button type="button" aria-label={`${label} 1페이지`} onClick={()=>selectPage(1)}>1</button>}

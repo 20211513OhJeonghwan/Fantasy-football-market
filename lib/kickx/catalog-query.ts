@@ -3,6 +3,13 @@ export type CatalogQuery = {
   position: string | null; sort: string; scope: string; day: string | null; state: string; month?: string | null;
 };
 export class CatalogInputError extends Error {}
+export const CATALOG_SEARCH_MAX_LENGTH = 100;
+export function normalizeCatalogSearch(value: string) {
+  const q = value.normalize("NFC").trim();
+  if (q.length > CATALOG_SEARCH_MAX_LENGTH || /[\x00-\x1f]/.test(q))
+    throw new CatalogInputError(`검색어는 ${CATALOG_SEARCH_MAX_LENGTH}자 이내로 입력해 주세요.`);
+  return q;
+}
 const allowed = (value: string, values: string[], label: string) => {
   if (!values.includes(value)) throw new CatalogInputError(`${label} 값을 확인해 주세요.`);
   return value;
@@ -19,8 +26,7 @@ export function parseCatalogQuery(params: URLSearchParams, kind: "players" | "fi
     if (!/^[a-zA-Z0-9_-]{1,100}$/.test(v)) throw new CatalogInputError(`${key} 값을 확인해 주세요.`);
     return v;
   };
-  const q = (params.get("q") || "").normalize("NFC").trim();
-  if (q.length > 100 || /[\x00-\x1f]/.test(q)) throw new CatalogInputError("검색어는 100자 이내로 입력해 주세요.");
+  const q = normalizeCatalogSearch(params.get("q") || "");
   const day = params.get("day") || null;
   const month = params.get('month') || null;
   if (month && (kind !== 'fixtures' || !/^(?:19|20|21)\d{2}-(?:0[1-9]|1[0-2])$/.test(month) || !!day)) throw new CatalogInputError('연월을 확인해 주세요.');

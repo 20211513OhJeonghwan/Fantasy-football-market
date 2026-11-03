@@ -174,7 +174,11 @@ export type RankingPeriod = {
 export type PublicData = {
   freshness?: {lastCheckedAt:string|null;lastSuccessAt:string|null;lastError:string|null;priceUpdatedAt:string|null;workerRunning:boolean|null} | null;
   communityCounts?: {scope:"club"|"player";target:string;count:number}[];
-  policy?: {version:string;initialPoints:number;initialPrice:number;sellFeeBps:number;quoteSeconds:number;clubCompetitionsEnabled?:boolean} | null;
+  policy?: {
+    version:string;initialPoints:number;initialPrice:number;sellFeeBps:number;quoteSeconds:number;clubCompetitionsEnabled?:boolean;
+    pricingReferenceAt?:string|null;
+    reportParameters?:Partial<Record<'initialMin'|'initialMax'|'minPrice'|'maxPrice'|'valuationStartMs',number>>;
+  } | null;
   /** Total DB catalog count; players below are bounded previews. */
   playerTotal?: number;
   players: Player[];

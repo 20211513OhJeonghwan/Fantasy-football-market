@@ -210,7 +210,7 @@ const LEAGUES: [RegExp, { short: string; color: string; ink: string; country: st
   [/dfb|포칼/i, { short: "DFB", color: "#111110", ink: "#FFD200", country: "독일" }],
   [/coupe de france|쿠프 ?드 ?프랑스/i, { short: "CDF", color: "#1F3B8C", ink: "#FFFFFF", country: "프랑스" }],
   [/premier|프리미어/i, { short: "EPL", color: "#3D195B", ink: "#FFFFFF", country: "잉글랜드" }],
-  [/la ?liga|laliga|라리가/i, { short: "LALIGA", color: "#FF4B44", ink: "#FFFFFF", country: "스페인" }],
+  [/la ?liga|laliga|라리가/i, { short: "LALIGA", color: "#FF4B44", ink: "#111110", country: "스페인" }],
   [/serie ?a|세리에/i, { short: "SERIE A", color: "#0A2C6E", ink: "#FFFFFF", country: "이탈리아" }],
   [/bundesliga|분데스리가/i, { short: "BUNDESLIGA", color: "#D20515", ink: "#FFFFFF", country: "독일" }],
   [/ligue ?1|리그 ?1/i, { short: "LIGUE 1", color: "#0B1E3F", ink: "#DAE025", country: "프랑스" }],

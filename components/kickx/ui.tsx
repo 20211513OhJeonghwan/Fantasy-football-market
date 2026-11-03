@@ -562,11 +562,15 @@ export function Modal({
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   useEffect(() => {
-    ref.current?.showModal();
+    const dialog = ref.current;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialog?.showModal();
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
+      if (dialog?.open) dialog.close();
       document.body.style.overflow = previous;
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     };
   }, []);
   return (

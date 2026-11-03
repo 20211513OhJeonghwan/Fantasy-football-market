@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { Fixture, Player } from "@/lib/kickx/types";
+import { normalizeCatalogSearch } from "@/lib/kickx/catalog-query";
 import { usePlatform, useResource } from "./provider";
 type Page<T> = {items:T[];total:number;page:number;size:number};
 const emptyPlayers=():Page<Player>=>({items:[],total:0,page:1,size:12});
@@ -9,6 +10,9 @@ const emptyDetail=()=>({player:null as Player|null});
 export function useCatalogPage<T extends Player|Fixture>(kind:"players"|"fixtures",params:Record<string,string|number|undefined>) {
   const {status,mock,cachePlayers,data}=usePlatform();
   const search=String(params.q??'');
+  let inputError: string | null = null;
+  try { normalizeCatalogSearch(search); }
+  catch (error) { inputError = error instanceof Error ? error.message : "검색어를 확인해 주세요."; }
   const [settledSearch,setSettledSearch]=useState(search);
   useEffect(()=>{if(search===settledSearch)return;const timer=setTimeout(()=>setSettledSearch(search),250);return()=>clearTimeout(timer);},[search,settledSearch]);
   const settled=new URLSearchParams(Object.entries({...params,q:settledSearch}).filter(([,v])=>v != null && v !== "" && v !== "all").map(([k,v])=>[k,String(v)])).toString();
@@ -16,7 +20,7 @@ export function useCatalogPage<T extends Player|Fixture>(kind:"players"|"fixture
   // Public lists have their own validated endpoint and need not wait for the
   // dashboard, ranking, community and member bootstrap to finish.
   const enabled=!mock && (status==='ready'||status==='loading'&&!privateScope);
-  const resource=useResource<Page<T>>(enabled ? `/api/kickx/${kind}?${settled}` : null, (kind === "players" ? emptyPlayers : emptyFixtures) as ()=>Page<T>,30000);
+  const resource=useResource<Page<T>>(enabled && !inputError ? `/api/kickx/${kind}?${settled}` : null, (kind === "players" ? emptyPlayers : emptyFixtures) as ()=>Page<T>,30000);
   const revision=data.member?.watchlist.join(",") ?? "";
   const reload=resource.reload, scope=params.scope;
   const previousWatch=useRef<string|null>(null);
@@ -26,7 +30,7 @@ export function useCatalogPage<T extends Player|Fixture>(kind:"players"|"fixture
     previousWatch.current=revision;
   },[revision,enabled,kind,scope,reload]);
   useEffect(()=>{if(kind === "players" && resource.status === "ready" && resource.source !== 'mock') cachePlayers(resource.data.items as Player[]);},[kind,resource.status,resource.source,resource.data,cachePlayers]);
-  return {...resource,enabled,status:enabled && (search !== settledSearch || resource.source === 'mock' && !mock) ? "loading" as const : resource.status};
+  return {...resource,enabled,inputError,status:inputError ? "error" as const : enabled && (search !== settledSearch || resource.source === 'mock' && !mock) ? "loading" as const : resource.status};
 }
 export function useCatalogPlayer(id: string | null) {
   const {getPlayer,status,mock,cachePlayers}=usePlatform();

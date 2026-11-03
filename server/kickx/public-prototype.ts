@@ -4,7 +4,7 @@ import type {PublicData, Formation} from '@/lib/kickx/types';
 import {FORMATIONS, checkDatabase, migrationMissing} from './prototype';
 export async function readPrototypePublic(db:SupabaseClient):Promise<Partial<PublicData>> {
  const [policy,posts,weekly,monthly,counts,market,freshness]=await Promise.all([
-  db.from('kickx_policy').select('version,initial_points,initial_price,sell_fee_bps,quote_seconds,club_competitions_enabled').single(),
+  db.from('kickx_policy').select('version,initial_points,initial_price,sell_fee_bps,quote_seconds,club_competitions_enabled,pricing_reference_at,report_parameters').single(),
   db.rpc('kickx_posts',{p_size:20}),
   db.from('ranking_snapshots').select('*').eq('period','weekly').gt('ends_at',new Date().toISOString()).order('calculated_at',{ascending:false}).limit(1),
   db.from('ranking_snapshots').select('*').eq('period','monthly').gt('ends_at',new Date().toISOString()).order('calculated_at',{ascending:false}).limit(1),
@@ -17,6 +17,7 @@ export async function readPrototypePublic(db:SupabaseClient):Promise<Partial<Pub
  if(!migrationMissing(freshness.error))checkDatabase(freshness.error);
  const p=policy.data;
  if(!p)throw new Error('Missing public policy');
- return {freshness:freshness.error?null:freshness.data,market:market.data,communityCounts:counts.data,policy:{version:p.version,initialPoints:p.initial_points,initialPrice:p.initial_price,sellFeeBps:p.sell_fee_bps,quoteSeconds:p.quote_seconds,clubCompetitionsEnabled:p.club_competitions_enabled===true},formations:FORMATIONS as Formation[],posts:posts.data.items,
+ return {freshness:freshness.error?null:freshness.data,market:market.data,communityCounts:counts.data,policy:{version:p.version,initialPoints:p.initial_points,initialPrice:p.initial_price,sellFeeBps:p.sell_fee_bps,quoteSeconds:p.quote_seconds,clubCompetitionsEnabled:p.club_competitions_enabled===true,
+  pricingReferenceAt:p.pricing_reference_at,reportParameters:p.report_parameters?{initialMin:p.report_parameters.initialMin,initialMax:p.report_parameters.initialMax,minPrice:p.report_parameters.minPrice,maxPrice:p.report_parameters.maxPrice,valuationStartMs:p.report_parameters.valuationStartMs}:undefined},formations:FORMATIONS as Formation[],posts:posts.data.items,
  rankings:[...(weekly.data??[]),...(monthly.data??[])].map(r=>({id:r.period,startsAt:r.starts_at,endsAt:r.ends_at,calculatedAt:r.calculated_at,rows:r.rows}))};
 }

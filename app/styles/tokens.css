@@ -29,22 +29,22 @@
   /* Text */
   --text: #111110;
   --text-2: #4f4f4a;
-  --text-3: #85857e;
+  --text-3: #62625b;
   --text-inverse: #ffffff;
 
   /* Status (always paired with a sign or icon) */
-  --up: #0e8a4f;
+  --up: #08703c;
   --up-bg: #e5f4ec;
-  --down: #d33a2c;
+  --down: #b82c26;
   --down-bg: #fdebe8;
   --warning: #a8700a;
   --warning-bg: #fff3d6;
   --info: #2457c5;
 
   /* Positions */
-  --pos-fw: #d8364a;
+  --pos-fw: #b72539;
   --pos-fw-bg: #ffe7ea;
-  --pos-mf: #18834a;
+  --pos-mf: #126f3e;
   --pos-mf-bg: #e2f5e9;
   --pos-df: #2459c9;
   --pos-df-bg: #e4edff;

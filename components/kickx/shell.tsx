@@ -5,6 +5,7 @@ import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { ArrowRight, ChevronDown, History, LogOut, Search, Settings, Wallet } from "lucide-react";
 import { apiRequest } from "@/lib/kickx/client";
 import { dateText, money } from "@/lib/kickx/data";
+import { CATALOG_SEARCH_MAX_LENGTH, normalizeCatalogSearch } from "@/lib/kickx/catalog-query";
 import { DataNotice, MockBadge } from "./ui";
 import { usePlatform } from "./provider";
 import { PlaybookArt } from "./playbook-art";
@@ -67,7 +68,7 @@ function AccountMenu() {
   }
   return (
     <div className="account" ref={ref}>
-      <button type="button" className="account-trigger" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(value => !value)}>
+      <button type="button" className="account-trigger" aria-label={`${nickname} 계정 메뉴`} aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(value => !value)}>
         <span className="account-avatar" aria-hidden="true">{nickname.slice(0, 1)}</span>
         <span className="account-text">
           <strong>{nickname}</strong>
@@ -95,11 +96,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { data, status, reload } = usePlatform();
   const [query, setQuery] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
   const standalone = pathname === "/login" || pathname === "/onboarding";
   const isHome = pathname === "/";
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    router.push(`/market?q=${encodeURIComponent(query.trim())}`);
+    try {
+      const normalized = normalizeCatalogSearch(query);
+      searchInput.current?.setCustomValidity("");
+      router.push(`/market?q=${encodeURIComponent(normalized)}`);
+    } catch (error) {
+      searchInput.current?.setCustomValidity(error instanceof Error ? error.message : "검색어를 확인해 주세요.");
+      searchInput.current?.reportValidity();
+    }
   };
   if (standalone) return <>{children}</>;
   return (
@@ -137,7 +146,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <form onSubmit={submit} role="search" className="subnav-search">
           <Search size={16} />
-          <input aria-label="선수, 구단, 리그 통합 검색" value={query} onChange={event => setQuery(event.target.value)} placeholder="선수 · 구단 · 리그 검색" />
+          <input ref={searchInput} aria-label="선수, 구단, 리그 통합 검색" maxLength={CATALOG_SEARCH_MAX_LENGTH} value={query} onChange={event => { event.target.setCustomValidity(""); setQuery(event.target.value); }} placeholder="선수 · 구단 · 리그 검색" />
           <button type="submit">검색</button>
         </form>
       </div>

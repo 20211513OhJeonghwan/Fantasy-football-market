@@ -492,7 +492,7 @@ button.pitch-player:hover { transform: translateY(-3px); }
 .podium { list-style: none; margin: 0 0 var(--s-6); padding: 0; display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: var(--s-4); }
 .podium-card { position: relative; display: grid; gap: var(--s-5); padding: var(--s-6); border: var(--border-strong); background: var(--surface); overflow: hidden; }
 .podium-card { --medal: #c9c9c2; border-top: 6px solid var(--medal); }
-.podium-card.place-1 { --medal: var(--yellow); background: var(--ink); color: #fff; box-shadow: 6px 6px 0 var(--yellow); }
+.podium-card.place-1 { --medal: var(--yellow); --text-3: #b8b8b0; background: var(--ink); color: #fff; box-shadow: 6px 6px 0 var(--yellow); }
 .podium-card.place-2 { --medal: #b9c0c8; }
 .podium-card.place-3 { --medal: #c98a4b; }
 .podium-medal { justify-self: start; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; font-size: 11px; font-weight: 900; letter-spacing: .08em; background: var(--medal); color: var(--ink); position: relative; }
