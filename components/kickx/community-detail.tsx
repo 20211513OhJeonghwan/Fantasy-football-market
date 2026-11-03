@@ -1,4 +1,7 @@
 "use client";
+import type { CSSProperties } from "react";
+import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
+import { UserAvatar } from "./avatar";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -100,10 +103,11 @@ export function PostDetail() {
     );
   }
   const reasonLength = reason.trim().length;
+  const club = clubIdentity(getTeam(post.scope === "club" ? post.target : targetPlayer?.team));
   return (
     <div className="reading-width">
       <BackLink href={lounge} label={targetName ? `${targetName} 라운지` : "커뮤니티"} />
-      <article className="article">
+      <article className={`article${club ? " has-club" : ""}`} style={club ? { "--club": luminance(club.primary) > 0.8 ? club.secondary : club.primary } as CSSProperties : undefined}>
         <div className="article-crumbs">
           <Link href={hub}>{post.scope === "club" ? "구단 커뮤니티" : "선수 커뮤니티"}</Link>
           <span aria-hidden="true">›</span>
@@ -114,7 +118,7 @@ export function PostDetail() {
         </div>
         <h1>{postHeading(post.title,post.body) || `${targetName ?? (post.scope === "club" ? "구단" : "선수")} 이야기`}</h1>
         <div className="article-author">
-          <span className="rank-avatar">{post.author.slice(0, 1)}</span>
+          <UserAvatar className="rank-avatar" avatar={post.authorId === data.session?.userId ? data.session?.profile?.avatar : null} seed={post.authorId} />
           <div>
             <strong>{post.author}</strong>
             <span>{dateText(post.date)} · 조회 {money(post.views)}</span>
@@ -188,7 +192,7 @@ export function PostDetail() {
             return (
               <li className={`comment ${isReply ? "reply" : ""} ${editing?.id === c.id ? "editing" : ""}`} key={c.id}>
                 {isReply && <CornerDownRight size={16} className="comment-reply-mark" aria-hidden="true" />}
-                <span className="rank-avatar">{c.author.slice(0, 1)}</span>
+                <UserAvatar className="rank-avatar" avatar={c.authorId === data.session?.userId ? data.session?.profile?.avatar : null} seed={c.authorId} />
                 <div>
                   <div className="comment-head">
                     <strong>{c.author}</strong>

@@ -58,8 +58,11 @@
 .community-board-table th:nth-child(4) { width:130px; }
 .community-board-table th.board-views,.community-board-table th.board-likes { width:65px; }
 .community-board-table td.board-subject { text-align:left; color:var(--ink); overflow:hidden; }
-.board-target { display:inline-block; max-width:9em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; padding:2px 7px; margin-right:8px; font-size:11px; font-weight:700; color:var(--text-2); background:var(--surface-2); border-radius:4px; }
-.board-target:hover { color:var(--ink); background:var(--yellow); }
+.board-target { --club:var(--text-3); display:inline-flex; align-items:center; gap:5px; max-width:11em; vertical-align:middle; padding:2px 8px 2px 4px; margin-right:8px; font-size:11.5px; font-weight:800; color:var(--ink); background:color-mix(in srgb, var(--club) 13%, white); border:1px solid color-mix(in srgb, var(--club) 45%, white); border-radius:999px; }
+.board-target span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.board-target .crest { --size:16px; }
+.board-target:hover { border-color:var(--club); background:color-mix(in srgb, var(--club) 22%, white); }
+.community-board-table tr.has-club td:first-child { box-shadow:inset 3px 0 0 var(--club); }
 .board-post-link { font-size:14px; font-weight:600; overflow-wrap:anywhere; vertical-align:middle; }
 .board-post-link:visited { color:#5b5b55; }
 .board-post-link:hover { text-decoration:underline; }
@@ -148,6 +151,7 @@
   .community-board-table th.board-subject { text-align:left; padding-left:14px; }
   .community-board-table td.board-subject { padding:13px 14px; }
   .board-target { margin-bottom:5px; }
+  .community-board-table tr.has-club td.board-subject { box-shadow:inset 3px 0 0 var(--club); }
   .board-post-link { display:block; font-size:14px; }
   .board-mobile-meta { display:block; font-size:11px; color:var(--text-3); margin-top:7px; }
   .numbered-pagination { padding:14px 10px; justify-content:center; }
@@ -155,3 +159,6 @@
   .numbered-pagination button { min-width:29px; }
   .supported-club-field { grid-template-columns:1fr; gap:8px; padding:10px; }
 }
+/* Post detail: the club colour runs along the top of the article and tints the club crumb. */
+.article.has-club { border-top:4px solid var(--club); }
+.article.has-club .article-target { padding:3px 10px 3px 5px; border-radius:999px; background:color-mix(in srgb, var(--club) 13%, white); border:1px solid color-mix(in srgb, var(--club) 45%, white); color:var(--ink); font-weight:800; }

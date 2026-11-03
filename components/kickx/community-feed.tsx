@@ -1,4 +1,5 @@
 "use client";
+import { UserAvatar } from "./avatar";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { supportsTeam, supportedTeams } from "@/lib/kickx/support";
@@ -12,7 +13,9 @@ import { POST_LIMITS, validatePost } from "@/lib/kickx/validation";
 import { usePlatform, useResource } from "./provider";
 import { useCatalogPage, useCatalogPlayer } from "./catalog";
 import { Select } from "./select";
-import { DataEmpty, PlayerPortrait } from "./ui";
+import { ClubCrest, DataEmpty, PlayerPortrait } from "./ui";
+import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
+import type { CSSProperties } from "react";
 
 const SIZE = 20;
 const emptyFeed = () => ({ items: [] as Post[], total: 0, page: 1, size: SIZE });
@@ -76,7 +79,7 @@ export function CommunityComposer(props: { scope: CommunityScope; target?: strin
   const fan = props.scope === "player" || supportedTeams(data.session?.profile).length>0 && (!props.target || supportsTeam(data.session?.profile,props.target));
   const canWrite = !!data.session?.profile && fan;
   return <section className="feed-composer panel" aria-label={`${props.scope === "club" ? "구단" : "선수"} 빠른 글쓰기`}>
-    {status !== "ready" ? <DataEmpty entity="커뮤니티" status={status} retry={reloadPlatform} rows={1} /> : !canWrite ? <div className="feed-composer-locked"><Lock size={16} aria-hidden="true" /><p>{!data.session ? "로그인하고 이야기를 나눠보세요." : !data.session.profile ? "프로필을 설정하면 이야기를 작성할 수 있습니다." : "구단 이야기는 해당 구단의 응원 팬만 작성할 수 있습니다."}</p><Link className="button secondary small" href={!data.session ? "/login" : "/mypage"}>{!data.session ? "로그인" : "프로필 설정"}</Link></div> : open ? <ComposerForm {...props} onSaved={() => { setOpen(false); props.onSaved(); }} onClose={() => setOpen(false)} /> : <button className="feed-composer-open" onClick={() => setOpen(true)}><span className="rank-avatar" aria-hidden="true">{data.session?.profile?.nickname.slice(0, 1) ?? "?"}</span><span className="feed-composer-prompt">{props.target && props.targetName ? `${props.targetName}에 대한 이야기를 남겨보세요` : props.scope === "club" ? "응원 구단에 대한 이야기를 남겨보세요" : "선수에 대한 생각을 나눠보세요"}</span><span className="feed-composer-cta"><Pencil size={15} /></span></button>}
+    {status !== "ready" ? <DataEmpty entity="커뮤니티" status={status} retry={reloadPlatform} rows={1} /> : !canWrite ? <div className="feed-composer-locked"><Lock size={16} aria-hidden="true" /><p>{!data.session ? "로그인하고 이야기를 나눠보세요." : !data.session.profile ? "프로필을 설정하면 이야기를 작성할 수 있습니다." : "구단 이야기는 해당 구단의 응원 팬만 작성할 수 있습니다."}</p><Link className="button secondary small" href={!data.session ? "/login" : "/mypage"}>{!data.session ? "로그인" : "프로필 설정"}</Link></div> : open ? <ComposerForm {...props} onSaved={() => { setOpen(false); props.onSaved(); }} onClose={() => setOpen(false)} /> : <button className="feed-composer-open" onClick={() => setOpen(true)}><UserAvatar className="rank-avatar" avatar={data.session?.profile?.avatar} seed={data.session?.userId ?? "guest"} /><span className="feed-composer-prompt">{props.target && props.targetName ? `${props.targetName}에 대한 이야기를 남겨보세요` : props.scope === "club" ? "응원 구단에 대한 이야기를 남겨보세요" : "선수에 대한 생각을 나눠보세요"}</span><span className="feed-composer-cta"><Pencil size={15} /></span></button>}
   </section>;
 }
 
@@ -99,8 +102,11 @@ export function CommunityFeed({ scope, target, targetName, title = "게시글", 
       {feedStatus!=='ready'?<DataEmpty entity="게시글" status={feedStatus} retry={status==='ready'?remote.reload:reloadPlatform}/>:items.length?<div className="board-list-scroll"><table className="community-board-table"><thead><tr><th className="board-number">번호</th><th className="board-subject">제목</th><th>작성자</th><th>작성일</th><th className="board-views">조회</th><th className="board-likes">추천</th></tr></thead><tbody>
         {items.map((post,index)=>{
           const name=post.targetName||(scope==='club'?getTeam(post.target)?.name:getPlayer(post.target)?.name)||'—';
-          return <tr key={post.id} data-scope={post.scope}><td className="board-number num">{total-(page-1)*SIZE-index}</td>
-            <td className="board-subject">{!target&&<Link className="board-target" href={`${COMMUNITY_PATHS[scope]}/${post.target}`}>{name}</Link>}
+          // Club colour marks the row edge and the club chip so mixed boards scan by club.
+          const club=scope==='club'?clubIdentity(getTeam(post.target)):null;
+          const clubStyle=club?{'--club':luminance(club.primary)>0.8?club.secondary:club.primary} as CSSProperties:undefined;
+          return <tr key={post.id} data-scope={post.scope} className={club&&!target?'has-club':''} style={clubStyle}><td className="board-number num">{total-(page-1)*SIZE-index}</td>
+            <td className="board-subject">{!target&&<Link className="board-target" href={`${COMMUNITY_PATHS[scope]}/${post.target}`}>{scope==='club'&&<ClubCrest id={post.target} size="small"/>}<span>{name}</span></Link>}
               <Link className="board-post-link" href={`/community/posts/${post.id}`}>{post.title||postTitle('',post.body)}{post.transaction&&<Paperclip size={13} aria-label="거래 첨부"/>}{post.commentCount>0&&<b className="board-comment-count num">[{post.commentCount}]</b>}</Link>
               <span className="board-mobile-meta">{post.author} · {dateText(post.date,false)} · 조회 {money(post.views)} · 추천 {money(post.likes)}</span>
             </td><td className="board-author">{post.author}</td><td className="board-date"><time dateTime={post.date}>{dateText(post.date,false)}</time></td><td className="board-views num">{money(post.views)}</td><td className="board-likes num">{money(post.likes)}</td></tr>;

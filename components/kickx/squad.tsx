@@ -1,5 +1,6 @@
 "use client";
-import { useState, useRef, type CSSProperties } from "react";
+import {MatchNotificationToggle} from "./notifications";
+import { useId, useState, useRef, type CSSProperties } from "react";
 import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
 import { Plus, RotateCcw, Save, X } from "lucide-react";
 import { apiRequest } from "@/lib/kickx/client";
@@ -11,18 +12,38 @@ import { Change, DataEmpty, MemberNotice, PageHeading, PlayerPortrait, PositionB
 
 const ROWS: Position[] = ["FW", "MF", "DF", "GK"];
 const MAX_SQUAD = 11;
-/** Kit colours from the presentation-only club identity; the trim keeps readable contrast. */
+/**
+ * Kit colours from the presentation-only club identity (the football API has no kit images).
+ * The trim keeps readable contrast; stripes appear only for clubs registered with striped colours.
+ */
 function kit(team: Parameters<typeof clubIdentity>[0]) {
   const id = clubIdentity(team);
   if (!id) return undefined;
   const ink = Math.abs(luminance(id.primary) - luminance(id.secondary)) > 0.25 ? id.secondary : luminance(id.primary) > 0.4 ? "#111110" : "#FFFFFF";
-  return { "--kit": id.primary, "--kit-2": ink } as CSSProperties;
+  return { style: { "--kit": id.primary, "--kit-2": ink } as CSSProperties, stripes: !!id.stripes };
 }
-function Jersey({ empty = false, style }: { empty?: boolean; style?: CSSProperties }) {
+const SHIRT = "M21 3 9 7.5 1.5 19 10 25.5 15 21.5V56q0 2 2 2h30q2 0 2-2V21.5l5 4 8.5-6.5L55 7.5 43 3q-3.5 6.5-11 6.5T21 3Z";
+function Jersey({ empty = false, kit: k }: { empty?: boolean; kit?: ReturnType<typeof kit> }) {
+  const uid = useId().replace(/:/g, "");
+  if (empty) return <svg className="jersey jersey-empty" viewBox="0 0 64 60" aria-hidden="true"><path d={SHIRT} /></svg>;
   return (
-    <svg className={`jersey ${empty ? "jersey-empty" : ""}`} viewBox="0 0 64 60" aria-hidden="true" style={style}>
-      <path d="M22 4 L12 7 L2 18 L9 28 L15 24 L15 57 L49 57 L49 24 L55 28 L62 18 L52 7 L42 4 C40 9 36 11 32 11 C28 11 24 9 22 4 Z" />
-      {!empty && <path className="jersey-trim" d="M22 4 C24 9 28 11 32 11 C36 11 40 9 42 4" />}
+    <svg className="jersey" viewBox="0 0 64 60" aria-hidden="true" style={k?.style}>
+      <defs>
+        <clipPath id={`${uid}c`}><path d={SHIRT} /></clipPath>
+        <linearGradient id={`${uid}g`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity=".28" />
+          <stop offset=".45" stopColor="#fff" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity=".22" />
+        </linearGradient>
+      </defs>
+      <path className="jersey-body" d={SHIRT} />
+      <g clipPath={`url(#${uid}c)`}>
+        {k?.stripes && <path className="jersey-stripes" d="M19.5 0h5v60h-5ZM29.5 0h5v60h-5ZM39.5 0h5v60h-5Z" />}
+        <path className="jersey-cuff" d="M1.5 19 10 25.5l2.2-2.9-8.6-6.4ZM62.5 19 54 25.5l-2.2-2.9 8.6-6.4Z" />
+        <path className="jersey-collar" d="M21 3q3.5 6.5 11 6.5T43 3l-3.4-.9Q37.6 6.6 32 6.6t-7.6-4.5Z" />
+        <rect width="64" height="60" fill={`url(#${uid}g)`} />
+      </g>
+      <path className="jersey-edge" d={SHIRT} />
     </svg>
   );
 }
@@ -69,7 +90,7 @@ export function Pitch({
               const p = rule ? getPlayer(slots[i]) : undefined;
               const body = p ? (
                 <>
-                  <Jersey style={kit(getTeam(p.team))} />
+                  <Jersey kit={kit(getTeam(p.team))} />
                   <span className="pitch-name">{p.short || p.name}</span>
                   {!compact && <span className="pitch-value num">{money(p.price)}</span>}
                 </>
@@ -172,6 +193,7 @@ export function SquadScreen() {
         }
       />
       <MemberNotice />
+      <MatchNotificationToggle/>
       <div className="squad-layout">
         <section className="squad-board">
           <div className="squad-toolbar">

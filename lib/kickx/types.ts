@@ -125,7 +125,8 @@ export type Comment = {
   parentId?: string | null;
   revision?: number;
 };
-export type Profile = { nickname: string; team: string | null; teams?: string[] };
+/** `avatar` is `icon:<name>` or `club:<teamId>` (see lib/kickx/avatar.ts); null uses a stable default icon. */
+export type Profile = { nickname: string; team: string | null; teams?: string[]; avatar?: string | null };
 export type Session = {
   userId: string;
   role: "member" | "admin";

@@ -1,4 +1,5 @@
 "use client";
+import { UserAvatar } from "./avatar";
 import { Select } from "./select";
 import { useState, type CSSProperties } from "react";
 import { Medal } from "lucide-react";
@@ -11,7 +12,7 @@ const MEDALS = ["GOLD", "SILVER", "BRONZE"];
 /** Avatar tinted with the supporter's club colour (presentation only). */
 function avatarStyle(team: Parameters<typeof clubIdentity>[0]) {
   const id = clubIdentity(team);
-  return id ? ({ background: id.primary, color: luminance(id.primary) > 0.45 ? "#111110" : "#FFFFFF" } as CSSProperties) : undefined;
+  return id ? ({ "--avatar-bg": id.primary, "--avatar-ink": luminance(id.primary) > 0.45 ? "#111110" : "#FFFFFF" } as CSSProperties) : undefined;
 }
 export function RankingScreen() {
   const { data, getTeam } = usePlatform();
@@ -57,7 +58,7 @@ export function RankingScreen() {
         </ol>
       )}
       <div className="my-rank">
-        <span className="my-rank-avatar">{data.session?.profile?.nickname.slice(0, 1) || "—"}</span>
+        <UserAvatar className="my-rank-avatar" avatar={data.session?.profile?.avatar} seed={data.session?.userId ?? "guest"} />
         <div className="my-rank-text">
           <span>나의 {period} 순위</span>
           <strong>{data.session?.profile?.nickname || (data.session ? "내 계정" : "로그인 후 확인")}</strong>
@@ -88,7 +89,7 @@ export function RankingScreen() {
                   <td className={`rank-index num ${r.rank <= 3 ? "top" : ""}`}>{r.rank}</td>
                   <td>
                     <div className="rank-user">
-                      <span className="rank-avatar" style={avatarStyle(getTeam(r.team))}>{r.nickname.slice(0, 1)}</span>
+                      <UserAvatar className="rank-avatar" avatar={r.userId === data.session?.userId ? data.session?.profile?.avatar : null} seed={r.userId} style={avatarStyle(getTeam(r.team))} />
                       <strong>{r.nickname}</strong>
                       {r.userId === data.session?.userId && <span className="tag yellow">나</span>}
                     </div>
