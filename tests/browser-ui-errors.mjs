@@ -42,7 +42,7 @@ async function setup({watchCount=13}={}){
  const p=await c.newPage();p.on('pageerror',error=>report.errors.push(error.message));
  return {c,p,state,requests};
 }
-const goto=(p,path)=>p.goto(base+path,{waitUntil:'networkidle'});
+const goto=async(p,path)=>{const response=await p.goto(base+path,{waitUntil:'networkidle'});if(path.startsWith('/market'))await p.getByRole('button',{name:'목록 보기',exact:true}).click();return response;};
 async function check(name,run){await run();report.checks.push(name);console.log('PASS '+name);}
 try{
  for(let i=0;i<40;i++){

@@ -18,6 +18,10 @@ test("profile input is normalized, constrained and cannot supply a role or ident
   assert.deepEqual(validation.parseProfile({nickname:"승현",team:""}),{nickname:"승현",team:null,teams:[]});
   for (const nickname of ["a","a".repeat(21),"<script>","승현\n관리자","😀😀"]) assert.throws(()=>validation.parseProfile({nickname}), validation.InputError);
   assert.throws(()=>validation.parseProfile({nickname:"승현",team:{id:"other"}}),validation.InputError);
+  assert.deepEqual(validation.parseProfile({nickname:"승현",teams:["club-1"],avatar:"icon:trophy"}),{nickname:"승현",team:"club-1",teams:["club-1"],avatar:"icon:trophy"});
+  assert.deepEqual(validation.parseProfile({nickname:"승현",teams:["club-1"],avatar:"club:club-1"}).avatar,"club:club-1");
+  assert.equal(validation.parseProfile({nickname:"승현",avatar:null}).avatar,null);
+  for (const avatar of ["club:club-2","icon:rocket","<img>",7]) assert.throws(()=>validation.parseProfile({nickname:"승현",teams:["club-1"],avatar}),validation.InputError);
 });
 test("watchlist mutation is an explicit idempotent desired state, not an ambiguous toggle", () => {
   assert.deepEqual(validation.parseWatch({playerId:"p-1",watched:false,userId:"other"}),{playerId:"p-1",watched:false});

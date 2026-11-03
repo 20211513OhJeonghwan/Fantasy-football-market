@@ -6,7 +6,8 @@
  */
 export type CrestShape = "shield" | "round" | "heater" | "square";
 export type CrestPattern = "solid" | "half" | "band" | "stripes" | "ring";
-export type ClubIdentity = { code: string; primary: string; secondary: string; shape: CrestShape; pattern: CrestPattern };
+/** `stripes` is true only for clubs registered with striped colours; hashed fallbacks never claim a kit pattern. */
+export type ClubIdentity = { code: string; primary: string; secondary: string; shape: CrestShape; pattern: CrestPattern; stripes?: boolean };
 
 type Entry = [aliases: string[], code: string, primary: string, secondary: string, shape?: CrestShape, pattern?: CrestPattern];
 const CLUBS: Entry[] = [
@@ -185,6 +186,7 @@ export function clubIdentity(team: { id: string; name: string; english?: string 
     secondary,
     shape: entry?.[4] ?? SHAPES[h % SHAPES.length],
     pattern: entry?.[5] ?? PATTERNS[(h >>> 3) % PATTERNS.length],
+    stripes: entry?.[5] === "stripes",
   };
   cache.set(team.id, identity);
   return identity;

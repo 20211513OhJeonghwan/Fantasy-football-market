@@ -99,7 +99,7 @@ try {
       await concurrentPage.goto(base+(detail?'/players/test-player':'/market'),{waitUntil:'domcontentloaded'});
       await requested;
       assert.equal(released,false);
-      await (detail?concurrentPage.getByRole('heading',{name:'CI-only player',exact:true}):concurrentPage.locator('.market-table').getByText('CI-only player',{exact:true})).waitFor({timeout:10000});
+      await concurrentPage.getByRole('heading',{name:'CI-only player',exact:true}).waitFor({timeout:10000});
     } finally {
       const completed=concurrentPage.waitForResponse(response=>new URL(response.url()).pathname==='/api/kickx',{timeout:5000}).catch(()=>null);
       released=true;release();await completed;await concurrent.close();
@@ -156,6 +156,7 @@ try {
   assert.deepEqual(state.member.watchlist,["test-player"]);
   report.checks.push("Zero price renders; failed watchlist writes do not pretend to succeed");
   await mockPage.goto(base+"/market?watchlist=1",{waitUntil:"networkidle"});
+  await mockPage.getByRole('button',{name:'목록 보기',exact:true}).click();
   assert.ok(await mockPage.locator('.market-table').getByText("CI-only player",{exact:true}).isVisible());
   report.checks.push("Saved watchlist feeds the filtered player list");
   await mockPage.getByRole("button",{name:"전체 선수",exact:true}).click();
@@ -220,10 +221,11 @@ try {
   state.players[0].importedMatches=2;
   await mock.route("https://sports.bzzoiro.com/img/player/9/",route=>route.fulfill({status:204}));
   await mockPage.goto(base+"/players/test-player",{waitUntil:"networkidle"});
-  assert.equal(await mockPage.getByText("수집된 2경기 득점 · 도움",{exact:true}).count(),0);
   await mockPage.locator(".detail-photo .portrait svg").waitFor();
   assert.equal(await mockPage.locator(".detail-photo .portrait img").count(),0);
-  report.checks.push("BSD missing photo falls back; removed season counters stay absent from player details");
+  // The 11-03 player detail removed the stat strip below the banner.
+  assert.equal(await mockPage.getByText("수집된 2경기 득점 · 도움",{exact:true}).count(),0);
+  report.checks.push("BSD missing photo falls back; the removed stat strip stays removed");
   // Opening a match report is the only trigger; reopening shares the cached result.
   const reportFacts={playerName:"CI-only player",opponent:"리포트 상대",playedAt:"2026-10-18T12:00:00Z",minutes:90,score:57,scoreStatus:"provisional",ruleVersion:"form-v2",contributions:[{metric:"minutes",value:90,points:30},{metric:"goals",value:1,points:30},{metric:"yellow_cards",value:1,points:-3}],warningCount:1,priceBefore:100000,priceAfter:92000,targetPrice:80000,formScore:40,changePercent:-8,windowSize:5};
   state.players[0].records=[{id:"report-record",fixtureId:"test-fixture",reportAvailable:true,playedAt:reportFacts.playedAt,opponent:reportFacts.opponent,result:"승",minutes:90,goals:1,assists:0,performance:57}];
@@ -590,10 +592,14 @@ try {
     assert.equal(await marketPage.locator('.market-stats,.market-pending').count(),0);
     assert.equal(await marketPage.locator('.market-heading .page-heading p').count(),0);
     assert.equal(await marketPage.locator('.market-browser .league-tiles').count(),1);
-    assert.equal(await marketPage.locator('.market-table tbody tr').count(),12);
+    const columns=await marketPage.locator('.player-grid').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
+    assert.equal(await marketPage.locator('.player-grid .pcard').count(),columns*2);
+    assert.equal(await marketPage.locator('.player-grid .pcard').evaluateAll(cards=>new Set(cards.map(card=>card.offsetTop)).size),2);
     assert.equal(await marketPage.getByRole('heading',{name:'선수 시장',exact:true}).evaluate(el=>parseFloat(getComputedStyle(el).fontSize)),width===1440?40:30);
     assert.ok(await marketPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     await marketPage.screenshot({path:`test-artifacts/market-scope-${width}.png`,fullPage:true});
+    await marketPage.getByRole('button',{name:'목록 보기',exact:true}).click();
+    assert.equal(await marketPage.locator('.market-table tbody tr').count(),12);
   }
   await marketPage.setViewportSize({width:1440,height:900});
   const marketPages=marketPage.getByRole('navigation',{name:'선수 시장 페이지 선택',exact:true});

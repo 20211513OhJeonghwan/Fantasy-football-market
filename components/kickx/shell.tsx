@@ -1,4 +1,5 @@
 "use client";
+import { UserAvatar } from "./avatar";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
@@ -9,6 +10,7 @@ import { CATALOG_SEARCH_MAX_LENGTH, normalizeCatalogSearch } from "@/lib/kickx/c
 import { DataNotice, MockBadge } from "./ui";
 import { usePlatform } from "./provider";
 import { PlaybookArt } from "./playbook-art";
+import { NotificationBell, NotificationProvider } from "./notifications";
 
 const links = [
   { href: "/", label: "홈" },
@@ -69,7 +71,7 @@ function AccountMenu() {
   return (
     <div className="account" ref={ref}>
       <button type="button" className="account-trigger" aria-label={`${nickname} 계정 메뉴`} aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(value => !value)}>
-        <span className="account-avatar" aria-hidden="true">{nickname.slice(0, 1)}</span>
+        <UserAvatar className="account-avatar" avatar={data.session?.profile?.avatar} seed={data.session?.userId ?? nickname} />
         <span className="account-text">
           <strong>{nickname}</strong>
           <span className="num">{money(points)}<span className="unit">P</span></span>
@@ -112,7 +114,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
   if (standalone) return <>{children}</>;
   return (
-    <div className="app">
+    <NotificationProvider key={data.session?.userId??"guest"}><div className="app">
       <a className="skip-link" href="#main-content">본문으로 바로가기</a>
       <div className="topbar">
         <span className="topbar-market">
@@ -135,7 +137,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <PlaybookArt variant="header" className="masthead-art" />
-        <AccountMenu />
+        <div className="masthead-account"><NotificationBell/><AccountMenu /></div>
         <span className="masthead-manifesto">PLAYERS<br />MARKET<br />SQUAD<br />COMMUNITY<br />FOR A BIGGER FOOTBALL</span>
       </header>
       <div className="subnav">
@@ -181,6 +183,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span>© 2026 KICK-X · Capstone Design Project</span>
         </p>
       </footer>
-    </div>
+    </div></NotificationProvider>
   );
 }

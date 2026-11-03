@@ -7,6 +7,9 @@ import { mapPlayer } from "./catalog";
 import { readCachedCatalog } from "./public-cache";
 import { checkDatabase, migrationMissing } from "./prototype";
 import { readOperations } from "./ingestion";
+/** PostgREST reports an unknown `profiles.avatar` column as 42703 (select) or PGRST204 (write). */
+const missingAvatarColumn = (error: { code?: string; message?: string } | null) =>
+  !!error && (error.code === "42703" || error.code === "PGRST204") && /avatar/.test(error.message ?? "");
 export class SupabaseKickxRepository implements KickxRepository {
   readonly configured = true;
   readonly adminConfigured = true;
@@ -25,15 +28,19 @@ export class SupabaseKickxRepository implements KickxRepository {
       throw error;
     }
     if (!data.user) return null;
-    const [profile, role] = await Promise.all([
-      client.from("profiles").select("nickname,team_id,team_ids").eq("id", data.user.id).maybeSingle(),
+    const readProfile = (columns: string) => client.from("profiles").select(columns).eq("id", data.user.id).maybeSingle();
+    const [firstProfile, role] = await Promise.all([
+      readProfile("nickname,team_id,team_ids,avatar"),
       client.from("user_roles").select("role").eq("user_id", data.user.id).maybeSingle(),
     ]);
+    let profile = firstProfile;
+    // Until the avatar migration is applied the profile still loads with the default icon.
+    if (missingAvatarColumn(profile.error)) profile = await readProfile("nickname,team_id,team_ids");
     if (profile.error) throw profile.error;
     if (role.error) throw role.error;
     return {
       userId: data.user.id, role: role.data?.role === "admin" ? "admin" : "member",
-      profile: profile.data ? { nickname: profile.data.nickname, team: profile.data.team_id, teams: profile.data.team_ids ?? (profile.data.team_id ? [profile.data.team_id] : []) } : null,
+      profile: profile.data ? (p => ({ nickname: p.nickname, team: p.team_id, teams: p.team_ids ?? (p.team_id ? [p.team_id] : []), avatar: p.avatar ?? null }))(profile.data as unknown as { nickname: string; team_id: string | null; team_ids: string[] | null; avatar?: string | null }) : null,
     };
   }
   async getPublicData() {

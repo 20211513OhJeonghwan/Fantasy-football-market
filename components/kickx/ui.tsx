@@ -456,10 +456,16 @@ export function Sparkline({ values, down = false }: { values: number[]; down?: b
   if (values.length < 2 || values.some((v) => !Number.isFinite(v))) return <span className="muted">—</span>;
   const min = Math.min(...values),
     range = Math.max(...values) - min || 1;
-  const points = values.map((v, i) => `${(i / (values.length - 1)) * 120},${30 - ((v - min) / range) * 26}`).join(" ");
+  const xy = values.map((v, i) => [(i / (values.length - 1)) * 120, 30 - ((v - min) / range) * 26] as const);
+  const points = xy.map(([x, y]) => `${x},${y}`).join(" ");
+  const baseY = xy[0][1];
+  // Same language as PriceChart: start-value baseline, soft area, line, end dot.
   return (
     <svg className={`sparkline ${down ? "negative" : ""}`} viewBox="0 0 120 34" preserveAspectRatio="none" role="img" aria-label={`가격 추이 ${down ? "하락" : "상승"}`}>
-      <polyline fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" points={points} />
+      <line className="spark-base" x1="0" x2="120" y1={baseY} y2={baseY} vectorEffect="non-scaling-stroke" />
+      <polygon className="spark-area" points={`0,34 ${points} 120,34`} />
+      <polyline className="spark-line" fill="none" points={points} vectorEffect="non-scaling-stroke" />
+      <circle className="spark-end" cx={xy[xy.length - 1][0]} cy={xy[xy.length - 1][1]} r="2.6" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
@@ -509,7 +515,7 @@ export function PriceChart({ points, label = "선수 가치" }: { points: Series
         >
           <defs>
             <linearGradient id={uid} x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" className="chart-stop" stopOpacity=".55" />
+              <stop offset="0%" className="chart-stop" stopOpacity=".22" />
               <stop offset="100%" className="chart-stop" stopOpacity="0" />
             </linearGradient>
           </defs>
@@ -517,8 +523,10 @@ export function PriceChart({ points, label = "선수 가치" }: { points: Series
             const y = top + (i / 3) * (H - top - bottom);
             return <line key={i} x1="0" y1={y} x2={W} y2={y} className="chart-grid" vectorEffect="non-scaling-stroke" />;
           })}
+          <line x1="0" x2={W} y1={coords[0][1]} y2={coords[0][1]} className="chart-base" vectorEffect="non-scaling-stroke" />
           <path d={`${path} L${W} ${H} L0 ${H} Z`} fill={`url(#${uid})`} className="chart-area" />
           <path d={path} pathLength={1} className="chart-line" fill="none" vectorEffect="non-scaling-stroke" />
+          {selected === null && <circle cx={coords[coords.length - 1][0]} cy={coords[coords.length - 1][1]} r="4" className="chart-end" />}
           {selected !== null && (
             <line x1={coords[selected][0]} x2={coords[selected][0]} y1={top} y2={H - bottom} className="chart-cross" vectorEffect="non-scaling-stroke" />
           )}

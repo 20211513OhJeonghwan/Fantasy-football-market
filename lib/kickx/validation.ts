@@ -1,6 +1,18 @@
 /** Technical input limits; product policy can be tightened before launch. */
 export const PROFILE_LIMITS = { min: 2, max: 20 } as const;
 export class InputError extends Error {}
+export const AVATAR_ICONS = ["ball", "jersey", "trophy", "boot", "whistle", "goal"] as const;
+export type AvatarIcon = typeof AVATAR_ICONS[number];
+export type AvatarChoice = { kind: "icon"; icon: AvatarIcon } | { kind: "club"; id: string };
+
+/** Stored as `icon:<name>` or `club:<teamId>`; anything else means "no choice". */
+export function parseAvatar(value: unknown): AvatarChoice | null {
+  if (typeof value !== "string") return null;
+  const [kind, id] = value.split(":", 2);
+  if (kind === "icon" && (AVATAR_ICONS as readonly string[]).includes(id)) return { kind, icon: id as AvatarIcon };
+  if (kind === "club" && /^[a-zA-Z0-9_-]{1,100}$/.test(id ?? "")) return { kind, id };
+  return null;
+}
 export function safeReturnPath(value: unknown, fallback = "/") {
   if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//") || /[\\\u0000-\u0020]/.test(value)) return fallback;
   try {
@@ -19,7 +31,12 @@ export function parseProfile(value: unknown) {
   if (!Array.isArray(rawTeams) || rawTeams.length > 5 || rawTeams.some(t => typeof t !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(t)) || new Set(rawTeams).size !== rawTeams.length)
     throw new InputError("응원 구단을 다시 선택해 주세요.");
   const teams = rawTeams as string[];
-  return { nickname, team: teams[0] ?? null, teams };
+  const avatar = input.avatar == null || input.avatar === "" ? null : input.avatar;
+  const choice = parseAvatar(avatar);
+  if (avatar !== null && (!choice || choice.kind === "club" && !teams.includes(choice.id)))
+    throw new InputError("프로필 아이콘을 다시 선택해 주세요. 구단 엠블럼은 응원 구단 중에서 고를 수 있습니다.");
+  // Omitted avatar leaves the stored choice untouched.
+  return { nickname, team: teams[0] ?? null, teams, ...("avatar" in input ? { avatar: avatar as string | null } : {}) };
 }
 export function parseWatch(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new InputError("요청을 확인해 주세요.");

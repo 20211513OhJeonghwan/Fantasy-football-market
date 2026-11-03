@@ -1,4 +1,5 @@
 "use client";
+import { AVATAR_LABELS, UserAvatar } from "./avatar";
 import { Select } from "./select";
 import { useTeamOptions } from "./options";
 import Link from "next/link";
@@ -11,7 +12,7 @@ import { PlaybookArt } from "./playbook-art";
 import { DataNotice, LeagueMark, MemberNotice, MockBadge, PageHeading, SectionTitle, StatCard, TeamBadge } from "./ui";
 import { apiRequest } from "@/lib/kickx/client";
 import { dateText, money } from "@/lib/kickx/data";
-import { parseProfile, PROFILE_LIMITS, safeReturnPath } from "@/lib/kickx/validation";
+import { AVATAR_ICONS, parseProfile, PROFILE_LIMITS, safeReturnPath } from "@/lib/kickx/validation";
 import type { Profile } from "@/lib/kickx/types";
 import { DOMESTIC_LEAGUES, supportedTeams } from '@/lib/kickx/support';
 
@@ -96,24 +97,28 @@ export function LoginScreen() {
 function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
   const { data, status, mock, updateProfile, notify } = usePlatform();
   const search = useSearchParams(), router = useRouter();
-  const [draftName, setDraftName] = useState<string | null>(null), [draftTeams, setDraftTeams] = useState<string[] | null>(null);
+  const [draftName, setDraftName] = useState<string | null>(null), [draftTeams, setDraftTeams] = useState<string[] | null>(null), [draftAvatar, setDraftAvatar] = useState<string | null | undefined>(undefined);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const lock = useRef(false);
   const nickname = draftName ?? data.session?.profile?.nickname ?? "";
   const teams = draftTeams ?? supportedTeams(data.session?.profile);
+  const savedAvatar = data.session?.profile?.avatar ?? null;
+  const rawAvatar = draftAvatar === undefined ? savedAvatar : draftAvatar;
+  // A crest stops being selectable once its club leaves the supported list.
+  const avatar = rawAvatar?.startsWith("club:") && !teams.includes(rawAvatar.slice(5)) ? null : rawAvatar;
   const leagues = data.leagues.filter(l => DOMESTIC_LEAGUES.includes(l.id as typeof DOMESTIC_LEAGUES[number]) || !l.id.startsWith('bsd-') && data.teams.some(t=>t.leagueId===l.id));
   const teamOptions = useTeamOptions("나중에 선택", "all", "");
   const canSave = status === "ready" && !!data.session;
-  const dirty = !data.session?.profile || nickname !== data.session.profile.nickname || JSON.stringify(teams) !== JSON.stringify(supportedTeams(data.session.profile));
+  const dirty = !data.session?.profile || nickname !== data.session.profile.nickname || JSON.stringify(teams) !== JSON.stringify(supportedTeams(data.session.profile)) || avatar !== savedAvatar;
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!canSave || lock.current) return;
     setError("");
     try {
-      const values = parseProfile({ nickname, teams });
+      const values = parseProfile({ nickname, teams, avatar });
       lock.current = true; setBusy(true);
       const profile = mock ? values : (await apiRequest<{ profile: Profile }>("/api/kickx/profile", "POST", values)).profile;
-      updateProfile(profile); setDraftName(null); setDraftTeams(null);
+      updateProfile(profile); setDraftName(null); setDraftTeams(null); setDraftAvatar(undefined);
       notify(mock ? "프로필을 저장했습니다. (예시 모드 · 저장되지 않음)" : "프로필을 저장했습니다.");
       if (onboarding) { router.replace(safeReturnPath(search.get("next"))); router.refresh(); }
     } catch (error) { setError(error instanceof Error ? error.message : "프로필을 저장하지 못했습니다."); }
@@ -134,6 +139,14 @@ function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
             onChange={id=>setDraftTeams([...teams.filter(team=>data.teams.find(t=>t.id===team)?.leagueId!==league.id),...(id?[id]:[])])}
             options={[{value:'',label:'선택 안 함'},...teamOptions.filter(o=>data.teams.some(t=>t.id===o.value&&t.leagueId===league.id))]} placeholder="선택 안 함"/>
         </div>;})}
+      </fieldset>
+      <fieldset className="avatar-picker" disabled={busy}><legend>프로필 아이콘</legend>
+        <p id="avatar-help">커뮤니티와 랭킹에 표시됩니다. 응원 구단 엠블럼도 고를 수 있습니다.</p>
+        <div role="radiogroup" aria-describedby="avatar-help">
+          {AVATAR_ICONS.map(icon => { const value = `icon:${icon}`; return <button type="button" role="radio" aria-checked={avatar === value} key={icon} className={avatar === value ? "active" : ""} onClick={() => setDraftAvatar(value)}><UserAvatar className="avatar-option" avatar={value} seed={icon} /><span>{AVATAR_LABELS[icon]}</span></button>; })}
+          {teams.map(id => { const value = `club:${id}`; return <button type="button" role="radio" aria-checked={avatar === value} key={value} className={avatar === value ? "active" : ""} onClick={() => setDraftAvatar(value)}><UserAvatar className="avatar-option" avatar={value} seed={id} /><span>{data.teams.find(t => t.id === id)?.name ?? "응원 구단"}</span></button>; })}
+          <button type="button" role="radio" aria-checked={avatar === null} className={avatar === null ? "active" : ""} onClick={() => setDraftAvatar(null)}><UserAvatar className="avatar-option" avatar={null} seed={data.session?.userId ?? "guest"} /><span>기본</span></button>
+        </div>
       </fieldset>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="form-actions">
@@ -183,7 +196,7 @@ export function MyPageScreen() {
       <div className="settings-layout">
         <aside className="profile-card">
           <div className="profile-card-top">
-            <span className="profile-avatar">{profile?.nickname.slice(0, 1) || "—"}</span>
+            <UserAvatar className="profile-avatar" avatar={profile?.avatar} seed={data.session?.userId ?? "guest"} label="프로필 아이콘" />
             <MockBadge compact />
           </div>
           <h2>{profile?.nickname || (data.session ? "프로필을 완성해 주세요" : "로그인이 필요합니다")}</h2>

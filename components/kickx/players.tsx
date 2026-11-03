@@ -119,10 +119,10 @@ export function PlayerList({ market = false }: { market?: boolean }) {
     [team, setTeam] = useState(sp.get("team") || "all"),
     [pos, setPos] = useState("전체");
   const [sort, setSort] = useState(market ? "volume" : "name"),
-    [view, setView] = useState(market ? "list" : "grid"),
+    [view, setView] = useState("grid"),
     [tab, setTab] = useState(sp.get("watchlist") === "1" ? "관심 선수" : "전체 선수"),
     [page, setPage] = useState(1),
-    [cardPageSize, setCardPageSize] = useState(LIST_PAGE_SIZE);
+    [cardPageSize, setCardPageSize] = useState(4);
   const browserRef=useRef<HTMLElement>(null);
   const pageSize=view === "grid" ? cardPageSize : LIST_PAGE_SIZE;
   useEffect(() => {
