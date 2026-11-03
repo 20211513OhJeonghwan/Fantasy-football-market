@@ -69,7 +69,7 @@ export function MatchReportDialog({ playerId, record, onClose }: { playerId: str
       {error && <div className="report-notice" role="alert"><p>{error}</p><button className="button secondary small" onClick={() => setAttempt(n => n + 1)}>다시 확인</button></div>}
       {facts && <>
         <div className="report-numbers">
-          <div><span>Performance</span><strong className="num">{score(facts.score)}<small>점</small></strong><small>{facts.minutes}분 출전 · {facts.scoreStatus === "provisional" ? "잠정 산정" : "산정 완료"}</small></div>
+          <div><span>Performance</span><strong className="num">{score(facts.score)}<small>점</small></strong><small>{facts.minutes}분 출전 · {facts.scoreStatus === "provisional" ? "확인 기록 기준" : "산정 완료"}</small></div>
           <div><span>이번 경기 가치 변동</span><strong><Change value={facts.changePercent} /></strong><small>{money(facts.priceBefore)} P → {money(facts.priceAfter)} P</small></div>
         </div>
         {text && <section className="report-section">

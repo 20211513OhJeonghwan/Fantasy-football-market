@@ -35,6 +35,23 @@ test('report counts DF defensive groups and MF individual actions, pass success 
  assert.equal(points(calc(m),'defensive_actions'),2);assert.equal(points(calc(m),'pass_accuracy'),1);
  m.source.lineups.lineups.home.players[1].position='M';assert.equal(points(calc(m),'defensive_actions'),3.5);
 });
+test('explicitly rejected reviews do not block finished matches but unresolved or accepted reviews still do',()=>{
+ const m=match();const review={type:'varDecision',minute:28,decision:'review',confirmed:false,player_id:2};
+ m.source.incidents.incidents=[review];assert.equal(calc(m).status,'provisional');
+ review.decision='mistakenIdentity';assert.equal(calc(m).status,'provisional');
+ review.confirmed=true;assert.ok(calc(m).warnings.includes('VAR_REVIEW_REQUIRED'));
+ delete review.confirmed;assert.ok(calc(m).warnings.includes('VAR_REVIEW_REQUIRED'));
+});
+test('announced added time reconciles late entries and first-half dismissals without accepting unrelated corrupt minutes',()=>{
+ const m=match();m.playerId='bsd-30';m.stats.minutes_played=9;
+ m.source.incidents.incidents=[{type:'substitution',minute:86,player_out_id:2,player_in_id:30},{type:'injuryTime',minute:90,length:3}];
+ assert.equal(calc(m).status,'provisional');
+ m.stats.minutes_played=30;assert.ok(calc(m).warnings.includes('MINUTES_INTERVAL_MISMATCH'));
+ m.playerId='bsd-2';m.stats.minutes_played=53;m.stats.red_card=1;
+ m.source.incidents.incidents=[{type:'card',minute:45,added_time:8,card_type:'red',player_id:2}];
+ assert.equal(calc(m).status,'provisional');
+ m.stats.minutes_played=70;assert.ok(calc(m).warnings.includes('MINUTES_INTERVAL_MISMATCH'));
+});
 test('report goalkeeper saves, clean-sheet threshold and actual participation',()=>{
  const m=match('G');m.stats.saves=7;m.legacy={penalty_save:1};assert.equal(points(calc(m),'saves'),2);assert.equal(points(calc(m),'penalty_saves'),5);assert.equal(points(calc(m),'clean_sheet'),4);
  m.stats.minutes_played=45;m.source.incidents.incidents=[{type:'substitution',minute:45,player_out_id:2,player_in_id:30}];assert.equal(points(calc(m),'clean_sheet'),0);

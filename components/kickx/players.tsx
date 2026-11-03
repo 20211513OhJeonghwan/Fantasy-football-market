@@ -28,7 +28,6 @@ import {
   PriceChart,
   SectionTitle,
   Sparkline,
-  StatCard,
   Tabs,
   TradeButton,
   TradeNotice,
@@ -395,22 +394,11 @@ export function PlayerDetail() {
           {p.status && <p className="detail-status">{p.status} · 현재 거래할 수 없습니다.</p>}
         </div>
       </section>
-      <div className="stat-grid detail-stats">
-        <StatCard label="최근 경기 Performance" value={score(p.performance)} hint={p.performance == null ? "저장된 점수 없음" : `경기 1건의 저장 점수 · ${p.scoreDetails?.[0]?.rule_version ?? "원점수"}`} tone="yellow" />
-        <StatCard label={p.statsScope === "imported_matches" ? `수집된 ${p.importedMatches ?? 0}경기 득점 · 도움` : p.season ? `${p.season} 시즌 득점 · 도움` : "시즌 득점 · 도움"} value={`${money(p.goals)} · ${money(p.assists)}`} />
-        <StatCard label="출전 시간" value={money(p.minutes)} unit="분" />
-        <StatCard label="거래량" value={money(p.volume)} unit="건" />
-      </div>
-      <ul className="value-legend" aria-label="숫자의 의미">
-        <li><b>현재 가치</b>마지막으로 발행된 거래 기준 가격입니다.</li>
-        <li><b>변동률</b>직전 발행 대비 변화입니다. 여러 경기가 한 번에 반영되면 한 경기 변화보다 클 수 있습니다.</li>
-        <li><b>Performance</b>경기 1건의 저장 점수입니다. 가격·손익과는 다른 숫자입니다. <Link className="text-link" href="/rules">점수표</Link></li>
-      </ul>
       <div className="detail-layout">
         <div className="detail-main">
-          <section className="panel">
+          <section className="panel player-value-history">
             <div className="section-title">
-              <h2>가치 흐름<span>MARKET VALUE</span></h2>
+              <h2>변동 기록<span>VALUE HISTORY</span></h2>
               <Tabs items={["1주", "2주", "1개월"]} value={period} onChange={setPeriod} variant="segment" label="기간 선택" />
             </div>
             <div className="chart-summary">
@@ -473,20 +461,6 @@ export function PlayerDetail() {
           </section>
         </div>
         <aside className="detail-side">
-          <section className="panel frame order-panel">
-            <h2>내 보유 현황</h2>
-            {owned ? (
-              <dl className="summary-list">
-                <div><dt>매입 금액</dt><dd>{money(owned.cost)} P</dd></div>
-                <div><dt>현재 가치</dt><dd>{money(owned.value)} P</dd></div>
-                <div><dt>평가손익</dt><dd className={(owned.profit ?? 0) >= 0 ? "up" : "down"}>{(owned.profit ?? 0) > 0 ? "+" : ""}{money(owned.profit)} P</dd></div>
-                <div><dt>수익률</dt><dd><Change value={owned.returnRate} /></dd></div>
-              </dl>
-            ) : (
-              <p className="order-empty">{data.session ? "아직 보유하지 않은 선수입니다." : "로그인 후 보유 현황을 확인할 수 있습니다."}</p>
-            )}
-            <div className="order-balance"><span>보유 포인트</span><b className="num">{money(data.member?.financialReady === false ? null : data.member?.points)} P</b></div>
-          </section>
           <section className="panel">
             <SectionTitle title="최근 Performance" meta="최근 6경기" />
             <PerformanceBars player={p} />
