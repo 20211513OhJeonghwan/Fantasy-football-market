@@ -18,6 +18,9 @@ export async function updateNotifications(request:Request){try{
  let result;
  if(body.action==='preferences'&&typeof body.matchNotifications==='boolean')
   result=await client.rpc('kickx_set_match_notifications',{p_enabled:body.matchNotifications});
+ else if(body.action==='preferences'&&(typeof body.commentNotifications==='boolean'||typeof body.replyNotifications==='boolean')
+  &&(body.commentNotifications===undefined||typeof body.commentNotifications==='boolean')&&(body.replyNotifications===undefined||typeof body.replyNotifications==='boolean'))
+  result=await client.rpc('kickx_set_community_notifications',{p_comments:body.commentNotifications??null,p_replies:body.replyNotifications??null});
  else if(body.action==='read'&&(body.all===true||Array.isArray(body.ids)&&body.ids.length>0&&body.ids.length<=100&&body.ids.every(validId)))
   result=await client.rpc('kickx_mark_notifications',{p_ids:body.all===true?null:body.ids});
  else throw new HttpError(400,'알림 설정을 확인해 주세요.');

@@ -5,7 +5,7 @@ import { emptyAdminData, emptyPlatformData } from "@/lib/kickx/data";
 import { apiRequest } from "@/lib/kickx/client";
 import type { DataResponse, DataSource, DataStatus, PlatformData, Profile, Player } from "@/lib/kickx/types";
 export function useResource<T>(url: string | null, initial: () => T, refreshMs = 0) {
-  const [snapshot,setSnapshot]=useState<{url:string|null;data:T;status:DataStatus;source:DataSource|null}>(()=>({url:null,data:initial(),status:'loading',source:null}));
+  const [snapshot,setSnapshot]=useState<{url:string|null;data:T;status:DataStatus;source:DataSource|null;stale?:boolean}>(()=>({url:null,data:initial(),status:'loading',source:null}));
   const setData=useCallback((next:SetStateAction<T>)=>setSnapshot(current=>({...current,data:typeof next==='function'?(next as (value:T)=>T)(current.data):next})),[]);
   const [attempt, setAttempt] = useState(0);
   const reload = useCallback(() => setAttempt(a => a + 1), []);
@@ -31,7 +31,7 @@ export function useResource<T>(url: string | null, initial: () => T, refreshMs =
         const result=await response.json() as DataResponse<T>;
         if (!["ready", "not-configured"].includes(result.status) || !result.data) throw new Error("Invalid response");
         if (!controller.signal.aborted) setSnapshot({url,data:result.data,status:result.status,source:result.status === "ready" ? result.source ?? "database" : null});
-      } catch { if (!controller.signal.aborted) setSnapshot({url,data:initial(),status:'error',source:null}); }
+      } catch { if (!controller.signal.aborted) setSnapshot(current=>current.url===url&&current.status==='ready'?{...current,stale:true}:{url,data:initial(),status:'error',source:null}); }
       finally { inFlight = false; }
     };
     void refresh();
@@ -43,10 +43,11 @@ export function useResource<T>(url: string | null, initial: () => T, refreshMs =
   // A route/account change must never expose the previous resource's data while
   // its effect is still starting, even for a single render.
   const current=snapshot.url===url;
-  return { data:current?snapshot.data:initial(), status:current?snapshot.status:'loading' as DataStatus, source:current?snapshot.source:null, reload, setData };
+  return { data:current?snapshot.data:initial(), status:current?snapshot.status:'loading' as DataStatus, source:current?snapshot.source:null, stale:current&&!!snapshot.stale, reload, setData };
 }
 type Notice = { message: string; kind: "success" | "error" };
 type PlatformContext = {
+  stale:boolean;
   cachedPlayers: Player[]; cachePlayers: (players: Player[]) => void;
   data: PlatformData; status: DataStatus; reload: () => void;
   /** True while the server returns development sample data. Writes stay local and are labeled. */
@@ -57,7 +58,7 @@ type PlatformContext = {
 };
 const Context = createContext<PlatformContext | null>(null);
 export function PlatformProvider({ children }: { children: ReactNode }) {
-  const { data, status, source, reload, setData } = useResource("/api/kickx", emptyPlatformData, 30000);
+  const { data, status, source, stale, reload, setData } = useResource("/api/kickx", emptyPlatformData, 30000);
   const mock = source === "mock";
   const [cachedPlayers,setCachedPlayers]=useState<Player[]>([]);
   const cachePlayers=useCallback((players:Player[])=>setCachedPlayers(current=>{
@@ -104,7 +105,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback((profile: Profile) => {
     setData(current => current.session ? { ...current, session: { ...current.session, profile } } : current);
   }, [setData]);
-  const value = useMemo(() => ({ cachedPlayers, cachePlayers, data, status, reload, mock, pendingWatch, setWatched, updateProfile, notify }), [cachedPlayers, cachePlayers, data, status, reload, mock, pendingWatch, setWatched, updateProfile, notify]);
+  const value = useMemo(() => ({ cachedPlayers, cachePlayers, data, status, stale, reload, mock, pendingWatch, setWatched, updateProfile, notify }), [cachedPlayers, cachePlayers, data, status, stale, reload, mock, pendingWatch, setWatched, updateProfile, notify]);
   return (
     <Context.Provider value={value}>
       {children}

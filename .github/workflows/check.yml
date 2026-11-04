@@ -58,6 +58,12 @@ jobs:
           node /tmp/kickx-browser/node_modules/playwright/cli.js install --with-deps chromium
       - name: Desktop and mobile smoke tests
         run: node tests/browser-smoke.mjs
+      - name: Community, notification and profile regression tests
+        run: |
+          node tests/community-activity-browser.mjs
+          node tests/notifications-browser.mjs
+          node tests/profile-report-browser.mjs
+          node tests/browser-ui-errors.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

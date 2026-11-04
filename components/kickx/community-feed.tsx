@@ -93,6 +93,7 @@ export function CommunityFeed({ scope, target, targetName, title = "게시글", 
   const local=data.posts.filter(p=>p.scope===scope&&(!target||p.target===target)&&`${p.title} ${p.body}`.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>sort==='popular'?b.likes-a.likes:Date.parse(b.date)-Date.parse(a.date));
   const items=(mock?local.slice((page-1)*SIZE,page*SIZE):remote.data.items).filter(p=>p.scope===scope&&(!target||p.target===target));
   const total=mock?local.length:remote.data.total;
+  const shownPage=mock?page:remote.data.page;
   const feedStatus=status!=='ready'?status:mock?status:remote.status;
   return <div className="community-feed" data-scope={scope}>
     {compose&&<CommunityComposer key={`${scope}:${target??'hub'}`} scope={scope} target={target} targetName={targetName} onSaved={()=>{setPage(1);remote.reload();}}/>}
@@ -105,14 +106,14 @@ export function CommunityFeed({ scope, target, targetName, title = "게시글", 
           // Club colour marks the row edge and the club chip so mixed boards scan by club.
           const club=scope==='club'?clubIdentity(getTeam(post.target)):null;
           const clubStyle=club?{'--club':luminance(club.primary)>0.8?club.secondary:club.primary} as CSSProperties:undefined;
-          return <tr key={post.id} data-scope={post.scope} className={club&&!target?'has-club':''} style={clubStyle}><td className="board-number num">{total-(page-1)*SIZE-index}</td>
+          return <tr key={post.id} data-scope={post.scope} className={club&&!target?'has-club':''} style={clubStyle}><td className="board-number num">{total-(shownPage-1)*SIZE-index}</td>
             <td className="board-subject">{!target&&<Link className="board-target" href={`${COMMUNITY_PATHS[scope]}/${post.target}`}>{scope==='club'&&<ClubCrest id={post.target} size="small"/>}<span>{name}</span></Link>}
               <Link className="board-post-link" href={`/community/posts/${post.id}`}>{post.title||postTitle('',post.body)}{post.transaction&&<Paperclip size={13} aria-label="거래 첨부"/>}{post.commentCount>0&&<b className="board-comment-count num">[{post.commentCount}]</b>}</Link>
-              <span className="board-mobile-meta">{post.author} · {dateText(post.date,false)} · 조회 {money(post.views)} · 추천 {money(post.likes)}</span>
-            </td><td className="board-author">{post.author}</td><td className="board-date"><time dateTime={post.date}>{dateText(post.date,false)}</time></td><td className="board-views num">{money(post.views)}</td><td className="board-likes num">{money(post.likes)}</td></tr>;
+              <span className="board-mobile-meta"><Link href={`/community/authors/${post.authorId}`}>{post.author}</Link> · {dateText(post.date,false)} · 조회 {money(post.views)} · 추천 {money(post.likes)}</span>
+            </td><td className="board-author"><Link className="board-author-link" href={`/community/authors/${post.authorId}`}><UserAvatar className="rank-avatar" avatar={post.authorId===data.session?.userId?data.session?.profile?.avatar:post.authorAvatar} seed={post.authorId}/><span>{post.author}</span></Link></td><td className="board-date"><time dateTime={post.date}>{dateText(post.date,false)}</time></td><td className="board-views num">{money(post.views)}</td><td className="board-likes num">{money(post.likes)}</td></tr>;
         })}
       </tbody></table></div>:<div className="feed-empty"><h3>{query?'조건에 맞는 게시글이 없습니다':'아직 게시글이 없습니다'}</h3><p>{query?'검색어를 바꿔보세요.':'첫 게시글을 작성해 보세요.'}</p></div>}
-      {feedStatus==='ready'&&<Pagination page={page} total={total} size={SIZE} onPage={setPage} label="게시글"/>}
+      {feedStatus==='ready'&&<Pagination page={shownPage} total={total} size={SIZE} onPage={setPage} label="게시글"/>}
     </section>
   </div>;
 }

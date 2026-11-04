@@ -15,6 +15,8 @@ import { dateText, money } from "@/lib/kickx/data";
 import { AVATAR_ICONS, parseProfile, PROFILE_LIMITS, safeReturnPath } from "@/lib/kickx/validation";
 import type { Profile } from "@/lib/kickx/types";
 import { DOMESTIC_LEAGUES, supportedTeams } from '@/lib/kickx/support';
+import { CommunityActivityPanel } from './community-activity';
+import { CommunityNotificationSettings } from './notifications';
 
 function AuthVisual() {
   return (
@@ -229,6 +231,8 @@ export function MyPageScreen() {
               <StatCard label="최근 거래" value={member?.transactions[0] ? member.transactions[0].playerName : "—"} hint={member?.transactions[0] ? dateText(member.transactions[0].date) : undefined} />
             </div>
           </section>
+          <CommunityActivityPanel key={`activity:${data.session?.userId || 'guest'}`} />
+          <CommunityNotificationSettings />
           <ProfileForm key={data.session?.userId || "guest"} />
           <section className="panel account-settings">
             <SectionTitle title="계정 설정" />

@@ -1,4 +1,5 @@
 "use client";
+import Link from 'next/link';
 import { UserAvatar } from "./avatar";
 import { Select } from "./select";
 import { useState, type CSSProperties } from "react";
@@ -45,7 +46,7 @@ export function RankingScreen() {
               <div className="podium-user">
                 <TeamBadge id={r.team} size="large" />
                 <div>
-                  <strong>{r.nickname}</strong>
+                  <strong><Link href={`/community/authors/${r.userId}`}>{r.nickname}</Link></strong>
                   <span>{getTeam(r.team)?.name || "응원 구단 없음"}</span>
                 </div>
               </div>
@@ -89,8 +90,8 @@ export function RankingScreen() {
                   <td className={`rank-index num ${r.rank <= 3 ? "top" : ""}`}>{r.rank}</td>
                   <td>
                     <div className="rank-user">
-                      <UserAvatar className="rank-avatar" avatar={r.userId === data.session?.userId ? data.session?.profile?.avatar : null} seed={r.userId} style={avatarStyle(getTeam(r.team))} />
-                      <strong>{r.nickname}</strong>
+                      <UserAvatar className="rank-avatar" avatar={r.userId === data.session?.userId ? data.session?.profile?.avatar : r.avatar} seed={r.userId} style={avatarStyle(getTeam(r.team))} />
+                      <strong><Link href={`/community/authors/${r.userId}`}>{r.nickname}</Link></strong>
                       {r.userId === data.session?.userId && <span className="tag yellow">나</span>}
                     </div>
                   </td>

@@ -1,0 +1,285 @@
+{
+  "counts": {
+    "profiles": 52,
+    "notifications": 0
+  },
+  "columns": [
+    {
+      "data_type": "uuid",
+      "table_name": "profiles",
+      "column_name": "id",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "profiles",
+      "column_name": "nickname",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "profiles",
+      "column_name": "team_id",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "timestamp with time zone",
+      "table_name": "profiles",
+      "column_name": "created_at",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "data_type": "timestamp with time zone",
+      "table_name": "profiles",
+      "column_name": "updated_at",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "data_type": "ARRAY",
+      "table_name": "profiles",
+      "column_name": "team_ids",
+      "is_nullable": "NO",
+      "column_default": "'{}'::text[]"
+    },
+    {
+      "data_type": "text",
+      "table_name": "profiles",
+      "column_name": "sample_batch",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "boolean",
+      "table_name": "profiles",
+      "column_name": "match_notifications",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "data_type": "text",
+      "table_name": "profiles",
+      "column_name": "avatar",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "bigint",
+      "table_name": "user_notifications",
+      "column_name": "id",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "uuid",
+      "table_name": "user_notifications",
+      "column_name": "user_id",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "user_notifications",
+      "column_name": "kind",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "user_notifications",
+      "column_name": "player_id",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "user_notifications",
+      "column_name": "fixture_id",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "user_notifications",
+      "column_name": "source_key",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "bigint",
+      "table_name": "user_notifications",
+      "column_name": "price_before",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "bigint",
+      "table_name": "user_notifications",
+      "column_name": "price_after",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "timestamp with time zone",
+      "table_name": "user_notifications",
+      "column_name": "starts_at",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "timestamp with time zone",
+      "table_name": "user_notifications",
+      "column_name": "created_at",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "data_type": "timestamp with time zone",
+      "table_name": "user_notifications",
+      "column_name": "expires_at",
+      "is_nullable": "NO",
+      "column_default": "(now() + '14 days'::interval)"
+    },
+    {
+      "data_type": "timestamp with time zone",
+      "table_name": "user_notifications",
+      "column_name": "read_at",
+      "is_nullable": "YES",
+      "column_default": null
+    }
+  ],
+  "functions": [
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "name": "kickx_community_write",
+      "schema": "public",
+      "definition": "CREATE OR REPLACE FUNCTION public.kickx_community_write(p_action text, p_input jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid:=public.kickx_require_active_member(); post public.community_posts%rowtype; c public.community_comments%rowtype; target_comment public.community_comments%rowtype; id_value uuid; req uuid; t uuid; body_value text; title_value text; begin\r\n -- Serializes permissions, cooldown and idempotency for the same author.\r\n perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('kickx:community:'||u::text,0));\r\n if p_action='createPost' then\r\n  req:=(p_input->>'requestId')::uuid;if req is null then raise exception 'INVALID_INPUT';end if;\r\n  select * into post from public.community_posts where author_id=u and request_id=req;if found then return jsonb_build_object('id',post.id);end if;\r\n  if not public.kickx_can_write_lounge(u,p_input->>'scope',p_input->>'target') then raise exception 'FAN_REQUIRED';end if;\r\n  if (p_input->>'scope'='club' and not exists(select 1 from public.teams where id=p_input->>'target')) or (p_input->>'scope'='player' and not exists(select 1 from public.players where id=p_input->>'target')) then raise exception 'INVALID_TARGET';end if;\r\n  if exists(select 1 from public.community_posts where author_id=u and created_at>now()-interval '3 seconds') then raise exception 'TOO_FAST';end if;\r\n  t:=nullif(p_input->>'transaction','')::uuid;\r\n  if t is not null and not exists(select 1 from public.trades where id=t and user_id=u) then raise exception 'TRADE_NOT_OWNED';end if;\r\n  insert into public.community_posts(author_id,scope,target,title,body,trade_id,request_id) values(u,p_input->>'scope',p_input->>'target',btrim(p_input->>'title'),btrim(p_input->>'body'),t,req) returning * into post;\r\n  return jsonb_build_object('id',post.id);\r\n end if;\r\n select * into post from public.community_posts where id=(p_input->>'postId')::uuid for update;\r\n if not found or post.status<>'published' then raise exception 'POST_NOT_FOUND';end if;\r\n if p_action in('editPost','deletePost') then\r\n  if post.author_id<>u then raise exception 'NOT_AUTHOR';end if;\r\n  if (p_input->>'revision')::integer is distinct from post.revision then raise exception 'STALE_REVISION';end if;\r\n  insert into public.community_revisions(post_id,actor,before_value) values(post.id,u,to_jsonb(post));\r\n  if p_action='deletePost' then update public.community_posts set status='deleted',revision=revision+1,updated_at=now() where id=post.id;\r\n  else\r\n   if not public.kickx_can_write_lounge(u,post.scope,post.target) then raise exception 'FAN_REQUIRED';end if;\r\n   t:=nullif(p_input->>'transaction','')::uuid;\r\n   if t is not null and not exists(select 1 from public.trades where id=t and user_id=u) then raise exception 'TRADE_NOT_OWNED';end if;\r\n   update public.community_posts set title=btrim(p_input->>'title'),body=btrim(p_input->>'body'),trade_id=t,revision=revision+1,updated_at=now() where id=post.id;\r\n  end if;\r\n elsif p_action='comment' then\r\n  req:=(p_input->>'requestId')::uuid;if req is null then raise exception 'INVALID_INPUT';end if;\r\n  select * into c from public.community_comments where author_id=u and request_id=req;if found then if c.post_id<>post.id then raise exception 'REQUEST_REUSED';end if;return jsonb_build_object('id',c.id);end if;\r\n  if not public.kickx_can_write_lounge(u,post.scope,post.target) then raise exception 'FAN_REQUIRED';end if;\r\n  if exists(select 1 from public.community_comments where author_id=u and created_at>now()-interval '2 seconds') then raise exception 'TOO_FAST';end if;\r\n  t:=nullif(p_input->>'parentId','')::uuid;\r\n  if t is not null and not exists(select 1 from public.community_comments where id=t and post_id=post.id and parent_id is null and status='published') then raise exception 'INVALID_PARENT';end if;\r\n  insert into public.community_comments(post_id,author_id,parent_id,body,request_id) values(post.id,u,t,btrim(p_input->>'body'),req) returning id into id_value;return jsonb_build_object('id',id_value);\r\n elsif p_action in('editComment','deleteComment') then\r\n  select * into c from public.community_comments where id=(p_input->>'commentId')::uuid and post_id=post.id and status='published' for update;\r\n  if not found or c.author_id<>u then raise exception 'NOT_AUTHOR';end if;\r\n  if (p_input->>'revision')::integer is distinct from c.revision then raise exception 'STALE_REVISION';end if;\r\n  if p_action='editComment' and not public.kickx_can_write_lounge(u,post.scope,post.target) then raise exception 'FAN_REQUIRED';end if;\r\n  insert into public.community_revisions(post_id,comment_id,actor,before_value) values(post.id,c.id,u,to_jsonb(c));\r\n  update public.community_comments set body=case when p_action='editComment' then btrim(p_input->>'body') else body end,status=case when p_action='deleteComment' then 'deleted' else status end,revision=revision+1,updated_at=now() where id=c.id;\r\n elsif p_action='like' then\r\n  if jsonb_typeof(p_input->'liked') is distinct from 'boolean' then raise exception 'INVALID_INPUT';end if;\r\n  if (p_input->>'liked')::boolean then insert into public.community_likes(user_id,post_id) values(u,post.id) on conflict do nothing;else delete from public.community_likes where user_id=u and post_id=post.id;end if;\r\n elsif p_action='view' then insert into public.community_views(user_id,post_id) values(u,post.id) on conflict do nothing;\r\n elsif p_action='report' then\r\n  t:=nullif(p_input->>'commentId','')::uuid;\r\n  if t is not null then\r\n   select * into target_comment from public.community_comments where id=t and post_id=post.id and status='published';\r\n   if not found then raise exception 'INVALID_TARGET';end if;\r\n  end if;\r\n  insert into public.community_reports(reporter,post_id,comment_id,reason) values(u,post.id,t,btrim(p_input->>'reason')) on conflict do nothing;\r\n else raise exception 'INVALID_ACTION';end if;\r\n return jsonb_build_object('id',post.id);\r\nend $function$\n"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "name": "kickx_notification_summary",
+      "schema": "public",
+      "definition": "CREATE OR REPLACE FUNCTION public.kickx_notification_summary()\n RETURNS jsonb\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$\n select jsonb_build_object('hasUnread',exists(select 1 from public.user_notifications n where n.user_id=(select auth.uid())and n.read_at is null and n.expires_at>now()),\n 'matchNotifications',coalesce((select match_notifications from public.profiles where id=(select auth.uid())),true))\n$function$\n"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "name": "kickx_notifications",
+      "schema": "public",
+      "definition": "CREATE OR REPLACE FUNCTION public.kickx_notifications(p_before bigint DEFAULT NULL::bigint, p_limit integer DEFAULT 20)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE\n SET search_path TO ''\nAS $function$\ndeclare result jsonb;begin\n if auth.uid()is null then raise exception 'LOGIN_REQUIRED';end if;\n if p_limit is null or p_limit not between 1 and 30 or p_before<=0 then raise exception 'INVALID_INPUT';end if;\n with page as materialized(select n.* from public.user_notifications n where n.user_id=(select auth.uid())and n.expires_at>now()\n  and(p_before is null or n.id<p_before)order by n.id desc limit p_limit+1),\n shown as(select * from page order by id desc limit p_limit)\n select jsonb_build_object('items',coalesce((select jsonb_agg(jsonb_build_object('id',n.id::text,'kind',n.kind,'playerId',n.player_id,\n  'playerName',coalesce(p.name_ko,p.name),'teamId',p.team_id,'fixtureId',n.fixture_id,'homeName',coalesce(h.name_ko,h.name),'awayName',coalesce(a.name_ko,a.name),\n  'startsAt',n.starts_at,'priceBefore',n.price_before,'priceAfter',n.price_after,'createdAt',n.created_at,'readAt',n.read_at)order by n.id desc)\n from shown n join public.players p on p.id=n.player_id left join public.fixtures f on f.id=n.fixture_id\n left join public.teams h on h.id=f.home_team_id left join public.teams a on a.id=f.away_team_id),'[]'::jsonb),\n 'hasMore',(select count(*)>p_limit from page),'hasUnread',exists(select 1 from public.user_notifications n where n.user_id=(select auth.uid())and n.read_at is null and n.expires_at>now()))into result;\n return result;\nend $function$\n"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "name": "kickx_post_detail",
+      "schema": "public",
+      "definition": "CREATE OR REPLACE FUNCTION public.kickx_post_detail(p_id uuid, p_page integer DEFAULT 1)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare p public.community_posts%rowtype; comments jsonb;begin\r\n if p_page not between 1 and 10000 then raise exception 'INVALID_INPUT';end if;\r\n select * into p from public.community_posts where id=p_id and status='published';if not found then return jsonb_build_object('post',null,'comments','[]'::jsonb);end if;\r\n select coalesce(jsonb_agg(item),'[]') into comments from(select jsonb_build_object('id',c.id,'postId',c.post_id,'authorId',c.author_id,'author',coalesce((select nickname from public.profiles where id=c.author_id),'탈퇴한 사용자'),'body',c.body,'parentId',c.parent_id,'date',c.created_at,'revision',c.revision,'updatedAt',c.updated_at) as item from public.community_comments c where c.post_id=p.id and c.status='published' order by c.created_at,c.id limit 50 offset (p_page-1)*50) q;\r\n return jsonb_build_object('post',public.kickx_post_json(p),'comments',comments);\r\nend $function$\n"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "name": "kickx_post_json",
+      "schema": "public",
+      "definition": "CREATE OR REPLACE FUNCTION public.kickx_post_json(p community_posts)\n RETURNS jsonb\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n select jsonb_build_object('id',p.id,'author',coalesce((select nickname from public.profiles where id=p.author_id),'탈퇴한 사용자'),'authorId',p.author_id,'scope',p.scope,'target',p.target,'targetName',case when p.scope='club' then (select coalesce(name_ko,name) from public.teams where id=p.target) else (select coalesce(x.name_ko,n.display_name,x.name) from public.players x left join public.player_names n on n.player_id=x.id where x.id=p.target) end,'title',p.title,'body',p.body,'date',p.created_at,'updatedAt',p.updated_at,'revision',p.revision,'likes',(select count(*) from public.community_likes where post_id=p.id),'liked',exists(select 1 from public.community_likes where post_id=p.id and user_id=auth.uid()),'views',(select count(*) from public.community_views where post_id=p.id),'commentCount',(select count(*) from public.community_comments where post_id=p.id and status='published'),'transaction',(select jsonb_build_object('id',t.id,'playerId',t.player_id,'playerName',t.player_name,'type',t.side,'quantity',1,'price',t.price,'fee',t.fee,'net',t.net,'date',t.created_at,'status','체결') from public.trades t where t.id=p.trade_id and t.user_id=p.author_id))\r\n$function$\n"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "name": "kickx_posts",
+      "schema": "public",
+      "definition": "CREATE OR REPLACE FUNCTION public.kickx_posts(p_scope text DEFAULT NULL::text, p_target text DEFAULT NULL::text, p_query text DEFAULT ''::text, p_category text DEFAULT NULL::text, p_sort text DEFAULT 'new'::text, p_page integer DEFAULT 1, p_size integer DEFAULT 20)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare result jsonb; n bigint;begin\r\n if p_page not between 1 and 10000 or p_size not between 1 and 50 or char_length(p_query)>100 then raise exception 'INVALID_INPUT';end if;\r\n select count(*) into n from public.community_posts p where status='published' and (p_scope is null or scope=p_scope) and(p_target is null or target=p_target)  and(position(lower(coalesce(p_query,'')) in lower(title||' '||body))>0);\r\n select coalesce(jsonb_agg(item),'[]') into result from(select public.kickx_post_json(p) as item from public.community_posts p where status='published' and(p_scope is null or scope=p_scope) and(p_target is null or target=p_target)  and(position(lower(coalesce(p_query,'')) in lower(title||' '||body))>0) order by case when p_sort='popular' then (select count(*) from public.community_likes where post_id=p.id) end desc,created_at desc,id limit p_size offset (p_page-1)*p_size) q;\r\n return jsonb_build_object('items',result,'total',n,'page',p_page,'size',p_size);\r\nend $function$\n"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "name": "kickx_set_match_notifications",
+      "schema": "public",
+      "definition": "CREATE OR REPLACE FUNCTION public.kickx_set_match_notifications(p_enabled boolean)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$begin\n if auth.uid()is null then raise exception 'LOGIN_REQUIRED';end if;\n if p_enabled is null then raise exception 'INVALID_INPUT';end if;\n update public.profiles set match_notifications=p_enabled where id=(select auth.uid());\n if not found then raise exception 'PROFILE_REQUIRED';end if;\n return public.kickx_notification_summary();\nend $function$\n"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "name": "notification_tick",
+      "schema": "kickx_private",
+      "definition": "CREATE OR REPLACE FUNCTION kickx_private.notification_tick()\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\n SET statement_timeout TO '8s'\nAS $function$\ndeclare removed integer;sent integer;begin\n -- Expiry hides rows immediately through RLS; physical cleanup is bounded.\n delete from public.user_notifications where id in(\n  select id from public.user_notifications where expires_at<=now()order by expires_at limit 2000);\n get diagnostics removed=row_count;\n insert into public.user_notifications(user_id,kind,player_id,fixture_id,source_key,starts_at)\n select h.user_id,'match',p.id,f.id,'match:'||f.id||':'||p.id||':'||extract(epoch from f.starts_at)::bigint,f.starts_at\n from public.fixtures f join public.players p on p.team_id in(f.home_team_id,f.away_team_id)\n join public.holdings h on h.player_id=p.id join public.profiles u on u.id=h.user_id\n where f.starts_at>now()and f.starts_at<=now()+interval '90 minutes'\n and f.status in('NS','TBD','1H','HT','2H','LIVE')and f.league_id in('bsd-1','bsd-3','bsd-4','bsd-5','bsd-6')\n and public.kickx_regular_fixture(f.id)is distinct from false and u.match_notifications\n on conflict(user_id,source_key)do nothing;\n get diagnostics sent=row_count;\n -- This job's execution logs have their own short retention; no growing cron log.\n if to_regclass('cron.job_run_details')is not null then\n  delete from cron.job_run_details where jobid in(select jobid from cron.job where jobname='kickx-notifications')and end_time<now()-interval '1 day';\n end if;\n return jsonb_build_object('removed',removed,'sent',sent);\nend $function$\n"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres"
+      ],
+      "name": "notify_player_price",
+      "schema": "kickx_private",
+      "definition": "CREATE OR REPLACE FUNCTION kickx_private.notify_player_price()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare event_key text;begin\n if new.pricing_status is distinct from 'ready'or old.price is null or new.price is null or old.price=new.price then return new;end if;\n event_key:='price:'||new.id||':'||md5(concat_ws(':',old.price,new.price,new.updated_at));\n insert into public.user_notifications(user_id,kind,player_id,source_key,price_before,price_after)\n select h.user_id,'price',new.id,event_key,old.price::bigint,new.price::bigint\n from public.holdings h where h.player_id=new.id on conflict(user_id,source_key)do nothing;\n return new;\nend $function$\n"
+    }
+  ],
+  "checked_at": "2026-11-04T01:12:34.184407+00:00",
+  "constraints": [
+    {
+      "name": "user_notifications_check",
+      "definition": "CHECK ((expires_at = (created_at + '14 days'::interval)))"
+    },
+    {
+      "name": "user_notifications_check1",
+      "definition": "CHECK ((((kind = 'price'::text) AND (price_before IS NOT NULL) AND (price_after IS NOT NULL) AND (price_before > 0) AND (price_after > 0) AND (price_before <> price_after)) OR ((kind = 'match'::text) AND (fixture_id IS NOT NULL) AND (starts_at IS NOT NULL))))"
+    },
+    {
+      "name": "user_notifications_fixture_id_fkey",
+      "definition": "FOREIGN KEY (fixture_id) REFERENCES fixtures(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "user_notifications_kind_check",
+      "definition": "CHECK ((kind = ANY (ARRAY['price'::text, 'match'::text])))"
+    },
+    {
+      "name": "user_notifications_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "user_notifications_player_id_fkey",
+      "definition": "FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "user_notifications_source_key_check",
+      "definition": "CHECK ((char_length(source_key) <= 180))"
+    },
+    {
+      "name": "user_notifications_user_id_fkey",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "name": "user_notifications_user_id_source_key_key",
+      "definition": "UNIQUE (user_id, source_key)"
+    }
+  ],
+  "migration_present": false
+}
