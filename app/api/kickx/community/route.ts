@@ -11,7 +11,8 @@ export async function GET(request:Request){try{
  const client=await createRequestClient();
  let input: ReturnType<typeof parseCommunityQuery>;
  try { input=parseCommunityQuery(p); } catch(e) { throw new HttpError(400,e instanceof Error?e.message:"검색 조건을 확인해 주세요."); }
- const query=postId?client.rpc("kickx_post_detail",{p_id:identity(postId,true),p_page:input.page}):client.rpc("kickx_posts",{p_scope:input.scope,p_target:input.target,p_query:input.query,p_sort:input.sort,p_page:input.page,p_size:20});
+ const focus=p.get('comment');
+ const query=postId?client.rpc("kickx_post_detail",{p_id:identity(postId,true),p_page:input.page,...(focus?{p_comment:identity(focus,true)}:{})}):client.rpc("kickx_posts",{p_scope:input.scope,p_target:input.target,p_query:input.query,p_sort:input.sort,p_page:input.page,p_size:20});
  const {data,error}=await query;if(migrationMissing(error))return json(unavailable);checkDatabase(error);return json({status:"ready",data});
 }catch(error){return failure(error);}}
 export async function POST(request:Request){try{

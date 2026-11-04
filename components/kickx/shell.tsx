@@ -96,7 +96,7 @@ function AccountMenu() {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data, status, reload } = usePlatform();
+  const { data, status, stale, reload } = usePlatform();
   const [query, setQuery] = useState("");
   const searchInput = useRef<HTMLInputElement>(null);
   const standalone = pathname === "/login" || pathname === "/onboarding";
@@ -153,6 +153,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </form>
       </div>
       <main id="main-content" className={isHome ? "content home" : "content"}>
+        {stale&&<div className="kx-stale-notice" role="status"><span>연결이 잠시 끊겨 마지막으로 확인한 정보를 표시하고 있습니다.</span><button type="button" onClick={reload}>다시 확인</button></div>}
         {!isHome && <DataNotice status={status} reload={reload} />}
         {children}
       </main>

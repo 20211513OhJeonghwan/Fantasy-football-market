@@ -102,6 +102,7 @@ export type Post = {
   id: string;
   author: string;
   authorId: string;
+  authorAvatar?: string | null;
   scope: "club" | "player";
   target: string;
   title: string;
@@ -120,6 +121,9 @@ export type Comment = {
   postId: string;
   author: string;
   authorId: string;
+  authorAvatar?: string | null;
+  parentAuthor?: string | null;
+  parentBody?: string | null;
   body: string;
   date: string;
   parentId?: string | null;
@@ -160,6 +164,7 @@ export type RankingRow = {
   userId: string;
   rank: number;
   nickname: string;
+  avatar?: string | null;
   team: string | null;
   teams?: string[];
   assets: number | null;

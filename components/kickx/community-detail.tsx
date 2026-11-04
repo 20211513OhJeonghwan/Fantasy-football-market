@@ -3,26 +3,28 @@ import type { CSSProperties } from "react";
 import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
 import { UserAvatar } from "./avatar";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, CornerDownRight, Flag, Heart, Lock, MessageCircle, Paperclip, Pencil, Send, Trash2, X } from "lucide-react";
 import type { Comment, Post } from "@/lib/kickx/types";
 import { apiRequest } from "@/lib/kickx/client";
 import { dateText, money, relativeTime } from "@/lib/kickx/data";
 import {postHeading} from "@/lib/kickx/community";
+import { createViewRecorder, viewDay } from '@/lib/kickx/community-views';
 import { supportsTeam } from '@/lib/kickx/support';
 import { usePlatform, useResource } from "./provider";
 import { BackLink, ClubCrest, DataEmpty, Empty, Modal, PlayerPortrait } from "./ui";
 
 const COMMENT_PAGE = 50;
 const COMMENT_MAX = 1000;
-export const emptyPost = () => ({ post: null as Post | null, comments: [] as Comment[] });
-export function usePost(id: string | null, page = 1) {
+const recordView = createViewRecorder(postId => apiRequest('/api/kickx/community', 'POST', { action: 'view', postId }), () => window.sessionStorage);
+export const emptyPost = () => ({ post: null as Post | null, comments: [] as Comment[], page: 1, pages: 1 });
+export function usePost(id: string | null, page = 1, focusComment?: string | null) {
   const { data, mock, status } = usePlatform();
-  const remote = useResource(!mock && status === "ready" && id ? `/api/kickx/community?postId=${encodeURIComponent(id)}&page=${page}` : null, emptyPost);
+  const remote = useResource(!mock && status === "ready" && id ? `/api/kickx/community?postId=${encodeURIComponent(id)}&page=${page}${focusComment ? `&comment=${encodeURIComponent(focusComment)}` : ''}` : null, emptyPost);
   return {
     ...remote,
-    data: mock ? { post: data.posts.find((p) => p.id === id) ?? null, comments: data.comments.filter((c) => c.postId === id) } : remote.data,
+    data: mock ? { post: data.posts.find((p) => p.id === id) ?? null, comments: data.comments.filter((c) => c.postId === id), page, pages: Math.max(1, Math.ceil(data.comments.filter(c => c.postId === id).length / COMMENT_PAGE)) } : remote.data,
     status: mock ? status : remote.status,
   };
 }
@@ -40,14 +42,20 @@ function threads(comments: Comment[]) {
 }
 type Action = { kind: "report" | "deletePost" | "deleteComment"; comment?: Comment };
 export function PostDetail() {
-  const { postId } = useParams<{ postId: string }>(), router = useRouter();
+  const { postId } = useParams<{ postId: string }>(), search = useSearchParams();
+  const focusComment = search.get('comment');
+  return <PostDetailContent key={`${postId}:${focusComment ?? ''}`} postId={postId} focusComment={focusComment} />;
+}
+function PostDetailContent({ postId, focusComment }: { postId: string; focusComment: string | null }) {
+  const router = useRouter();
   const { data, mock, notify, getTeam, getPlayer, reload: reloadPlatform } = usePlatform();
-  const [page, setPage] = useState(1);
-  const resource = usePost(postId, page);
+  const [requestedPage, setPage] = useState<number | null>(null);
+  const resource = usePost(postId, requestedPage ?? 1, requestedPage === null ? focusComment : null);
   const { post, comments } = resource.data;
   const [body, setBody] = useState(""), [reply, setReply] = useState<Comment | null>(null), [editing, setEditing] = useState<Comment | null>(null), [busy, setBusy] = useState(false);
   const [action, setAction] = useState<Action | null>(null), [reason, setReason] = useState("");
   const lock = useRef(false), requestId = useRef("");
+  const focused = useRef(false);
   const owner = !!post && post.authorId === data.session?.userId;
   const fan = post?.scope === "player" || !!post && supportsTeam(data.session?.profile,post.target);
   const canWrite = !!data.session?.profile && fan;
@@ -55,10 +63,17 @@ export function PostDetail() {
   const hub = post?.scope === "player" ? `/players/${post.target}` : "/community/clubs";
   const targetPlayer = post?.scope === "player" ? getPlayer(post.target) : undefined;
   const targetName = post ? post.targetName ?? (post.scope === "club" ? getTeam(post.target)?.name : targetPlayer?.name) ?? null : null;
-  const pages = Math.max(1, Math.ceil((post?.commentCount ?? 0) / COMMENT_PAGE));
+  const pages = resource.data.pages ?? Math.max(1, Math.ceil((post?.commentCount ?? 0) / COMMENT_PAGE));
+  const page = resource.data.page ?? requestedPage ?? 1;
+  const viewedPostId = post?.id, viewerId = data.session?.userId, hasProfile = !!data.session?.profile, day = viewDay();
   useEffect(() => {
-    if (!mock && post && data.session?.profile) void apiRequest("/api/kickx/community", "POST", { action: "view", postId: post.id }).catch(() => {});
-  }, [mock, post, data.session?.profile]);
+    if (!mock && viewedPostId && viewerId && hasProfile) void recordView(viewerId, viewedPostId, day);
+  }, [mock, viewedPostId, viewerId, hasProfile, day]);
+  useEffect(() => {
+    if (resource.status !== 'ready' || !focusComment || focused.current) return;
+    const target = document.getElementById(`comment-${focusComment}`);
+    if (target) { target.scrollIntoView({ block: 'center' }); focused.current = true; }
+  }, [resource.status, focusComment, comments]);
   async function mutate(payload: Record<string, unknown>) {
     if (lock.current) return false;
     if (mock) { notify("예시 모드 · 실제로 저장되지 않습니다."); return false; }
@@ -118,9 +133,9 @@ export function PostDetail() {
         </div>
         <h1>{postHeading(post.title,post.body) || `${targetName ?? (post.scope === "club" ? "구단" : "선수")} 이야기`}</h1>
         <div className="article-author">
-          <UserAvatar className="rank-avatar" avatar={post.authorId === data.session?.userId ? data.session?.profile?.avatar : null} seed={post.authorId} />
+          <Link href={`/community/authors/${post.authorId}`} aria-label={`${post.author} 활동 보기`}><UserAvatar className="rank-avatar" avatar={owner ? data.session?.profile?.avatar : post.authorAvatar} seed={post.authorId} /></Link>
           <div>
-            <strong>{post.author}</strong>
+            <strong><Link href={`/community/authors/${post.authorId}`}>{post.author}</Link></strong>
             <span>{dateText(post.date)} · 조회 {money(post.views)}</span>
           </div>
           {owner && (
@@ -190,16 +205,16 @@ export function PostDetail() {
           {threads(comments).map(({ comment: c, reply: isReply, orphan }) => {
             const mine = c.authorId === data.session?.userId;
             return (
-              <li className={`comment ${isReply ? "reply" : ""} ${editing?.id === c.id ? "editing" : ""}`} key={c.id}>
+              <li id={`comment-${c.id}`} className={`comment ${isReply ? "reply" : ""} ${editing?.id === c.id ? "editing" : ""}`} key={c.id}>
                 {isReply && <CornerDownRight size={16} className="comment-reply-mark" aria-hidden="true" />}
-                <UserAvatar className="rank-avatar" avatar={c.authorId === data.session?.userId ? data.session?.profile?.avatar : null} seed={c.authorId} />
+                <Link href={`/community/authors/${c.authorId}`} aria-label={`${c.author} 활동 보기`}><UserAvatar className="rank-avatar" avatar={mine ? data.session?.profile?.avatar : c.authorAvatar} seed={c.authorId} /></Link>
                 <div>
                   <div className="comment-head">
-                    <strong>{c.author}</strong>
+                    <strong><Link href={`/community/authors/${c.authorId}`}>{c.author}</Link></strong>
                     {c.authorId === post.authorId && <span className="tag yellow">작성자</span>}
                     <time dateTime={c.date} title={dateText(c.date)}>{relativeTime(c.date)}</time>
                   </div>
-                  {orphan && <p className="comment-orphan">삭제되었거나 다른 페이지에 있는 댓글의 답글입니다.</p>}
+                  {orphan && <p className="comment-orphan">{c.parentAuthor ? `${c.parentAuthor}님의 댓글에 답글 · ${c.parentBody ?? ''}` : '삭제되었거나 숨겨진 댓글의 답글입니다.'}</p>}
                   <p>{c.body}</p>
                   <div className="comment-actions">
                     {canWrite && !isReply && <button onClick={() => startReply(c)}><CornerDownRight size={13} />답글</button>}

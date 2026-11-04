@@ -28,3 +28,12 @@ test('guests and cross-origin writes do not touch notification data',async()=>{
  const guest=handlers({signedIn:false});assert.equal((await guest.readNotifications(new Request('https://kickx.test'))).status,401);assert.equal((await guest.updateNotifications(request({action:'read',all:true}))).status,401);assert.equal(guest.calls.length,0);
  const foreign=handlers({origin:false});assert.equal((await foreign.updateNotifications(request({action:'read',all:true}))).status,403);assert.equal(foreign.calls.length,0);
 });
+test('comment and reply preferences are independent partial updates bound to the caller',async()=>{
+ const api=handlers();
+ await api.updateNotifications(request({action:'preferences',commentNotifications:false,userId:'another-user'}));
+ assert.deepEqual(api.calls[0],{name:'kickx_set_community_notifications',args:{p_comments:false,p_replies:null}});
+ await api.updateNotifications(request({action:'preferences',replyNotifications:false}));
+ assert.deepEqual(api.calls[1].args,{p_comments:null,p_replies:false});
+ for(const body of[{action:'preferences'},{action:'preferences',commentNotifications:'false'},{action:'preferences',commentNotifications:true,replyNotifications:1}])assert.equal((await api.updateNotifications(request(body))).status,400);
+ assert.equal(api.calls.length,2);
+});
