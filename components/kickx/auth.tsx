@@ -9,7 +9,7 @@ import { ArrowLeft, ArrowRight, Check, LoaderCircle, LogOut, Mail, Save, ShieldC
 import { usePlatform } from "./provider";
 import { Logo } from "./shell";
 import { PlaybookArt } from "./playbook-art";
-import { DataNotice, LeagueMark, MemberNotice, MockBadge, PageHeading, SectionTitle, StatCard, TeamBadge } from "./ui";
+import { Change, DataNotice, LeagueMark, MemberNotice, MockBadge, PageHeading, SectionTitle, TeamBadge } from "./ui";
 import { apiRequest } from "@/lib/kickx/client";
 import { dateText, money } from "@/lib/kickx/data";
 import { AVATAR_ICONS, parseProfile, PROFILE_LIMITS, safeReturnPath } from "@/lib/kickx/validation";
@@ -195,58 +195,57 @@ export function MyPageScreen() {
     <>
       <PageHeading eyebrow="MY KICK-X" title="마이페이지" description="프로필과 응원 구단, 나의 자산과 거래 요약을 관리하세요." />
       <MemberNotice />
-      <div className="settings-layout">
-        <aside className="profile-card">
-          <div className="profile-card-top">
-            <UserAvatar className="profile-avatar" avatar={profile?.avatar} seed={data.session?.userId ?? "guest"} label="프로필 아이콘" />
-            <MockBadge compact />
-          </div>
-          <h2>{profile?.nickname || (data.session ? "프로필을 완성해 주세요" : "로그인이 필요합니다")}</h2>
+      {/* Account header, then a sticky jump bar so phones can move between long sections. */}
+      <section className="my-hero" aria-label="내 프로필">
+        <UserAvatar className="profile-avatar" avatar={profile?.avatar} seed={data.session?.userId ?? "guest"} label="프로필 아이콘" />
+        <div className="my-hero-text">
+          <div className="my-hero-name"><h2>{profile?.nickname || (data.session ? "프로필을 완성해 주세요" : "로그인이 필요합니다")}</h2><MockBadge compact /></div>
           <div className="profile-supported-clubs" aria-label="선택한 응원 구단">{supportedTeams(profile).length ? supportedTeams(profile).map(id=><div className="profile-club" key={id}><TeamBadge id={id}/><strong>{getTeam(id)?.name||'구단 정보 없음'}</strong></div>) : <div className="profile-club">응원 구단 미선택</div>}</div>
-          <dl className="profile-facts">
-            <div><dt>보유 선수</dt><dd className="num">{member ? `${new Set(member.holdings.map((h) => h.playerId)).size}명` : "—"}</dd></div>
-            <div><dt>거래 기록</dt><dd className="num">{member ? `${member.transactions.length}건` : "—"}</dd></div>
-            <div><dt>주간 순위</dt><dd className="num">{member?.weeklyRank != null ? `${member.weeklyRank}위` : "—"}</dd></div>
-          </dl>
-          {data.session ? (
-            <button className="button secondary full" onClick={signOut} disabled={busy}><LogOut size={16} />{busy ? "로그아웃 중…" : "로그아웃"}</button>
-          ) : (
-            <Link className="button primary full" href="/login?next=/mypage">로그인</Link>
-          )}
-        </aside>
-        <div className="settings-main">
-          <section>
-            <SectionTitle title="자산 요약" href="/portfolio" link="내 자산" />
-            <div className="stat-grid three">
-              <StatCard label="총자산" value={money(member?.totalAssets)} unit="P" change={member ? member.returnRate : undefined} tone="yellow" />
-              <StatCard label="보유 포인트" value={money(member?.points)} unit="P" />
-              <StatCard label="선수 평가액" value={money(member?.playerAssets)} unit="P" />
-            </div>
-          </section>
-          <section>
-            <SectionTitle title="거래 요약" href="/transactions" link="거래 내역" />
-            <div className="stat-grid three">
-              <StatCard label="매입" value={member ? buys.length : "—"} unit="건" hint={member ? `${money(buys.reduce((s, t) => s + t.net, 0))} P` : undefined} />
-              <StatCard label="매각" value={member ? sells.length : "—"} unit="건" hint={member ? `정산 ${money(sells.reduce((s, t) => s + t.net, 0))} P` : undefined} />
-              <StatCard label="최근 거래" value={member?.transactions[0] ? member.transactions[0].playerName : "—"} hint={member?.transactions[0] ? dateText(member.transactions[0].date) : undefined} />
-            </div>
-          </section>
-          <CommunityActivityPanel key={`activity:${data.session?.userId || 'guest'}`} />
-          <CommunityNotificationSettings />
-          <ProfileForm key={data.session?.userId || "guest"} />
-          <section className="panel account-settings">
-            <SectionTitle title="계정 설정" />
-            <div className="settings-row">
-              <Mail size={20} />
-              <div><strong>Google 계정 연결</strong><span>{data.session ? "Google로 로그인한 계정입니다." : "로그인 후 확인할 수 있습니다."}</span></div>
-              <span className={`status-pill ${data.session ? "ok" : ""}`}>{data.session ? "연결됨" : "미로그인"}</span>
-            </div>
-            <div className="settings-row">
-              <ShieldCheck size={20} />
-              <div><strong>가상 포인트 정책</strong><span>KICK-X는 실제 금전 거래·환전을 제공하지 않습니다.</span></div>
-            </div>
-          </section>
         </div>
+        <dl className="profile-facts">
+          <div><dt>보유 선수</dt><dd className="num">{member ? `${new Set(member.holdings.map((h) => h.playerId)).size}명` : "—"}</dd></div>
+          <div><dt>거래 기록</dt><dd className="num">{member ? `${member.transactions.length}건` : "—"}</dd></div>
+          <div><dt>주간 순위</dt><dd className="num">{member?.weeklyRank != null ? `${member.weeklyRank}위` : "—"}</dd></div>
+        </dl>
+        {data.session ? (
+          <button className="button secondary small my-hero-action" onClick={signOut} disabled={busy}><LogOut size={15} />{busy ? "로그아웃 중…" : "로그아웃"}</button>
+        ) : (
+          <Link className="button primary small my-hero-action" href="/login?next=/mypage">로그인</Link>
+        )}
+      </section>
+      <nav className="my-sections" aria-label="마이페이지 영역 바로가기">
+        <a href="#my-summary">자산·거래</a><a href="#my-activity">커뮤니티 활동</a><a href="#my-alerts">알림 설정</a><a href="#my-profile">프로필</a><a href="#my-account">계정</a>
+      </nav>
+      <div className="my-body">
+        <section id="my-summary" className="my-summary" aria-label="자산과 거래 요약">
+          <Link href="/portfolio" className="my-card">
+            <span className="my-card-head">총자산<ArrowRight size={15} /></span>
+            <strong className="num">{money(member?.totalAssets)}<small>P</small></strong>
+            <Change value={member ? member.returnRate : null} />
+            <dl><div><dt>보유 포인트</dt><dd className="num">{money(member?.points)} P</dd></div><div><dt>선수 평가액</dt><dd className="num">{money(member?.playerAssets)} P</dd></div></dl>
+          </Link>
+          <Link href="/transactions" className="my-card">
+            <span className="my-card-head">거래 요약<ArrowRight size={15} /></span>
+            <strong className="num">{member ? member.transactions.length : "—"}<small>건</small></strong>
+            <span className="my-card-sub">{member?.transactions[0] ? `최근 ${member.transactions[0].playerName} · ${dateText(member.transactions[0].date)}` : "최근 거래 없음"}</span>
+            <dl><div><dt>매입 {member ? buys.length : "—"}건</dt><dd className="num">{member ? `${money(buys.reduce((s, t) => s + t.net, 0))} P` : "—"}</dd></div><div><dt>매각 {member ? sells.length : "—"}건</dt><dd className="num">{member ? `${money(sells.reduce((s, t) => s + t.net, 0))} P` : "—"}</dd></div></dl>
+          </Link>
+        </section>
+        <div id="my-activity" className="my-anchor"><CommunityActivityPanel key={`activity:${data.session?.userId || 'guest'}`} /></div>
+        <div id="my-alerts" className="my-anchor"><CommunityNotificationSettings /></div>
+        <div id="my-profile" className="my-anchor"><ProfileForm key={data.session?.userId || "guest"} /></div>
+        <section id="my-account" className="panel account-settings my-anchor">
+          <SectionTitle title="계정 설정" />
+          <div className="settings-row">
+            <Mail size={20} />
+            <div><strong>Google 계정 연결</strong><span>{data.session ? "Google로 로그인한 계정입니다." : "로그인 후 확인할 수 있습니다."}</span></div>
+            <span className={`status-pill ${data.session ? "ok" : ""}`}>{data.session ? "연결됨" : "미로그인"}</span>
+          </div>
+          <div className="settings-row">
+            <ShieldCheck size={20} />
+            <div><strong>가상 포인트 정책</strong><span>KICK-X는 실제 금전 거래·환전을 제공하지 않습니다.</span></div>
+          </div>
+        </section>
       </div>
     </>
   );

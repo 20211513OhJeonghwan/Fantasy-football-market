@@ -1,0 +1,225 @@
+/* Account pages (2026-11-04): portfolio, trade statement, my page, community activity and inbox.
+   Brokerage-app patterns (Toss Securities, Robinhood): total first with its flow, composition beside it,
+   holdings as rows with P/L on the right, a statement grouped by day. */
+
+/* ---------- 내 자산: summary ---------- */
+.pf-summary { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; margin-bottom: 20px; }
+.pf-overview, .pf-allocation, .pf-kpis { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.pf-overview { display: grid; grid-template-columns: minmax(0, 1fr); padding: 22px 24px 18px; }
+.pf-total { display: grid; gap: 4px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.pf-label { font-size: 13px; font-weight: 800; color: var(--text-2); }
+.pf-total strong { font-size: 44px; font-weight: 900; letter-spacing: -0.04em; line-height: 1.05; }
+.pf-total strong .unit { margin-left: 4px; font-size: 20px; color: var(--text-3); }
+.pf-delta { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-3); }
+.pf-chart { padding-top: 14px; }
+.pf-chart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 14px; font-weight: 900; }
+.pf-chart .chart-inner { height: 220px; }
+.pf-side { display: grid; gap: 16px; align-content: start; }
+.pf-allocation { padding: 18px 20px; }
+.pf-allocation h2 { font-size: 14px; font-weight: 900; margin-bottom: 12px; }
+.pf-allocation .allocation-bar { height: 12px; border-radius: 999px; overflow: hidden; }
+.pf-allocation dl { display: grid; gap: 10px; margin: 14px 0 0; }
+.pf-allocation dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; }
+.pf-allocation dt { display: flex; align-items: center; gap: 7px; color: var(--text-2); font-weight: 700; }
+.pf-allocation dd { margin: 0; font-weight: 900; }
+.pf-allocation dd small { margin-left: 6px; font-size: 11px; color: var(--text-3); font-weight: 700; }
+.pf-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; overflow: hidden; }
+.pf-kpis > div { display: grid; gap: 2px; padding: 14px 18px; }
+.pf-kpis > div:nth-child(even) { border-left: 1px solid var(--line); }
+.pf-kpis > div:nth-child(n + 3) { border-top: 1px solid var(--line); }
+.pf-kpis dt { font-size: 11.5px; font-weight: 800; color: var(--text-3); }
+.pf-kpis dd { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: -0.02em; }
+.pf-kpis dd small { margin-left: 2px; font-size: 12px; color: var(--text-3); }
+.pf-kpis dd.up { color: var(--up); } .pf-kpis dd.down { color: var(--down); }
+.pf-kpis > div > small { font-size: 11px; color: var(--text-3); }
+
+/* ---------- 내 자산: holdings ---------- */
+.holding-list { list-style: none; margin: 0; padding: 0; }
+.holding-head, .holding-row { display: grid; grid-template-columns: minmax(180px, 1.6fr) 0.8fr 0.9fr 1fr 0.9fr 64px 76px; align-items: center; gap: 12px; padding: 0 20px; }
+.holding-head { height: 36px; font-size: 11.5px; font-weight: 700; color: var(--text-3); border-bottom: 1px solid var(--line-2); }
+.holding-head > span:nth-child(n + 2):nth-child(-n + 4) { text-align: right; }
+.holding-row { min-height: 64px; border-bottom: 1px solid var(--line); }
+.holding-row:last-child { border-bottom: 0; }
+.holding-row:hover { background: #fbfbf9; }
+.holding-player { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.holding-player > span { display: grid; min-width: 0; }
+.holding-player strong { font-size: 14px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.holding-player small { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.holding-cost, .holding-value, .holding-pl { display: grid; justify-items: end; font-size: 13.5px; }
+.holding-cost { color: var(--text-2); }
+.holding-value b { font-size: 14.5px; font-weight: 900; }
+.holding-pl b { font-weight: 900; }
+.holding-pl.up b { color: var(--up); } .holding-pl.down b { color: var(--down); }
+.holding-pl .change { font-size: 11.5px; }
+.holding-row > span > small:first-child { display: none; }
+.holding-weight { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.holding-weight small { font-size: 11.5px; color: var(--text-3); }
+.holding-action { justify-self: end; }
+
+/* ---------- 거래 내역: statement ---------- */
+.tx-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.tx-summary > div { display: grid; gap: 2px; padding: 16px 20px; }
+.tx-summary > div + div { border-left: 1px solid var(--line); }
+.tx-summary > div > span { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--text-3); }
+.tx-summary > .buy > span::before, .tx-summary > .sell > span::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--ink); }
+.tx-summary > .sell > span::before { background: var(--yellow-strong); box-shadow: inset 0 0 0 1px var(--ink); }
+.tx-summary strong { font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+.tx-summary strong small { margin-left: 3px; font-size: 13px; color: var(--text-3); }
+.tx-summary > div > small { font-size: 11.5px; color: var(--text-3); }
+.tx-tools { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.tx-tools .input-search { flex: 1; min-width: 0; }
+.tx-day h3 { position: sticky; top: 56px; z-index: 2; padding: 8px 20px; font-size: 12.5px; font-weight: 800; color: var(--text-2); background: #f7f7f3; border-bottom: 1px solid var(--line); }
+.tx-day ul { list-style: none; margin: 0; padding: 0; }
+.tx-row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 0.9fr) auto; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+.tx-day:last-of-type li:last-child { border-bottom: 0; }
+.tx-portrait-empty { width: 40px; height: 40px; border-radius: 50%; background: var(--surface-3); }
+.tx-main { display: grid; gap: 3px; min-width: 0; }
+.tx-main strong { font-size: 14.5px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-main small { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-size: 12px; color: var(--text-3); }
+.tx-main .trade-type { font-size: 10.5px; }
+.tx-detail { display: grid; gap: 2px; justify-items: end; font-size: 12px; color: var(--text-3); }
+.tx-amount { display: grid; justify-items: end; gap: 2px; min-width: 120px; }
+.tx-amount b { font-size: 16px; font-weight: 900; letter-spacing: -0.01em; }
+.tx-amount b small { margin-left: 2px; font-size: 11px; color: var(--text-3); }
+.tx-row.sell .tx-amount b { color: var(--up); }
+.tx-amount > small { font-size: 11px; color: var(--text-3); }
+
+/* ---------- 마이페이지 ---------- */
+.my-hero { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 20px; padding: 22px 24px; margin-bottom: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: inset 0 4px 0 var(--yellow); }
+.my-hero .profile-avatar { width: 72px; height: 72px; border-radius: 50%; border: 0; }
+.my-hero-text { display: grid; gap: 8px; min-width: 0; }
+.my-hero-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.my-hero-name h2 { font-size: 24px; font-weight: 900; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.my-hero .profile-supported-clubs { display: flex; flex-wrap: wrap; gap: 6px; }
+.my-hero .profile-club { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; background: var(--surface-2); font-size: 12px; }
+.my-hero .profile-facts { display: grid; grid-template-columns: repeat(3, auto); gap: 0; margin: 0; border: 0; }
+.my-hero .profile-facts > div { display: grid; justify-items: center; gap: 2px; padding: 0 16px; }
+.my-hero .profile-facts > div + div { border-left: 1px solid var(--line); }
+.my-hero .profile-facts dt { font-size: 11px; color: var(--text-3); font-weight: 700; }
+.my-hero .profile-facts dd { margin: 0; font-size: 17px; font-weight: 900; }
+.my-sections { position: sticky; top: 56px; z-index: 20; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 8px 0; margin-bottom: 14px; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(6px); }
+.my-sections::-webkit-scrollbar { display: none; }
+.my-sections a { flex-shrink: 0; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); font-size: 13px; font-weight: 800; color: var(--text-2); }
+.my-sections a:hover, .my-sections a:focus-visible { border-color: var(--ink); color: var(--ink); }
+.my-body { display: grid; gap: 16px; min-width: 0; }
+.my-anchor { scroll-margin-top: 120px; min-width: 0; }
+.my-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; scroll-margin-top: 120px; }
+.my-card { display: grid; gap: 6px; align-content: start; padding: 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.my-card:hover { border-color: var(--ink); }
+.my-card-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 800; color: var(--text-2); }
+.my-card > strong { font-size: 30px; font-weight: 900; letter-spacing: -0.03em; }
+.my-card > strong small { margin-left: 3px; font-size: 14px; color: var(--text-3); }
+.my-card-sub { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.my-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 8px 0 0; padding-top: 10px; border-top: 1px solid var(--line); }
+.my-card dl > div { display: grid; gap: 2px; min-width: 0; }
+.my-card dt { font-size: 11.5px; color: var(--text-3); font-weight: 700; }
+.my-card dd { margin: 0; font-size: 14px; font-weight: 900; }
+
+/* Switches: native checkboxes (role="switch") drawn as toggles. */
+.notification-switch input, .match-notification-setting input[role="switch"] { appearance: none; -webkit-appearance: none; position: relative; width: 42px; min-width: 42px; height: 24px; min-height: 24px; margin: 0; padding: 0; border: 0; border-radius: 999px; background: var(--line-2); cursor: pointer; transition: background var(--t-fast) var(--ease); }
+.notification-switch input::after, .match-notification-setting input[role="switch"]::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); transition: transform var(--t-fast) var(--ease); }
+.notification-switch input:checked, .match-notification-setting input[role="switch"]:checked { background: var(--ink); }
+.notification-switch input:checked::after, .match-notification-setting input[role="switch"]:checked::after { transform: translateX(18px); background: var(--yellow); }
+.notification-switch input:focus-visible, .match-notification-setting input[role="switch"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.notification-switch input:disabled, .match-notification-setting input[role="switch"]:disabled { opacity: 0.45; cursor: default; }
+
+/* ---------- Activity: board-like rows ---------- */
+.activity-heading .author-avatar { width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0; }
+.activity-list a { gap: 6px; padding: 14px 24px; }
+.activity-item-meta { order: -1; }
+.activity-item-meta .board-target { margin-right: 0; }
+.activity-kind { padding: 1px 7px; border-radius: 4px; background: var(--surface-3); font-size: 11px; font-weight: 800; color: var(--text-2); }
+.activity-kind.reply { background: var(--yellow-wash, #fff8d6); color: var(--ink); }
+.activity-list a > strong { font-size: 14.5px; font-weight: 800; }
+.activity-list a > p { font-size: 13px; -webkit-line-clamp: 1; }
+
+/* ---------- Inbox ---------- */
+.notification-scroll li > a { grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 12px; padding: 13px 16px; }
+.notification-text { display: grid; gap: 3px; min-width: 0; }
+.notification-text strong { overflow-wrap: anywhere; }
+.notification-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-3); color: var(--text-2); }
+.notification-icon.price { background: var(--up-bg); color: var(--up); }
+.notification-icon.price.down { background: var(--down-bg); color: var(--down); }
+.notification-icon.match { background: #fff3c2; color: var(--ink); }
+.notification-icon.comment, .notification-icon.reply { background: #e9effb; color: #2f5fb3; }
+.notification-scroll li.unread { background: #fffbea; box-shadow: inset 3px 0 0 var(--yellow-strong); }
+.notification-scroll li.unread strong::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 6px; vertical-align: 2px; border-radius: 50%; background: #e32936; }
+.notification-empty small { font-size: 11.5px; color: var(--text-3); }
+.notification-empty svg { color: var(--line-2); }
+.notification-loading { display: grid; gap: 10px; padding: 16px; }
+.notification-loading i { display: block; height: 44px; border-radius: 8px; background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2)); background-size: 200% 100%; animation: kx-shimmer 1.2s linear infinite; }
+@keyframes kx-shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .notification-loading i { animation: none; } }
+
+/* ---------- Tablet ---------- */
+@media (max-width: 1100px) {
+  .pf-summary { grid-template-columns: minmax(0, 1fr); }
+  .pf-side { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .holding-head, .holding-row { grid-template-columns: minmax(160px, 1.6fr) 0.8fr 0.9fr 1fr 64px 76px; }
+  .holding-head > span:nth-child(5), .holding-weight { display: none; }
+  .tx-detail { display: none; }
+  .tx-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+}
+@media (max-width: 860px) {
+  .my-hero { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .my-hero .profile-facts { grid-column: 1 / -1; justify-content: start; }
+  .my-hero .profile-facts > div:first-child { padding-left: 0; }
+  .my-sections, .tx-day h3 { top: 0; }
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 640px) {
+  .pf-summary { gap: 10px; margin-bottom: 14px; }
+  .pf-overview { padding: 16px; }
+  .pf-total strong { font-size: 32px; }
+  .pf-total strong .unit { font-size: 15px; }
+  .pf-chart .chart-inner { height: 170px; padding-right: 54px; }
+  .pf-chart .chart-axis { width: 50px; font-size: 10px; }
+  .pf-side { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .pf-allocation { padding: 14px 16px; }
+  .pf-kpis > div { padding: 10px 14px; }
+  .pf-kpis dd { font-size: 17px; }
+  /* Holdings become two-line rows: player + value on top, cost · P/L · squad below. */
+  .holding-head { display: none; }
+  .holding-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "player value" "pl action" "meta action"; gap: 4px 10px; padding: 12px 14px; }
+  .holding-player { grid-area: player; }
+  .holding-player .portrait { --w: 36px; --h: 36px; }
+  .holding-value { grid-area: value; }
+  .holding-pl { grid-area: pl; display: flex; align-items: baseline; justify-content: flex-start; gap: 6px; padding-left: 46px; font-size: 12.5px; }
+  .holding-cost { grid-area: meta; display: flex; gap: 4px; justify-content: flex-start; padding-left: 46px; font-size: 11.5px; color: var(--text-3); }
+  .holding-row > span > small:first-child { display: inline; font-size: 11px; color: var(--text-3); }
+  .holding-value > small:first-child { display: none !important; }
+  .holding-state { display: none; }
+  .holding-action { grid-area: action; align-self: center; }
+  .holding-action .button { min-height: 30px; padding: 0 10px; }
+  .tx-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 12px; }
+  .tx-summary > div { padding: 10px 12px; }
+  .tx-summary > div > span { font-size: 10.5px; }
+  .tx-summary strong { font-size: 16px; }
+  .tx-summary strong small { font-size: 10.5px; }
+  .tx-summary > div > small { font-size: 10.5px; }
+  .tx-tools { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+  .tx-tools > .tabs { flex: 1 0 100%; }
+  .tx-tools .kx-select { width: auto; }
+  .tx-day h3 { padding: 6px 14px; font-size: 12px; }
+  .tx-row { gap: 10px; padding: 10px 14px; }
+  .tx-row .portrait { --w: 34px; --h: 34px; }
+  .tx-main strong { font-size: 14px; }
+  .tx-amount { min-width: 0; }
+  .tx-amount b { font-size: 14.5px; }
+  .my-hero { grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 16px; }
+  .my-hero .profile-avatar { width: 52px; height: 52px; }
+  .my-hero-name h2 { font-size: 19px; }
+  .my-hero-action { grid-column: 1 / -1; justify-self: start; }
+  .my-hero .profile-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; padding-top: 10px; border-top: 1px solid var(--line); }
+  .my-hero .profile-facts dd { font-size: 15px; }
+  .my-sections { margin: 0 calc(var(--gutter) * -1) 10px; padding: 8px var(--gutter); }
+  .my-sections a { padding: 6px 12px; font-size: 12.5px; }
+  .my-summary { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .my-card { padding: 14px 16px; }
+  .my-card > strong { font-size: 24px; }
+  .my-body { gap: 12px; }
+  .activity-list a { padding: 12px 16px; }
+  .activity-heading .author-avatar { width: 44px; height: 44px; }
+  .notification-scroll li > a { padding: 12px 14px; gap: 10px; }
+}

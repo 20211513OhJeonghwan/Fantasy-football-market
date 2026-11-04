@@ -1,7 +1,7 @@
 "use client";
 import Link from 'next/link';
 import {createContext,useContext,useEffect,useRef,useState,type ReactNode}from 'react';
-import {CheckCheck,Mail,X}from 'lucide-react';
+import {CalendarClock,CheckCheck,CornerDownRight,Mail,MessageCircle,TrendingDown,TrendingUp,X}from 'lucide-react';
 import {apiRequest}from '@/lib/kickx/client';
 import {dateText,money}from '@/lib/kickx/data';
 import {emptyNotificationPage,emptyNotificationSummary,notificationHref,type InboxNotification,type NotificationSummary}from '@/lib/kickx/notifications';
@@ -50,6 +50,12 @@ export function CommunityNotificationSettings(){
  const options=[{kind:'commentNotifications' as const,label:'내 글의 댓글 알림',description:'내가 쓴 게시글에 새 댓글이 달리면 알려드려요.'},{kind:'replyNotifications' as const,label:'내 댓글의 답글 알림',description:'내 댓글에 답글이 달리면 알려드려요.'}];
  return <section className="panel community-notification-settings" aria-label="커뮤니티 알림 설정"><h2>커뮤니티 알림</h2><p>알림함에서 확인할 수 있고, 최근 2주 동안 보관됩니다.</p>{options.map(option=><label className="community-notification-row" key={option.kind}><span><strong>{option.label}</strong><small>{option.description}</small></span><span className="notification-switch"><input type="checkbox" role="switch" aria-label={option.label} checked={context.summary[option.kind]??true} disabled={!context.ready||context.busy} onChange={event=>void context.setCommunityEnabled(option.kind,event.target.checked)}/><span>{(context.summary[option.kind]??true)?'켜짐':'꺼짐'}</span></span></label>)}</section>;
 }
+/** Kind marker: a small tinted icon so price, match, comment and reply rows scan apart. */
+function NotificationIcon({item}:{item:InboxNotification}){
+ const down=item.kind==='price'&&(item.priceAfter??0)<(item.priceBefore??0);
+ const Icon=item.kind==='comment'?MessageCircle:item.kind==='reply'?CornerDownRight:item.kind==='match'?CalendarClock:down?TrendingDown:TrendingUp;
+ return <span className={`notification-icon ${item.kind}${down?' down':''}`} aria-hidden="true"><Icon size={16}/></span>;
+}
 function NotificationContents({item}:{item:InboxNotification}){
  if(item.kind==='comment'||item.kind==='reply')return <><strong>{item.actorName??'사용자'}님이 {item.kind==='reply'?'답글':'댓글'}을 남겼습니다</strong><span className="notification-post-title">{item.postTitle}</span><span className="notification-comment-body">{item.body}</span><time dateTime={item.createdAt}>{dateText(item.createdAt)}</time></>;
  return <><strong>{item.playerName} · {item.kind==='price'?'가격 변동':'경기 예정'}</strong><span>{item.kind==='price'?`${money(item.priceBefore)} P → ${money(item.priceAfter)} P`:`${item.homeName??'홈 구단'} vs ${item.awayName??'원정 구단'}`}</span>{item.kind==='match'&&item.startsAt&&<span>경기 시작 {dateText(item.startsAt)}</span>}<time dateTime={item.createdAt}>{dateText(item.createdAt)}</time></>;
@@ -76,7 +82,7 @@ export function NotificationBell(){
   <button ref={trigger} type="button" className="notification-trigger" aria-label={context.summary.hasUnread?'알림함 · 읽지 않은 알림 있음':'알림함'} aria-expanded={open} aria-controls="notification-inbox" onClick={()=>{if(!open){setCursor(null);setOlder([]);}setOpen(!open);}}><Mail size={23}/>{context.summary.hasUnread&&<i className="notification-unread-dot" aria-hidden="true"/>}</button>
   {open&&<section id="notification-inbox" className="notification-inbox" role="dialog" aria-label="알림함"><header><h2>알림함</h2><button type="button" ref={closeButton} aria-label="알림함 닫기" onClick={()=>{setOpen(false);trigger.current?.focus();}}><X size={19}/></button></header>
    <div className="notification-tools"><span>최근 2주 알림</span><button type="button" disabled={!context.summary.hasUnread||reading} onClick={()=>void markAll()}><CheckCheck size={15}/>모두 읽음</button></div>
-   <div className="notification-scroll">{resource.status==='error'?<p className="notification-empty">알림을 불러오지 못했습니다.<button className="text-link" onClick={resource.reload}>다시 확인</button></p>:!rows.length?<p className="notification-empty">{resource.status==='loading'&&!mock?'알림을 불러오는 중입니다.':'새로운 알림이 없습니다.'}</p>:<ul>{rows.map(item=><li key={item.id} className={item.readAt?'':'unread'}><Link href={notificationHref(item)} onClick={()=>follow(item)}><NotificationContents item={item}/></Link></li>)}</ul>}
+   <div className="notification-scroll">{resource.status==='error'?<p className="notification-empty">알림을 불러오지 못했습니다.<button className="text-link" onClick={resource.reload}>다시 확인</button></p>:!rows.length?(resource.status==='loading'&&!mock?<div className="notification-loading" role="status" aria-label="알림을 불러오는 중입니다."><i/><i/><i/></div>:<p className="notification-empty"><Mail size={22} aria-hidden="true"/>새로운 알림이 없습니다.<small>가격·경기·댓글 알림이 최근 2주 동안 여기에 모입니다.</small></p>):<ul>{rows.map(item=><li key={item.id} className={item.readAt?'':'unread'}><Link href={notificationHref(item)} onClick={()=>follow(item)}><NotificationIcon item={item}/><span className="notification-text"><NotificationContents item={item}/></span></Link></li>)}</ul>}
    {page.hasMore&&<button className="notification-more" disabled={resource.status!=='ready'} onClick={()=>{setOlder(rows);setCursor(page.items.at(-1)?.id??null);}}>이전 알림 더 보기</button>}</div>
   </section>}
  </div>;

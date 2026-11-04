@@ -4,16 +4,16 @@ import { simple } from "./options";
 import Link from "next/link";
 import { useState } from "react";
 import { History, Search, Wallet } from "lucide-react";
-import { dateText, money, percent, seriesForDays } from "@/lib/kickx/data";
+import { money, percent, seriesForDays } from "@/lib/kickx/data";
 import type {Transaction} from "@/lib/kickx/types";
 import { usePlatform, useResource } from "./provider";
-import { Change, DataEmpty, MemberNotice, PageHeading, PlayerIdentity, PriceChart, StatCard, Tabs, TradeButton } from "./ui";
+import { Change, DataEmpty, MemberNotice, PageHeading, PlayerPortrait, PriceChart, Tabs, TradeButton } from "./ui";
 
 function signed(value: number | null | undefined) {
   return value != null && value > 0 ? `+${money(value)}` : money(value);
 }
 export function PortfolioScreen() {
-  const { data, getPlayer } = usePlatform();
+  const { data, getPlayer, getTeam } = usePlatform();
   const member = data.member?.financialReady === false ? null : data.member;
   const [period, setPeriod] = useState("1개월"),
     [sort, setSort] = useState("가치 순");
@@ -27,6 +27,7 @@ export function PortfolioScreen() {
         : (b.value ?? -Infinity) - (a.value ?? -Infinity),
   );
   const history = seriesForDays(member?.assetHistory || [], period === "1주" ? 7 : 30);
+  const tone = (n: number | null | undefined) => (n ?? 0) > 0 ? "up" : (n ?? 0) < 0 ? "down" : "";
   return (
     <>
       <PageHeading
@@ -36,86 +37,84 @@ export function PortfolioScreen() {
         action={<Link className="button secondary" href="/transactions"><History size={17} />거래 내역</Link>}
       />
       <MemberNotice />
-      <div className="portfolio-top">
-        <section className="portfolio-hero">
-          <span className="eyebrow plain">TOTAL ASSETS · 총자산</span>
-          <div className="portfolio-total">
+      {/* Brokerage-style account summary: total and its flow first, composition and key figures beside it. */}
+      <section className="pf-summary" aria-label="자산 요약">
+        <div className="pf-overview">
+          <div className="pf-total">
+            <span className="pf-label">총자산</span>
             <strong className="num">{money(total)}<span className="unit">P</span></strong>
-            <Change value={member?.returnRate} size="lg" />
+            <div className="pf-delta"><Change value={member?.returnRate} /><span>초기 자산 대비</span></div>
           </div>
-          <p>보유 포인트 + 보유 선수 현재 가치 합계{member?.weeklyRank != null && <> · 주간 랭킹 <b>{member.weeklyRank}위</b></>}</p>
-        </section>
-        <section className="panel allocation">
-          <h2>자산 구성</h2>
-          <div className="allocation-bar" aria-hidden="true">
-            {allocation != null ? <><i style={{ width: `${allocation}%` }} /><i style={{ width: `${100 - allocation}%` }} /></> : <i className="none" />}
+          <div className="pf-chart">
+            <div className="pf-chart-head"><span>자산 흐름</span><Tabs items={["1주", "1개월"]} value={period} onChange={setPeriod} variant="segment" label="기간 선택" /></div>
+            {member || data.session ? <PriceChart points={history} label="총자산" /> : <DataEmpty financial entity="자산" />}
           </div>
-          <dl>
-            <div><dt><span className="legend players" />선수 평가액</dt><dd className="num">{money(value)} P<small>{allocation == null ? "—" : `${allocation.toFixed(1)}%`}</small></dd></div>
-            <div><dt><span className="legend points" />보유 포인트</dt><dd className="num">{money(cash)} P<small>{allocation == null ? "—" : `${(100 - allocation).toFixed(1)}%`}</small></dd></div>
-          </dl>
-        </section>
-      </div>
-      <div className="stat-grid portfolio-stats">
-        <StatCard label="보유 포인트" value={money(cash)} unit="P" />
-        <StatCard label="선수 평가액" value={money(value)} unit="P" hint={member ? `${member.holdings.length}명 보유` : undefined} />
-        <StatCard label="총 평가손익" value={<span className={(member?.profit ?? 0) > 0 ? "up" : (member?.profit ?? 0) < 0 ? "down" : ""}>{signed(member?.profit)}</span>} unit="P" hint="매입가 대비" />
-        <StatCard label="수익률" value={<span className={(member?.returnRate ?? 0) > 0 ? "up" : (member?.returnRate ?? 0) < 0 ? "down" : ""}>{percent(member?.returnRate)}</span>} hint="초기 자산 대비" tone="yellow" />
-      </div>
-      <section className="panel">
-        <div className="section-title">
-          <h2>자산 흐름</h2>
-          <Tabs items={["1주", "1개월"]} value={period} onChange={setPeriod} variant="segment" label="기간 선택" />
         </div>
-        {member || data.session ? <PriceChart points={history} label="총자산" /> : <DataEmpty financial entity="자산" />}
+        <aside className="pf-side">
+          <div className="pf-allocation">
+            <h2>자산 구성</h2>
+            <div className="allocation-bar" aria-hidden="true">
+              {allocation != null ? <><i style={{ width: `${allocation}%` }} /><i style={{ width: `${100 - allocation}%` }} /></> : <i className="none" />}
+            </div>
+            <dl>
+              <div><dt><span className="legend players" />선수 평가액</dt><dd className="num">{money(value)} P<small>{allocation == null ? "—" : `${allocation.toFixed(1)}%`}</small></dd></div>
+              <div><dt><span className="legend points" />보유 포인트</dt><dd className="num">{money(cash)} P<small>{allocation == null ? "—" : `${(100 - allocation).toFixed(1)}%`}</small></dd></div>
+            </dl>
+          </div>
+          <dl className="pf-kpis">
+            <div><dt>평가손익</dt><dd className={`num ${tone(member?.profit)}`}>{signed(member?.profit)}<small>P</small></dd><small>매입가 대비</small></div>
+            <div><dt>수익률</dt><dd className={`num ${tone(member?.returnRate)}`}>{percent(member?.returnRate)}</dd><small>초기 자산 대비</small></div>
+            <div><dt>보유 선수</dt><dd className="num">{member ? member.holdings.length : "—"}<small>명</small></dd></div>
+            <div><dt>주간 랭킹</dt><dd className="num">{member?.weeklyRank != null ? member.weeklyRank : "—"}<small>위</small></dd></div>
+          </dl>
+        </aside>
       </section>
-      <section className="panel flush">
+      <section className="panel flush pf-holdings">
         <div className="panel-head">
           <h2>보유 선수 <span className="muted num">{member ? `${rows.length}명` : ""}</span></h2>
           <Tabs items={["가치 순", "손익 순", "수익률 순"]} value={sort} onChange={setSort} variant="segment" label="정렬" />
         </div>
-        <div className="table-scroll">
-          <table className="data-table holdings-table">
-            <thead>
-              <tr>
-                <th>선수</th>
-                <th className="numeric">매입가</th>
-                <th className="numeric">현재 가치</th>
-                <th className="numeric">평가손익</th>
-                <th className="numeric">수익률</th>
-                <th className="hide-md">비중</th>
-                <th>스쿼드</th>
-                <th className="cell-actions" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((h) => {
-                const p = getPlayer(h.playerId);
-                const weight = value && h.value != null ? (h.value / value) * 100 : null;
-                return (
-                  <tr key={h.id}>
-                    <td>{p ? <PlayerIdentity player={p} /> : h.playerName}</td>
-                    <td className="numeric">{money(h.cost)}</td>
-                    <td className="numeric strong">{money(h.value)}</td>
-                    <td className={`numeric ${(h.profit ?? 0) > 0 ? "up" : (h.profit ?? 0) < 0 ? "down" : ""}`}>{signed(h.profit)}</td>
-                    <td className="numeric"><Change value={h.returnRate} /></td>
-                    <td className="hide-md"><span className="weight"><span className="meter"><i style={{ width: `${weight ?? 0}%` }} /></span><small className="num">{weight == null ? "—" : `${weight.toFixed(1)}%`}</small></span></td>
-                    <td>{member?.squad?.slots.includes(h.playerId) ? <span className="tag ink">출전</span> : <span className="tag">벤치</span>}</td>
-                    <td className="cell-actions"><TradeButton player={p} side="sell" className="button secondary small" /></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        {rows.length > 0 && (
+          <ul className="holding-list">
+            <li className="holding-head" aria-hidden="true"><span>선수</span><span>매입가</span><span>현재 가치</span><span>평가손익</span><span>비중</span><span>스쿼드</span><span /></li>
+            {rows.map((h) => {
+              const p = getPlayer(h.playerId);
+              const weight = value && h.value != null ? (h.value / value) * 100 : null;
+              const starter = member?.squad?.slots.includes(h.playerId);
+              return (
+                <li key={h.id} className="holding-row">
+                  {p ? <Link href={`/players/${p.id}`} className="holding-player"><PlayerPortrait player={p} size="sm" /><span><strong>{p.name}</strong><small>{[getTeam(p.team)?.name, p.position].filter(Boolean).join(" · ") || "—"}</small></span></Link>
+                    : <span className="holding-player"><span><strong>{h.playerName}</strong></span></span>}
+                  <span className="holding-cost num"><small>매입가</small>{money(h.cost)}</span>
+                  <span className="holding-value num"><small>현재 가치</small><b>{money(h.value)}</b></span>
+                  <span className={`holding-pl num ${tone(h.profit)}`}><small>평가손익</small><b>{signed(h.profit)}</b><Change value={h.returnRate} /></span>
+                  <span className="holding-weight"><span className="meter"><i style={{ width: `${weight ?? 0}%` }} /></span><small className="num">{weight == null ? "—" : `${weight.toFixed(1)}%`}</small></span>
+                  <span className="holding-state">{starter ? <span className="tag ink">출전</span> : <span className="tag">벤치</span>}</span>
+                  <span className="holding-action"><TradeButton player={p} side="sell" className="button secondary small" /></span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
         {!rows.length && <DataEmpty financial entity="보유 선수" />}
       </section>
     </>
   );
 }
 const emptyTransactions=()=>({items:[] as Transaction[],total:0,page:1,size:50});
+const KST_DAY = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "long", day: "numeric", weekday: "short" });
+const KST_TIME = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false });
+/** Groups already-ordered rows by their KST calendar day for a statement-style list. */
+function byDay(rows: Transaction[]) {
+  const groups: [string, Transaction[]][] = [];
+  for (const t of rows) {
+    const day = Number.isFinite(Date.parse(t.date)) ? KST_DAY.format(new Date(t.date)) : "날짜 정보 없음";
+    if (groups.at(-1)?.[0] === day) groups.at(-1)![1].push(t); else groups.push([day, [t]]);
+  }
+  return groups;
+}
 export function TransactionsScreen() {
-  const { data, getPlayer, mock, status } = usePlatform();
+  const { data, getPlayer, getTeam, mock, status } = usePlatform();
   const member = data.member?.financialReady === false ? null : data.member;
   const [tab, setTab] = useState("전체"),
     [q, setQ] = useState(""),
@@ -131,6 +130,7 @@ export function TransactionsScreen() {
       (period === "전체 기간" || Date.parse(t.date) >= Date.now() - (period === "최근 7일" ? 7 : 30) * 86400000),
   );
   const sum = (type: "buy" | "sell") => (member ? all.filter((t) => t.type === type).reduce((s, t) => s + t.net, 0) : null);
+  const count = (type: "buy" | "sell") => (member ? all.filter((t) => t.type === type).length : null);
   return (
     <>
       <PageHeading
@@ -140,55 +140,41 @@ export function TransactionsScreen() {
         action={<Link className="button secondary" href="/portfolio"><Wallet size={17} />내 자산</Link>}
       />
       <MemberNotice />
-      <div className="stat-grid transaction-stats three">
-        <div className="stat-card"><span className="stat-label">조회된 매입 금액</span><strong className="stat-value num">{money(sum("buy"))} <small className="unit">P</small></strong></div>
-        <div className="stat-card"><span className="stat-label">조회된 매각 정산</span><strong className="stat-value num">{money(sum("sell"))} <small className="unit">P</small></strong></div>
-        <div className="stat-card"><span className="stat-label">거래 건수</span><strong className="stat-value num">{member ? mock?all.length:remote.status==="ready"?remote.data.total:"—" : "—"} <small className="unit">건</small></strong></div>
-      </div>
-      <section className="panel flush">
-        <div className="panel-head">
+      <section className="tx-summary" aria-label="조회된 거래 요약">
+        <div className="buy"><span>조회된 매입</span><strong className="num">{money(sum("buy"))}<small>P</small></strong><small className="num">{count("buy") ?? "—"}건</small></div>
+        <div className="sell"><span>조회된 매각 정산</span><strong className="num">{money(sum("sell"))}<small>P</small></strong><small className="num">{count("sell") ?? "—"}건</small></div>
+        <div><span>거래 건수</span><strong className="num">{member ? mock?all.length:remote.status==="ready"?remote.data.total:"—" : "—"}<small>건</small></strong><small>전체 기간 기준</small></div>
+      </section>
+      <section className="panel flush tx-panel">
+        <div className="tx-tools">
           <Tabs items={["전체", "매입", "매각"]} value={tab} onChange={v=>{setTab(v);setPage(1);}} variant="segment" label="거래 유형" />
-          <div className="toolbar">
-            <label className="input-search"><Search size={16} /><input aria-label="거래 선수 검색" placeholder="거래 선수 검색" value={q} onChange={(e) => {setQ(e.target.value);setPage(1);}} /></label>
-            <Select label="거래 기간" value={period} onChange={v=>{setPeriod(v);setPage(1);}} options={simple(["전체 기간", "최근 7일", "최근 30일"])} variant="compact" />
-          </div>
+          <label className="input-search"><Search size={16} /><input aria-label="거래 선수 검색" placeholder="거래 선수 검색" value={q} onChange={(e) => {setQ(e.target.value);setPage(1);}} /></label>
+          <Select label="거래 기간" value={period} onChange={v=>{setPeriod(v);setPage(1);}} options={simple(["전체 기간", "최근 7일", "최근 30일"])} variant="compact" />
         </div>
-        <div className="table-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>거래 일시 (KST)</th>
-                <th>선수</th>
-                <th>유형</th>
-                <th className="numeric">거래 가격</th>
-                <th className="numeric">수량</th>
-                <th className="numeric">수수료</th>
-                <th className="numeric">정산액</th>
-                <th>상태</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((t) => {
+        {rows.length > 0 && byDay(rows).map(([day, items]) => (
+          <div className="tx-day" key={day}>
+            <h3>{day}</h3>
+            <ul>
+              {items.map((t) => {
                 const p = getPlayer(t.playerId);
                 return (
-                  <tr key={t.id}>
-                    <td className="muted num">{dateText(t.date)}</td>
-                    <td>{p ? <PlayerIdentity player={p} /> : t.playerName}</td>
-                    <td><span className={`trade-type ${t.type}`}>{t.type === "buy" ? "매입" : "매각"}</span></td>
-                    <td className="numeric">{money(t.price)}</td>
-                    <td className="numeric">{money(t.quantity)}</td>
-                    <td className="numeric muted">{t.fee ? `−${money(t.fee)}` : money(t.fee)}</td>
-                    <td className="numeric strong">{money(t.net)}</td>
-                    <td><span className="status-pill ok">{t.status}</span></td>
-                  </tr>
+                  <li key={t.id} className={`tx-row ${t.type}`}>
+                    {p ? <PlayerPortrait player={p} size="sm" /> : <span className="tx-portrait-empty" aria-hidden="true" />}
+                    <span className="tx-main">
+                      <strong>{p ? <Link href={`/players/${p.id}`}>{t.playerName}</Link> : t.playerName}</strong>
+                      <small><span className={`trade-type ${t.type}`}>{t.type === "buy" ? "매입" : "매각"}</span><time className="num" dateTime={t.date}>{Number.isFinite(Date.parse(t.date)) ? KST_TIME.format(new Date(t.date)) : "—"}</time>{p && <span>{getTeam(p.team)?.name}</span>}</small>
+                    </span>
+                    <span className="tx-detail num"><span>거래 가격 {money(t.price)} P × {money(t.quantity)}</span><span>수수료 {t.fee ? `−${money(t.fee)}` : money(t.fee)} P</span></span>
+                    <span className="tx-amount num"><b>{t.type === "buy" ? "−" : "+"}{money(t.net)}<small>P</small></b><small>{t.type === "buy" ? "결제" : "정산"} · {t.status}</small></span>
+                  </li>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+          </div>
+        ))}
         {!rows.length && <DataEmpty financial entity="거래 내역" status={mock||!member?undefined:remote.status} filtered={!!q||tab!=="전체"} />}
         {!mock&&<div className="button-row frame"><button className="button secondary small" disabled={page===1} onClick={()=>setPage(p=>p-1)}>이전</button><span>{page} 페이지</span><button className="button secondary small" disabled={page*50>=remote.data.total} onClick={()=>setPage(p=>p+1)}>다음</button></div>}
-        {rows.length > 0 && <div className="panel-foot"><span className="fine-print">금액 단위 P · 수수료와 정산액은 거래 당시 기록입니다.</span><span className="fine-print num">{rows.length}건</span></div>}
+        {rows.length > 0 && <div className="panel-foot"><span className="fine-print">금액 단위 P · 시각은 한국 시간 · 수수료와 정산액은 거래 당시 기록입니다.</span><span className="fine-print num">{rows.length}건</span></div>}
       </section>
     </>
   );
