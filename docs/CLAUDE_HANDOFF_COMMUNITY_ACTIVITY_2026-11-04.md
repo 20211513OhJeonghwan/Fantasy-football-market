@@ -4,9 +4,9 @@
 
 ## 1. 인계 상태
 
-이번 요청의 기능 코드와 DB 마이그레이션, 자동 검증을 작성했다. 현재 운영 DB에 새 마이그레이션은 적용되지 않았다. 운영 Supabase의 기존 알림 제약조건·함수·트리거·권한을 변경하는 작업을 자동 승인 검토가 거부하여 명시적 적용 승인을 기다리는 상태다. 다른 SQL 도구로 우회 실행하지 않았다.
+이번 요청의 기능 코드와 DB 마이그레이션, 자동 검증을 작성했다. 운영 DB에는 2026-11-04 사용자 승인 후 마이그레이션을 적용했다. 실제 DB에서 수신 설정 저장·본인 활동·알림 조회·타인 공개 아이콘·익명 접근 제한을 검증했고, 설정 검증 쓰기는 롤백했다.
 
-코드 검토 브랜치: `feat/community-activity-notifications`. 운영 main 반영은 DB 승인·적용·검증 이후에 진행해야 한다. 기존 운영 DB로 Preview만 열면 신규 RPC가 없어 새 기능을 검증할 수 없으므로 아래의 모의 응답 브라우저 검사 또는 마이그레이션을 적용한 격리 환경을 사용한다.
+배포 대상은 개인·팀 저장소 main이다. 구현 PR은 개인 #36·팀 #13이며 동일한 기능 코드와 이 인계 문서를 포함한다. 운영 DB에 이 마이그레이션을 중복 실행하지 않는다.
 
 개인 저장소: https://github.com/hyun1290/kick-x-test
 
@@ -88,7 +88,7 @@
 
 ## 5. DB와 배포 순서
 
-마이그레이션 파일: `supabase/migrations/20261104004149_community_activity_and_replies.sql`.
+마이그레이션 파일: `supabase/migrations/20261104011313_community_activity_and_replies.sql`.
 
 변경 내용:
 - profiles에 댓글/답글 수신 설정 2개 추가.
@@ -98,9 +98,9 @@
 - 사용자/작성자별 조회와 외래 키 정리를 위한 인덱스 추가.
 - 비공개 definer 함수의 schema usage와 각 함수 실행 권한을 명시. 기계 작업용 기존 함수의 접근 제한은 유지.
 
-**운영 적용 승인 전까지 main에 새 앱을 배포하지 않는다.** 승인 후 기존 스키마/관련 기록의 백업·복구 경로를 확인하고, 이 파일을 적용한 뒤 함수 권한·기존 가격/경기 알림·실제 아바타 응답을 검증한다. 이후 개인/팀 main에 같은 코드 변경을 반영한다. 가격·지갑·거래 기록을 초기화하거나 과거 댓글 알림을 일괄 생성하지 않는다.
+**운영 DB 적용과 검증을 완료했다.** 적용 전 스키마·함수·권한·제약조건은 `docs/evidence/community-schema-before-2026-11-04.json`에 보관했다. 적용 시 기존 알림은 0건이었으며, 가격·지갑·거래 기록을 초기화하거나 과거 댓글 알림을 일괄 생성하지 않았다. 새 환경에는 전체 마이그레이션을 순서대로 적용하고 운영 DB에는 중복 실행하지 않는다.
 
-자동 승인 검토는 기존 알림 제약조건과 함수·트리거·권한의 운영 변경을 이유로 거부했다. 운영 DB에서 preference 컬럼 0개, 신규 활동 RPC 없음도 다시 확인했으므로 적용되었다고 설명하면 안 된다.
+운영 마이그레이션 이력의 버전은 `20261104011313`이다. 저장소 파일명도 실제 적용 이력과 맞췄다. 기존 가격 알림 트리거와 알림 테이블 RLS는 유지되며 익명 사용자는 개인 알림 조회 함수를 실행할 수 없다.
 
 ## 6. 검증과 재현
 
@@ -143,6 +143,7 @@ node tests/browser-smoke.mjs
 
 아래 파일은 기능, 서버 응답, 모바일 보완, 검증을 포함한 전체 변경 범위다.
 
+- `docs/evidence/community-schema-before-2026-11-04.json`
 - `.github/workflows/check.yml`
 - `app/api/kickx/community/activity/route.ts`
 - `app/api/kickx/community/route.ts`
@@ -164,7 +165,7 @@ node tests/browser-smoke.mjs
 - `lib/kickx/types.ts`
 - `server/kickx/notifications.ts`
 - `server/kickx/public-prototype.ts`
-- `supabase/migrations/20261104004149_community_activity_and_replies.sql`
+- `supabase/migrations/20261104011313_community_activity_and_replies.sql`
 - `tests/browser-smoke.mjs`
 - `tests/community-activity-browser.mjs`
 - `tests/community-activity.test.mjs`
