@@ -79,6 +79,6 @@ export function validatePost(draft: PostDraft, rules: PostRules): Partial<Record
   if (!body) errors.body = "내용을 입력해 주세요.";
   else if (body < POST_LIMITS.bodyMin) errors.body = `내용은 ${POST_LIMITS.bodyMin}자 이상 입력해 주세요. (현재 ${body}자)`;
   else if (body > POST_LIMITS.bodyMax) errors.body = `내용은 ${POST_LIMITS.bodyMax.toLocaleString("ko-KR")}자까지 입력할 수 있습니다.`;
-  if (draft.transaction && !rules.transactions.includes(draft.transaction)) errors.transaction = "본인의 거래 내역만 첨부할 수 있습니다.";
+  if (draft.transaction && !rules.transactions.includes(draft.transaction)) errors.transaction = draft.scope === "player" ? "본인의 거래 중 이 선수의 거래 내역만 첨부할 수 있습니다." : "본인의 거래 내역만 첨부할 수 있습니다.";
   return errors;
 }

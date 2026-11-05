@@ -465,12 +465,11 @@ export function PlayerDetail() {
           </section>
         </div>
         <aside className="detail-side">
-          <section className="panel">
-            <SectionTitle title="최근 Performance" meta="최근 6경기" />
-            <PerformanceBars player={p} />
-          </section>
-          <section className="panel lounge-preview">
-            <SectionTitle title={`${p.short || p.name} 라운지`} href={`/community/players/${p.id}`} link="입장" />
+          <section className="panel lounge-preview player-community-entry">
+            <span className="eyebrow">PLAYER COMMUNITY</span>
+            <h2><MessageCircle size={23}/>{p.short || p.name} 커뮤니티</h2>
+            <p>이 선수의 경기와 시세에 대한 이야기를 나눠보세요.</p>
+            <Link className="button primary player-lounge-cta" href={`/community/players/${p.id}`}>선수 커뮤니티 입장 <ArrowRight size={18}/></Link>
             {posts.length ? (
               <ul>
                 {posts.map((post) => (
@@ -485,6 +484,10 @@ export function PlayerDetail() {
             ) : (
               <Link href={`/community/players/${p.id}`} className="lounge-empty"><MessageCircle size={18} />첫 이야기를 남겨보세요 <ArrowRight size={15} /></Link>
             )}
+          </section>
+          <section className="panel">
+            <SectionTitle title="최근 Performance" meta="최근 6경기" />
+            <PerformanceBars player={p} />
           </section>
         </aside>
       </div>

@@ -30,6 +30,18 @@ test('database error mapping exposes known conflicts but redacts unknown private
  assert.throws(()=>prototype.checkDatabase({code:'42P01',message:'private schema'}),e=>e.status===503&&!e.message.includes('private'));
  assert.throws(()=>prototype.checkDatabase({code:'XX000',message:'private credentials or content'}),e=>!e.message.includes('private'));
 });
+
+test('attachment history reads only verified own trades, filters by player and stays paginated',async()=>{
+ const calls=[];const query={};
+ for(const method of ['select','eq','order'])query[method]=(...args)=>{calls.push([method,...args]);return query;};
+ query.range=async(...args)=>{calls.push(['range',...args]);return {data:[],count:0,error:null};};
+ const route=loadTs('../app/api/kickx/trades/route.ts',{'@/server/kickx/http':{...http,authenticatedClient:async()=>({user:{id:'verified'},client:{from:()=>query}})},'@/server/kickx/prototype':prototype});
+ assert.equal((await route.GET(new Request('https://kickx.invalid/api/kickx/trades?playerId=bsd-19&userId=forged&page=2'))).status,200);
+ assert(calls.some(x=>x[0]==='eq'&&x[1]==='user_id'&&x[2]==='verified'));
+ assert(calls.some(x=>x[0]==='eq'&&x[1]==='player_id'&&x[2]==='bsd-19'));
+ assert.deepEqual(calls.at(-1),['range',50,99]);
+ assert.equal((await route.GET(new Request('https://kickx.invalid/api/kickx/trades?playerId=bad%20target'))).status,400);
+});
 test('member restriction routes verify admin, reject invalid input and ignore forged roles/balances',async()=>{
  let denied=true;const calls=[];
  const route=loadTs('../app/api/kickx/admin/users/route.ts',{'@/server/kickx/http':{...http,authenticatedClient:async()=>({client:{rpc:async(name,args)=>{calls.push({name,args});return {error:null};}}})},'@/server/kickx/prototype':prototype,'@/lib/kickx/catalog-query':loadTs('../lib/kickx/catalog-query.ts'),'@/server/kickx/admin-db':{requireAdmin:async()=>{if(denied)throw new http.HttpError(403,'blocked');},createAdminDatabase:()=>{throw Error('not called');}}});

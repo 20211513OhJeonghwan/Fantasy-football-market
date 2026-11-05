@@ -32,11 +32,11 @@ do $$declare q jsonb;t jsonb;r jsonb;req uuid:=gen_random_uuid();slots text[]:=a
  if public.kickx_trade((q->>'id')::uuid,gen_random_uuid())<>t then raise exception 'Quote executed twice';end if;
  if (select balance from public.wallets)<>1200000 or (select count(*) from public.holdings)<>1 or (select count(*) from public.trades)<>1 then raise exception 'Buy not atomic';end if;
  perform pg_temp.expect_error($q$select public.kickx_quote('bsd-10','buy')$q$,'ALREADY_OWNED');
- slots[1]:='bsd-10';r:=public.kickx_save_squad('4-3-3',slots,0);
- perform pg_temp.expect_error(format('select public.kickx_save_squad(%L,%L,0)','4-3-3',slots),'STALE_REVISION');
- slots[2]:='bsd-10';perform pg_temp.expect_error(format('select public.kickx_save_squad(%L,%L,1)','4-3-3',slots),'DUPLICATE_PLAYER');
- slots[1]:=null;perform pg_temp.expect_error(format('select public.kickx_save_squad(%L,%L,1)','4-3-3',slots),'INVALID_SQUAD_PLAYER');
- slots[2]:='bsd-11';perform pg_temp.expect_error(format('select public.kickx_save_squad(%L,%L,1)','4-3-3',slots),'INVALID_SQUAD_PLAYER');
+ slots[1]:='bsd-10';r:=public.kickx_save_squad('4-3-3',slots,1);
+ perform pg_temp.expect_error(format('select public.kickx_save_squad(%L,%L,99)','4-3-3',slots),'STALE_REVISION');
+ slots[2]:='bsd-10';perform pg_temp.expect_error(format('select public.kickx_save_squad(%L,%L,1)','4-3-3',slots),'AUTO_SQUAD_MANAGED');
+ slots[1]:=null;perform pg_temp.expect_error(format('select public.kickx_save_squad(%L,%L,1)','4-3-3',slots),'AUTO_SQUAD_MANAGED');
+ slots[2]:='bsd-11';perform pg_temp.expect_error(format('select public.kickx_save_squad(%L,%L,1)','4-3-3',slots),'AUTO_SQUAD_MANAGED');
  if (public.kickx_member_data()->>'totalAssets')::bigint<>1300000 then raise exception 'Assets after buy wrong';end if;
  if jsonb_array_length(public.kickx_member_data()->'ownedPlayers')<>1 then raise exception 'Owned catalog missing';end if;
  q:=public.kickx_quote('bsd-10','sell');perform pg_temp.expect_error(format('select public.kickx_trade(%L,%L)',q->>'id',req),'REQUEST_REUSED');if (q->>'fee')::bigint<>2000 then raise exception 'Fee not 2 percent';end if;

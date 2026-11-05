@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 import {loadTs} from './load-ts.mjs';
 const policy=loadTs('../server/kickx/engine/report-policy.ts');
 const {calculatePerformance:calc}=loadTs('../server/kickx/engine/report-performance.ts',{'./report-policy':policy});
 const {calculateReportPricing:price,reportBaseline}=loadTs('../server/kickx/engine/report-pricing.ts',{'./report-policy':policy});
-const p={...policy.REPORT_PARAMETERS};
+// Historical reference examples retain the previous 2% cap. New policy is tested separately.
+const p={...policy.REPORT_PARAMETERS,maxUp:.02,maxDown:.02};
 const baseline={source:'previous-season',season:2025,gameCount:20,meanScore:6,seedScore:6,percentile:.5,price:100000,lower:-20,upper:100,referenceHash:'fixed',fixtures:[],warnings:[]};
 const game=(id,score,season=2026)=>({fixtureId:`bsd-${id}`,score,status:'provisional',minutes:90,season,startedAt:`${season}-09-${String(id).padStart(2,'0')}T12:00:00Z`});
 function match(position='D') {return {fixtureId:'bsd-100',playerId:'bsd-2',teamId:'bsd-1',status:'FT',homeTeam:'bsd-1',awayTeam:'bsd-2',homeScore:0,awayScore:0,stats:{minutes_played:90,goals:0},legacy:null,source:{lineups:{lineup_status:'confirmed',lineups:{home:{team_id:1,players:Array.from({length:11},(_,i)=>({id:i+1,position:i===1?position:'D'})),substitutes:[{id:30,position}]},away:{team_id:2,players:Array.from({length:11},(_,i)=>({id:i+12,position:'D'}))}}},incidents:{incidents:[]}}};}
@@ -108,13 +109,15 @@ test('frozen positional midranks and prior fallback do not ingest current-season
 });
 test('independent PostgreSQL and TypeScript agree for cumulative seasons and integer percentage caps',async()=>{
  const db=new PGlite();try{
-  const sql=readFileSync(new URL('../supabase/migrations/20261029183641_valuation_launch_dnp.sql',import.meta.url),'utf8');
-  await db.exec(sql.match(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$\$;/)[0]);
+  const name=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(x=>x.endsWith('_automatic_squad_market_and_community.sql'));
+  const sql=readFileSync(new URL('../supabase/migrations/'+name,import.meta.url),'utf8');
+  await db.exec(sql.match(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$function\$\s*;/i)[0]);
   let seed=7654;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   for(let c=0;c<40;c++){
    const rows=Array.from({length:1+Math.floor(rand()*24)},(_,i)=>game(i+1,Math.round((rand()*60-15)*2)/2));
    const b={...baseline,seedScore:Math.round((rand()*15-4)*2)/2,price:10000+Math.floor(rand()*900000)};
-   const ts=price(rows,b,p),pg=(await db.query('select public.kickx_report_plan($1,$2,$3) plan',[rows,b,p])).rows[0].plan;
+   const parameters=c%2?{...p,maxUp:.1,maxDown:.1,capChangeAtMs:Date.parse("2026-09-05T00:00:00Z"),previousMaxUp:.02,previousMaxDown:.02}:policy.REPORT_PARAMETERS;
+   const ts=price(rows,b,parameters),pg=(await db.query('select public.kickx_report_plan($1,$2,$3) plan',[rows,b,parameters])).rows[0].plan;
    assert.equal(pg.price,ts.price,`case ${c}`);assert.equal(pg.steps.length,ts.steps.length);
    for(let i=0;i<ts.steps.length;i++)for(const key of ['priceBefore','priceAfter','targetPrice','formScore','changePercent','window'])assert.deepEqual(pg.steps[i][key],ts.steps[i][key],`${c}/${i}/${key}`);
   }
@@ -126,8 +129,9 @@ test('verified non-participation compounds 1.5 percent without diluting seasonal
  const plan=price(rows,baseline,p);assert.equal(plan.steps.length,3);assert.equal(plan.steps[1].priceAfter,100470);assert.equal(plan.price,98963);
  assert.equal(plan.steps[2].evidence.n,1);assert.equal(plan.steps[2].formScore,plan.steps[0].formScore);assert.equal(plan.steps[1].evidence.reason,'NON_PARTICIPATION');
  const db=new PGlite();try{
-  const sql=readFileSync(new URL('../supabase/migrations/20261029183641_valuation_launch_dnp.sql',import.meta.url),'utf8');
-  await db.exec(sql.match(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$\$;/)[0]);
+  const name=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(x=>x.endsWith('_automatic_squad_market_and_community.sql'));
+  const sql=readFileSync(new URL('../supabase/migrations/'+name,import.meta.url),'utf8');
+  await db.exec(sql.match(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$function\$\s*;/i)[0]);
   const pg=(await db.query('select public.kickx_report_plan($1,$2,$3) plan',[rows,baseline,p])).rows[0].plan;
   assert.equal(pg.price,plan.price);assert.deepEqual(pg.steps.map(x=>x.priceAfter),plan.steps.map(x=>x.priceAfter));
  }finally{await db.close();}
@@ -153,4 +157,19 @@ test('corrected lineup evidence cannot keep an obsolete DNP eligible for decay',
  m.source.lineups.lineups.home.substitutes.pop();m.stats._roster_evidence.kind='unavailable-list';assert.equal(calc(m).status,'blocked');
  m.source.lineups.unavailable_players={home:[{id:77}]};assert.equal(calc(m).status,'not-played');
  m.source.lineups.unavailable_players={home:[]};m.stats._roster_evidence.kind='observed-squad';assert.equal(calc(m).status,'not-played');
+});
+
+test('ten-percent cap applies to new games while the cutover reproduces old issued prices',()=>{
+ assert.equal(policy.REPORT_PARAMETERS.maxUp,.1);assert.equal(policy.REPORT_PARAMETERS.maxDown,.1);
+ const rows=[game(1,100),game(2,100),game(3,-100)];
+ const old=price(rows.slice(0,1),baseline,p);
+ const current=price(rows.slice(0,1),baseline,policy.REPORT_PARAMETERS);
+ assert.equal(old.price,102000);assert.equal(current.price,110000);
+ const params={...policy.REPORT_PARAMETERS,capChangeAtMs:Date.parse('2026-09-02T12:00:00Z'),previousMaxUp:.02,previousMaxDown:.02};
+ const plan=price(rows,baseline,params);
+ assert.equal(plan.steps[0].priceAfter,old.price);
+ assert.equal(plan.steps[1].priceAfter,112200);
+ for(const step of plan.steps.slice(1))assert.ok(step.priceAfter>=Math.ceil(step.priceBefore*.9)&&step.priceAfter<=Math.floor(step.priceBefore*1.1));
+ const downward=price([game(1,-100)],baseline,policy.REPORT_PARAMETERS);assert.equal(downward.price,90000);
+ assert.throws(()=>price(rows,baseline,{...params,previousMaxUp:undefined}),/INVALID_REPORT_PARAMETERS/);
 });

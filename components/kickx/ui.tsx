@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { dateText, money, percent, unavailableAction } from "@/lib/kickx/data";
 import { tradeService } from "@/lib/kickx/trade";
+import { POSITION_LIMITS, purchaseBlock, squadCapacity } from "@/lib/kickx/squad";
 import type { DataStatus, Player, Position, SeriesPoint, TradeQuote } from "@/lib/kickx/types";
 import { usePlatform } from "./provider";
 import { clubIdentity, leagueIdentity, luminance, type CrestShape } from "@/lib/kickx/club-identity";
@@ -606,7 +607,9 @@ export function Modal({
 }
 type TradeState = "loading" | "review" | "submitting" | "done" | "failed";
 function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | "sell"; onClose: () => void }) {
-  const { data, mock, getTeam, notify, reload } = usePlatform();
+  const { data, mock, getTeam, getPlayer, notify, reload } = usePlatform();
+  const capacity = squadCapacity(data.member?.holdings ?? [], getPlayer);
+  const buyBlocked = side === "buy" && data.member ? purchaseBlock(player, data.member.holdings, getPlayer) : null;
   const service = tradeService(mock);
   const [quote, setQuote] = useState<TradeQuote | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -614,6 +617,7 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
   useEffect(() => {
     let active = true;
     setQuote(null); setError(""); setState("loading"); lock.current=false;
+    if (buyBlocked) { setError(buyBlocked); setState("failed"); return; }
     void service.quote(player, side, data.member).then(q => {if(active){setQuote(q);requestId.current=crypto.randomUUID();setState("review");}}).catch(e=>{if(active){setError(e instanceof Error?e.message:"견적을 불러오지 못했습니다.");setState("failed");}});
     return ()=>{active=false;};
   // A confirmed quote is frozen until the user explicitly requests a new one.
@@ -625,13 +629,13 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
   const lock = useRef(false);
   const label = side === "buy" ? "매입" : "매각";
   const insufficient = side === "buy" && quote?.balanceAfter != null && quote.balanceAfter < 0;
-  const positionBlocked = side === "buy" && !player.position;
+  const positionBlocked = side === "buy" && (!player.position || !!buyBlocked);
   const expiresAt = quote?.expiresAt ? Date.parse(quote.expiresAt) : null;
   const quotedAt = quote?.quotedAt ? Date.parse(quote.quotedAt) : null;
   const remaining = expiresAt == null ? null : Math.max(0, Math.floor((expiresAt - now) / 1000));
   const expired = state === "review" && expiresAt != null && expiresAt <= now;
   // Errors that a fresh quote can resolve (expired quote, changed price).
-  const renewable = state === "failed" && (!quote || /견적|가격이 변경/.test(error));
+  const renewable = !positionBlocked && state === "failed" && (!quote || /견적|가격이 변경/.test(error));
   useEffect(() => {
     if (state !== "review" || expiresAt == null) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -681,6 +685,11 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
             </div>
             <Change value={player.change} />
           </div>
+          {data.member && <section className="trade-capacity" aria-label="현재 포지션별 보유 현황">
+            <div><strong>현재 보유 현황</strong><span className="num">{capacity.total} / 11명</span></div>
+            <ul>{(["GK", "DF", "MF", "FW"] as const).map(pos => <li key={pos} className={`${player.position === pos ? "target" : ""} ${capacity.counts[pos] >= POSITION_LIMITS[pos] ? "full" : ""}`}><PositionBadge position={pos}/><b className="num">{capacity.counts[pos]} / {POSITION_LIMITS[pos]}</b></li>)}</ul>
+            <p>{side === "buy" ? "매입 즉시 해당 포지션의 빈자리에 자동으로 반영됩니다." : "매각 즉시 경기장에서도 제외됩니다."}</p>
+          </section>}
           <dl className="trade-summary">
             {rows.map(([term, value, tone]) => (
               <div key={term} className={tone}>
@@ -708,8 +717,8 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
             </div>
           )}
           {insufficient && <p className="trade-state error" role="alert">보유 포인트가 부족합니다. 거래 후 잔액이 0P보다 작을 수 없습니다.</p>}
-          {positionBlocked && <p className="trade-state error" role="alert">{"포지션 정보를 확인한 뒤 매입할 수 있습니다."}</p>}
-          {state === "failed" && (
+          {positionBlocked && <p className="trade-state error" role="alert">{buyBlocked || "포지션 정보를 확인한 뒤 매입할 수 있습니다."}</p>}
+          {state === "failed" && !positionBlocked && (
             <div className="trade-state error" role="alert">
               <span>{error || "거래를 처리하지 못했습니다."}</span>
               {renewable && <button className="button secondary small" onClick={() => setAttempt((a) => a + 1)}>새 견적 받기</button>}
@@ -748,17 +757,18 @@ export function TradeButton({
   className?: string;
   label?: string;
 }) {
-  const [open, setOpen] = useState(false);
+  // Keep the reviewed side/player stable when a successful receipt updates holdings.
+  const [open, setOpen] = useState<{player:Player;side:"buy"|"sell"}|null>(null);
   const {data}=usePlatform();
   const unknownPosition = side === "buy" && !!player && !player.position;
   const locked=player?.tradeWindow?.locked;
   const duplicate=side==="buy" && data.member?.holdings.some(h=>h.playerId===player?.id);
   return (
     <>
-      <button type="button" className={className} disabled={locked || duplicate || unknownPosition || !player || !!player.status || player.price == null} title={locked ? "경기 시작 90분 전부터 종료 확인 후 10분까지 거래할 수 없습니다." : unknownPosition ? "포지션 정보가 없어 매입할 수 없습니다." : player?.status || undefined} onClick={() => setOpen(true)}>
+      <button type="button" className={className} disabled={locked || duplicate || unknownPosition || !player || !!player.status || player.price == null} title={locked ? "경기 시작 90분 전부터 종료 확인 후 10분까지 거래할 수 없습니다." : unknownPosition ? "포지션 정보가 없어 매입할 수 없습니다." : player?.status || undefined} onClick={() => player && setOpen({player,side})}>
         {locked ? "경기 거래 제한" : duplicate ? "보유 중" : unknownPosition ? "포지션 확인 중" : player?.status || label || (side === "buy" ? "매입" : "매각")}
       </button>
-      {open && player && <TradeDialog player={player} side={side} onClose={() => setOpen(false)} />}
+      {open && <TradeDialog player={open.player} side={open.side} onClose={() => setOpen(null)} />}
     </>
   );
 }

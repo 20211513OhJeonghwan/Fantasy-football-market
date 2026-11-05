@@ -46,7 +46,7 @@ try{
  }
  await page.goto(base+'/squad',{waitUntil:'networkidle'});const toggle=page.getByRole('switch');assert.equal(await toggle.isChecked(),true);await toggle.click();await page.getByText('경기 알림을 껐습니다.',{exact:true}).waitFor();assert.equal(await toggle.isChecked(),false);
  await page.reload({waitUntil:'networkidle'});assert.equal(await toggle.isChecked(),false);assert.ok(mutations.some(m=>m.action==='preferences'&&m.matchNotifications===false));
- await page.goto(base+'/community/clubs',{waitUntil:'networkidle'});assert.equal(await page.getByRole('combobox',{name:'게시판 구단',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'응원 구단',exact:true}).count(),1);
+ await page.goto(base+'/community/clubs',{waitUntil:'networkidle'});assert.equal(await page.getByRole('combobox',{name:'게시판 구단 선택',exact:true}).count(),1);assert.equal(await page.getByRole('button',{name:'응원 구단',exact:true}).count(),1);
  state.session=null;await page.goto(base+'/market',{waitUntil:'networkidle'});assert.equal(await page.locator('.notification-trigger').count(),0);
- assert.deepEqual(errors,[]);console.log('Passed: desktop/mobile inbox, red dot, pagination, read-all, Escape, persistent squad mute, club filter removal, grid default and guest state');
+ assert.deepEqual(errors,[]);console.log('Passed: desktop/mobile inbox, red dot, pagination, read-all, Escape, persistent squad mute, restored club filter, grid default and guest state');
 }finally{await browser?.close();server.kill('SIGTERM');}

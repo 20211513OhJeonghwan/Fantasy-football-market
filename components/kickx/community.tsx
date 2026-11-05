@@ -1,21 +1,20 @@
 "use client";
 import { Select } from "./select";
 import { useTeamOptions } from "./options";
-import { supportedTeams } from "@/lib/kickx/support";
+import { supportedTeams, supportsTeam } from "@/lib/kickx/support";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { ArrowRight, LoaderCircle, Lock, MessageCircle, Paperclip, Pencil } from "lucide-react";
+import { ArrowRight, LoaderCircle, Lock, MessageCircle, Paperclip, Pencil, X } from "lucide-react";
 import { dateText, money } from "@/lib/kickx/data";
-import type { Player } from "@/lib/kickx/types";
 import { clubIdentity } from "@/lib/kickx/club-identity";
 import { POST_LIMITS, validatePost, type PostField } from "@/lib/kickx/validation";
 import {apiRequest} from "@/lib/kickx/client";
 import {usePost} from "./community-detail";
 import {CommunityFeed} from "./community-feed";
-import {postTitle, postHeading} from "@/lib/kickx/community";
+import {usePostTradeAttachments} from "./post-trades";
 import { usePlatform } from "./provider";
-import { useCatalogPage, useCatalogPlayer } from "./catalog";
+import { useCatalogPlayer } from "./catalog";
 import { BackLink, ClubCrest, LeagueMark, DataEmpty, MemberNotice, PageHeading, PlayerPortrait } from "./ui";
 
 const HUB = { club: "/community/clubs", player: "/community/players" } as const;
@@ -23,15 +22,16 @@ export function CommunityHub({ kind }: { kind: "club" | "player" }) {
   const { data, getTeam } = usePlatform();
   const [target,setTarget]=useState('');
   const teams=supportedTeams(data.session?.profile);
+  const clubOptions=useTeamOptions('전체 구단','all','');
   if(kind==='player')return <><PageHeading eyebrow="PLAYER COMMUNITY" title="선수 커뮤니티" description="선수 상세페이지의 커뮤니티 탭에서 이야기를 나눠보세요."/><Link className="button primary" href="/market">선수 시장 <ArrowRight size={16}/></Link></>;
   return <>
-    <PageHeading eyebrow="COMMUNITY" title="구단 커뮤니티" description="응원 구단의 경기와 이야기를 나누세요." action={<Link className="button primary" href={`/community/write?scope=club${target?`&target=${target}`:''}`}><Pencil size={16}/>글쓰기</Link>}/>
+    <PageHeading eyebrow="COMMUNITY" title="구단 커뮤니티" description="응원 구단의 경기와 이야기를 나누세요." action={(!target || supportsTeam(data.session?.profile,target)) ? <Link className="button primary" href={`/community/write?scope=club${target?`&target=${target}`:''}`}><Pencil size={16}/>글쓰기</Link> : <span className="fine-print">글쓰기는 응원 구단에서 가능합니다.</span>}/>
     <section className="supported-board-clubs" aria-label="나의 응원 구단">
       <strong>나의 응원 구단</strong>
       <nav aria-label="응원 구단 게시글"><button className={!target?'active':''} onClick={()=>setTarget('')}>전체 구단</button>{teams.map(id=><button key={id} className={target===id?'active':''} onClick={()=>setTarget(id)}><ClubCrest id={id} size="small"/>{getTeam(id)?.name||'구단 정보 없음'}</button>)}</nav>
       <Link href={data.session?'/mypage':'/login'}>{teams.length?`설정 ${teams.length} / 5`:data.session?'응원 구단 설정':'로그인하고 응원 구단 설정'} <ArrowRight size={13}/></Link>
     </section>
-    <CommunityFeed key={target||'all'} scope="club" target={target||undefined} title={target?`${getTeam(target)?.name??'구단'} 게시판`:'전체 게시글'} compose={false}/>
+    <CommunityFeed key={target||'all'} scope="club" target={target||undefined} title={target?`${getTeam(target)?.name??'구단'} 게시판`:'전체 게시글'} compose={false} filter={<Select label="게시판 구단 선택" value={target} onChange={setTarget} options={clubOptions} className="community-club-filter"/>}/>
   </>;
 }
 export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
@@ -67,14 +67,17 @@ function Counter({ value, min, max }: { value: string; min: number; max: number 
 }
 export function WritePost() {
   const sp = useSearchParams();
+  const { data } = usePlatform();
+  return <PostEditor key={`${sp.toString()}:${data.session?.userId ?? 'guest'}`}/>;
+}
+function PostEditor() {
+  const sp = useSearchParams();
   const { data, status, mock, notify, getTeam, reload } = usePlatform();
   const detail=usePost(sp.get("edit"));
   const existing=detail.data.post?.authorId===data.session?.userId?detail.data.post:undefined;
   const requestId=useRef("");
   const revision=useRef<number|null>(null);
   const [savedId,setSavedId]=useState<string|null>(null);
-  const [playerSearch,setPlayerSearch]=useState("");
-  const searched=useCatalogPage<Player>("players",{q:playerSearch,size:50,sort:"name"});
   const myTeams = supportedTeams(data.session?.profile);
   const myTeam = myTeams[0] ?? null;
   const initialScope: DraftState["scope"] = existing?.scope ?? (sp.get("scope") === "player" ? "player" : "club");
@@ -82,7 +85,7 @@ export function WritePost() {
   const value: DraftState = draft ?? {
     scope: initialScope,
     target: existing?.target ?? sp.get("target") ?? (initialScope === "club" ? myTeam ?? "" : ""),
-    title: existing ? postHeading(existing.title, existing.body) : "",
+    title: existing?.title ?? "",
     body: existing?.body ?? "",
     transaction: existing?.transaction?.id ?? "",
   };
@@ -93,13 +96,14 @@ export function WritePost() {
   const lock = useRef(false);
   const summaryRef = useRef<HTMLDivElement>(null);
   const selectedPlayer=useCatalogPlayer(value.scope==="player"?value.target:null);
-  const selectablePlayers=[...new Map([...(searched.enabled?searched.data.items:data.players),...(selectedPlayer.player?[selectedPlayer.player]:[])].map(p=>[p.id,p])).values()];
-  const targets = value.scope === "club" ? data.teams : selectablePlayers;
+  const targets = value.scope === "club" ? data.teams : selectedPlayer.player ? [selectedPlayer.player] : [];
+  const attachments = usePostTradeAttachments(value.scope,value.target,true);
+  const transactions = [...new Map([...attachments.items,...(existing?.transaction ? [existing.transaction] : [])].filter(t=>value.scope==='club'||t.playerId===value.target).map(t=>[t.id,t])).values()];
   const clubTargets = useTeamOptions(null).filter((o) => myTeams.includes(o.value));
-  const errors = validatePost({...value,title:postTitle(value.title,value.body)}, {
+  const errors = validatePost(value, {
     myTeam, myTeams,
     targets: targets.map((t) => t.id),
-    transactions: data.member?.transactions.map((t) => t.id) ?? [],
+    transactions: transactions.map(t => t.id),
   });
   const errorFields = FIELD_ORDER.filter((f) => errors[f]);
   const visible = (field: PostField) => (attempted || touched[field]) && errors[field];
@@ -111,6 +115,7 @@ export function WritePost() {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
+  const reset = () => { setDraft(null); setTouched({}); setAttempted(false); setServerNote(""); requestId.current=""; revision.current=null; };
   const update = (patch: Partial<DraftState>) => { revision.current ??= existing?.revision??0;requestId.current="";setDraft({ ...value, ...patch }); setServerNote(""); };
   const blur = (field: PostField) => () => setTouched((t) => ({ ...t, [field]: true }));
   const fieldProps = (field: PostField) => ({
@@ -137,7 +142,7 @@ export function WritePost() {
   }
   const hub = value.scope==='player' && value.target ? `/players/${value.target}` : HUB.club;
   const targetName = value.scope === "club" ? getTeam(value.target)?.name : selectedPlayer.player?.name;
-  const attached = data.member?.transactions.find((t) => t.id === value.transaction);
+  const attached = transactions.find((t) => t.id === value.transaction);
   if(isEdit&&!existing)return <DataEmpty entity="수정할 게시글" status={detail.status}/>;
   if (phase === "done")
     return (
@@ -172,20 +177,19 @@ export function WritePost() {
         )}
         <div className="form-grid">
           <div className={`field ${visible("target") ? "invalid" : ""}`}>
-            <label htmlFor="post-target">대상 {value.scope === "club" ? "구단" : "선수"} <span className="req" aria-hidden="true">*</span></label>
-            {value.scope==="player"&&!isEdit&&<input aria-label="게시글 대상 선수 검색" value={playerSearch} onChange={e=>setPlayerSearch(e.target.value)} placeholder="한글·영문 선수 검색"/>}
-            <Select id="post-target" invalid={!!visible("target")} describedBy={`post-target-hint${visible("target") ? " post-target-error" : ""}`} onBlur={blur("target")}
-              disabled={isEdit || phase !== "edit" || !targets.length || (value.scope === "club" && !myTeam)} value={targets.some((t) => t.id === value.target) ? value.target : ""}
-              onChange={(target) => update({ target })} placeholder={value.scope === "club" ? "구단 선택" : "선수 선택"}
-              options={value.scope === "club" ? clubTargets : selectablePlayers.map((p) => ({ value: p.id, label: p.name, hint: getTeam(p.team)?.name, icon: <ClubCrest id={p.team} size="small" /> }))} />
-            <small id="post-target-hint">{value.scope === "club" ? (myTeam ? "응원 구단 라운지에만 작성할 수 있습니다." : <>응원 구단이 없습니다. <Link className="text-link" href="/mypage">마이페이지에서 설정</Link></>) : "선수 라운지에 게시됩니다."}</small>
+            {value.scope === "club" ? <>
+              <label htmlFor="post-target">대상 구단 <span className="req" aria-hidden="true">*</span></label>
+              <Select id="post-target" invalid={!!visible("target")} describedBy="post-target-hint" onBlur={blur("target")}
+                disabled={isEdit || phase !== "edit" || !myTeam} value={value.target} onChange={target => update({ target, transaction: "" })} placeholder="구단 선택" options={clubTargets}/>
+              <small id="post-target-hint">응원 구단 라운지에만 작성할 수 있습니다.</small>
+            </> : <div id="post-target" className="post-fixed-target" tabIndex={-1}><strong>{targetName ? `${targetName} 커뮤니티` : "선수 상세페이지에서 글쓰기를 시작해 주세요."}</strong><small>이 선수에 대한 게시글을 작성합니다.</small>{!value.target && <Link className="text-link" href="/market">선수 시장으로 이동 →</Link>}</div>}
             {fieldError("target")}
           </div>
         </div>
         <div className={`field ${visible("title") ? "invalid" : ""}`}>
-          <div className="label-row"><label htmlFor="post-title">제목 (선택)</label><Counter value={value.title} min={0} max={POST_LIMITS.titleMax} /></div>
-          <input {...fieldProps("title")} value={value.title} onChange={(e) => update({ title: e.target.value })} placeholder="분석 제목이 있다면 입력하세요" />
-          <small id="post-title-hint">제목 없이도 게시할 수 있습니다. 입력할 경우 {POST_LIMITS.titleMin}–{POST_LIMITS.titleMax}자</small>
+          <div className="label-row"><label htmlFor="post-title">제목 <span className="req" aria-hidden="true">*</span></label><Counter value={value.title} min={POST_LIMITS.titleMin} max={POST_LIMITS.titleMax} /></div>
+          <input {...fieldProps("title")} required minLength={POST_LIMITS.titleMin} maxLength={POST_LIMITS.titleMax} value={value.title} onChange={(e) => update({ title: e.target.value })} placeholder="제목을 입력하세요" />
+          <small id="post-title-hint">필수 입력 · {POST_LIMITS.titleMin}–{POST_LIMITS.titleMax}자</small>
           {fieldError("title")}
         </div>
         <div className={`field ${visible("body") ? "invalid" : ""}`}>
@@ -197,13 +201,16 @@ export function WritePost() {
         <div className={`field attachment ${visible("transaction") ? "invalid" : ""}`}>
           <div className="label-row"><label htmlFor="post-transaction"><Paperclip size={15} /> 내 거래 내역 첨부</label><small>선택</small></div>
           <Select id="post-transaction" invalid={!!visible("transaction")} describedBy={`post-transaction-hint${visible("transaction") ? " post-transaction-error" : ""}`} onBlur={blur("transaction")}
-            disabled={phase !== "edit" || !data.member?.transactions.length} value={value.transaction} onChange={(transaction) => update({ transaction })} placeholder="첨부하지 않음"
-            options={[{ value: "", label: "첨부하지 않음" }, ...(data.member?.transactions.map((t) => ({ value: t.id, label: `${t.playerName} · ${t.type === "buy" ? "매입" : "매각"}`, hint: `${money(t.price)} P · ${dateText(t.date, false)}` })) ?? [])]} />
-          <small id="post-transaction-hint">{data.member?.transactions.length ? "본인의 거래만 첨부할 수 있으며 게시글에 함께 공개됩니다." : "첨부할 수 있는 거래 내역이 없습니다."}</small>
+            disabled={phase !== "edit" || !transactions.length} value={value.transaction} onChange={(transaction) => update({ transaction })} placeholder="첨부하지 않음"
+            options={[{ value: "", label: "첨부하지 않음" }, ...(transactions.map((t) => ({ value: t.id, label: `${t.playerName} · ${t.type === "buy" ? "매입" : "매각"}`, hint: `${money(t.price)} P · ${dateText(t.date, false)}` })) ?? [])]} />
+          <small id="post-transaction-hint">{transactions.length ? (value.scope === "player" ? "이 선수의 본인 거래만 첨부할 수 있으며 함께 공개됩니다." : "본인의 거래만 첨부할 수 있으며 함께 공개됩니다.") : "첨부할 수 있는 거래 내역이 없습니다."}</small>
+          {attachments.loading&&<small role="status">거래 내역을 확인하고 있습니다…</small>}
+          {attachments.error&&<button type="button" className="text-link" onClick={attachments.reload}>거래 내역 다시 불러오기</button>}
+          {attachments.hasMore&&<button type="button" className="text-link" onClick={attachments.loadMore}>이전 거래 더 불러오기</button>}
           {fieldError("transaction")}
           {attached && (
             <div className="attached-trade compact">
-              <span className="attached-label"><Paperclip size={14} />첨부 미리보기</span>
+              <span className="attached-label"><Paperclip size={14} />첨부 미리보기 <button type="button" className="text-link attachment-remove" aria-label="거래 첨부 취소" disabled={phase !== "edit"} onClick={() => update({ transaction: "" })}><X size={14}/>첨부 취소</button></span>
               <div className="attached-row">
                 <span className={`trade-type ${attached.type}`}>{attached.type === "buy" ? "매입" : "매각"}</span>
                 <strong>{attached.playerName}</strong>
@@ -222,8 +229,8 @@ export function WritePost() {
         )}
         <div className="form-actions">
           <p className="fine-print">{mock ? "예시 모드 · 등록해도 실제로 저장되지 않습니다." : status === "ready" && !data.session ? "로그인 후 작성할 수 있습니다." : "저장한 글은 해당 라운지에 공개됩니다."}</p>
-          <Link className="button secondary" href={hub}>취소</Link>
-          <button type="submit" className="button primary" disabled={phase !== "edit" || !data.session} aria-busy={phase === "saving"}>
+          <Link className="button secondary" href={hub} onClick={reset}>취소</Link>
+          <button type="submit" className="button primary" disabled={phase !== "edit" || !data.session || !value.target} aria-busy={phase === "saving"}>
             {phase === "saving" ? <><LoaderCircle size={16} className="kx-spin" />등록 중…</> : <><Pencil size={16} />{isEdit ? "수정 저장" : "게시글 등록"}</>}
           </button>
         </div>

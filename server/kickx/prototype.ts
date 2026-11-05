@@ -7,6 +7,8 @@ const messages: Record<string,string>={POSITION_FULL:"해당 포지션의 보유
 export function migrationMissing(error: {code?:string;message?:string}|null) {return !!error && (["42P01","42883","PGRST202","PGRST205"].includes(error.code??""));}
 export function checkDatabase(error:{code?:string;message?:string}|null) {
  if(!error)return;
+ const squadMessages:Record<string,string>={SQUAD_FULL:"스쿼드 11명을 모두 보유 중입니다. 선수를 매각한 뒤 매입해 주세요.",LEGACY_SQUAD_EXCESS:"기존 보유 선수가 정원을 초과했습니다. 초과 포지션 선수를 먼저 매각해 주세요.",AUTO_SQUAD_MANAGED:"스쿼드는 매입·매각에 따라 자동으로 반영됩니다.",TRADE_PLAYER_MISMATCH:"이 선수의 거래 내역만 첨부할 수 있습니다.",TITLE_REQUIRED:"제목을 2–80자로 입력해 주세요."};
+ if(error.message&&squadMessages[error.message])throw new HttpError(409,squadMessages[error.message]);
  if(migrationMissing(error))throw new HttpError(503,"새 기능의 DB 연결을 준비하고 있습니다.");
  const key=Object.keys(messages).find(k=>error.message===k);
  if(key)throw new HttpError(key==="AUTH_REQUIRED"?401:key==="MEMBER_SUSPENDED"||key==="ADMIN_REQUIRED"||key==="NOT_AUTHOR"||key==="FAN_REQUIRED"?403:key==="POST_NOT_FOUND"?404:409,messages[key]);
