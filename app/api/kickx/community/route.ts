@@ -3,7 +3,7 @@ import { asObject, checkDatabase, identity, migrationMissing } from "@/server/ki
 import { createRequestClient } from "@/server/kickx/supabase";
 import { getSupabaseConfig } from "@/server/kickx/config";
 import { validatePost } from "@/lib/kickx/validation";
-import { parseCommunityQuery, postTitle } from "@/lib/kickx/community";
+import { parseCommunityQuery } from "@/lib/kickx/community";
 export async function GET(request:Request){try{
  const p=new URL(request.url).searchParams;const postId=p.get("postId");
  const unavailable={status:"not-configured",data:postId?{post:null,comments:[]}:{items:[],total:0,page:1,size:20}};
@@ -20,7 +20,7 @@ export async function POST(request:Request){try{
  if(typeof action!=="string")throw new HttpError(400,"요청을 확인해 주세요.");
  if(action==="createPost"||action==="editPost"){
   for(const field of ["scope","target","title","body","transaction"])if(typeof input[field]!=="string")throw new HttpError(400,"글 내용을 확인해 주세요.");
-  input.title=postTitle(String(input.title),String(input.body));
+  input.title=String(input.title).normalize("NFC").trim();
   if(action==="editPost"){
    const current=await client.rpc("kickx_post_detail",{p_id:identity(input.postId,true),p_page:1});checkDatabase(current.error);
    if(!current.data?.post)throw new HttpError(404,"게시글을 찾을 수 없습니다.");
@@ -28,7 +28,12 @@ export async function POST(request:Request){try{
   }
   const profile=await client.from("profiles").select("team_id,team_ids").eq("id",user.id).maybeSingle();checkDatabase(profile.error);
   const target=await client.from(input.scope==="club"?"teams":"players").select("id").eq("id",identity(input.target)).maybeSingle();checkDatabase(target.error);
-  const errors=validatePost(input as unknown as Parameters<typeof validatePost>[0],{myTeam:profile.data?.team_id??null,myTeams:profile.data?.team_ids,targets:target.data?[target.data.id]:[],transactions:input.transaction?[String(input.transaction)]:[]});
+  const ownTrades:string[]=[];
+  if(input.transaction){
+   const trade=await client.from("trades").select("id,player_id").eq("id",identity(input.transaction,true)).eq("user_id",user.id).maybeSingle();checkDatabase(trade.error);
+   if(trade.data && (input.scope!=="player" || trade.data.player_id===input.target))ownTrades.push(trade.data.id);
+  }
+  const errors=validatePost(input as unknown as Parameters<typeof validatePost>[0],{myTeam:profile.data?.team_id??null,myTeams:profile.data?.team_ids,targets:target.data?[target.data.id]:[],transactions:ownTrades});
   if(Object.keys(errors).length)throw new HttpError(400,Object.values(errors).join(" "));
  }
  const {data,error}=await client.rpc("kickx_community_write",{p_action:action,p_input:{...input,category:"자유"}});checkDatabase(error);return json(data);

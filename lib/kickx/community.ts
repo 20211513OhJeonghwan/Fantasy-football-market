@@ -1,13 +1,18 @@
 import { POST_LIMITS } from "./validation";
+import type { Transaction } from "./types";
 export type CommunityScope = "club" | "player";
 export const COMMUNITY_PATHS = { club: "/community/clubs", player: "/community/players" } as const;
 
-/** Existing DB titles stay compatible; a note's title is derived on the server. */
+/** Display-only fallback for legacy posts. New writes must provide an explicit title. */
 export function postTitle(title: string, body: string) {
   return title.normalize("NFC").trim() || [...body.normalize("NFC").trim().replace(/\s+/gu, " ")].slice(0, POST_LIMITS.titleMax).join("");
 }
 export function postHeading(title: string, body: string) {
-  return title === postTitle("", body) ? "" : title;
+  return postTitle(title, body);
+}
+/** A player lounge can attach only the current player's own trades. */
+export function attachmentTrades(transactions: Transaction[], scope: CommunityScope, target: string) {
+  return transactions.filter(t => scope === 'club' || t.playerId === target);
 }
 export function parseCommunityQuery(params: URLSearchParams) {
   const scope = params.get("scope") ?? "player";

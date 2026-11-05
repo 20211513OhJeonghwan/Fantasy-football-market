@@ -1,7 +1,9 @@
 import { REPORT_PARAMETERS, RULE_VERSION } from './report-policy';
 import type { PricingMatch } from './pricing';
 
-export type ReportParameters = { [K in keyof typeof REPORT_PARAMETERS]: number } & {valuationStartMs?:number};
+export type ReportParameters = { [K in keyof typeof REPORT_PARAMETERS]: number } & {
+ valuationStartMs?:number; capChangeAtMs?:number; previousMaxUp?:number; previousMaxDown?:number;
+};
 export type ReportBaseline = {
  source:string;season:number;gameCount:number;meanScore:number|null;seedScore:number;
  percentile:number;price:number;lower:number;upper:number;referenceHash:string;
@@ -14,6 +16,9 @@ export function validateReportParameters(p:ReportParameters) {
   !Number.isSafeInteger(p.minPrice)||!Number.isSafeInteger(p.maxPrice)||!Number.isSafeInteger(p.initialMin)||!Number.isSafeInteger(p.initialMax)||
   p.minPrice<=0 || p.minPrice>p.initialMin || p.initialMin>p.initialMax || p.initialMax>p.maxPrice || p.maxPrice>1_000_000_000 ||
   p.maxUp<0 || p.maxUp>=1 || p.maxDown<0 || p.maxDown>=1 || (p.nonParticipationRate??.015)<0 || (p.nonParticipationRate??.015)>=1 || (p.valuationStartMs!=null&&(!Number.isSafeInteger(p.valuationStartMs)||p.valuationStartMs<0)) || p.lowerQuantile<0 || p.upperQuantile>1 || p.lowerQuantile>=p.upperQuantile)
+  throw new Error('INVALID_REPORT_PARAMETERS');
+ if (p.capChangeAtMs != null && (!Number.isSafeInteger(p.capChangeAtMs) || p.capChangeAtMs < 0 ||
+  p.previousMaxUp == null || p.previousMaxDown == null || p.previousMaxUp < 0 || p.previousMaxUp >= 1 || p.previousMaxDown < 0 || p.previousMaxDown >= 1))
   throw new Error('INVALID_REPORT_PARAMETERS');
 }
 /** Frozen previous-season population; no current-season result can change this baseline. */
@@ -56,8 +61,10 @@ export function calculateReportPricing(matches:PricingMatch[],baseline:ReportBas
   if(Date.parse(at(m))<(p.valuationStartMs??0))continue;
   const target=dnp?clamp(price*(1-(p.nonParticipationRate??.015)),p.minPrice,p.maxPrice):clamp(baseline.price*Math.exp(p.beta*clamp(deviation,-p.deviationLimit,p.deviationLimit)),p.minPrice,p.maxPrice);
   const before=price;
+  const historical=p.capChangeAtMs!=null && Date.parse(at(m))<p.capChangeAtMs;
+  const maxUp=historical?p.previousMaxUp!:p.maxUp,maxDown=historical?p.previousMaxDown!:p.maxDown;
   // Ceil/floor after rounding: even a 1-P price may not cross the percentage cap.
-  price=clamp(Math.round(target),Math.max(p.minPrice,Math.ceil(before*(1-p.maxDown))),Math.min(p.maxPrice,Math.floor(before*(1+p.maxUp))));
+  price=clamp(Math.round(target),Math.max(p.minPrice,Math.ceil(before*(1-maxDown))),Math.min(p.maxPrice,Math.floor(before*(1+maxUp))));
   steps.push({fixtureId:m.fixtureId,playedAt:at(m),priceBefore:before,priceAfter:price,targetPrice:Math.round(target),
    formScore:rounded(cumulative),changePercent:rounded((price-before)*100/before,4),window:[...window],
    evidence:{season,n,reason:dnp?'NON_PARTICIPATION':'PERFORMANCE',nonParticipationRate:dnp?(p.nonParticipationRate??.015):null,rawScore:m.score,boundedScore:bounded,cumulativeSum:sum,cumulativeScore:cumulative,deviation,target,referenceHash:baseline.referenceHash}});

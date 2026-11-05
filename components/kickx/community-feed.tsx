@@ -5,49 +5,37 @@ import { useEffect, useId, useRef, useState } from "react";
 import { supportsTeam, supportedTeams } from "@/lib/kickx/support";
 import { Pagination } from "./pagination";
 import { LoaderCircle, Lock, Paperclip, Pencil, Search, Send, X } from "lucide-react";
-import type { Player, Post } from "@/lib/kickx/types";
+import type { Post } from "@/lib/kickx/types";
 import { dateText, money } from "@/lib/kickx/data";
 import { apiRequest } from "@/lib/kickx/client";
 import { COMMUNITY_PATHS, postTitle, type CommunityScope } from "@/lib/kickx/community";
+import {usePostTradeAttachments} from "./post-trades";
 import { POST_LIMITS, validatePost } from "@/lib/kickx/validation";
 import { usePlatform, useResource } from "./provider";
-import { useCatalogPage, useCatalogPlayer } from "./catalog";
 import { Select } from "./select";
-import { ClubCrest, DataEmpty, PlayerPortrait } from "./ui";
+import { ClubCrest, DataEmpty } from "./ui";
 import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
 import type { CSSProperties } from "react";
 
 const SIZE = 20;
 const emptyFeed = () => ({ items: [] as Post[], total: 0, page: 1, size: SIZE });
 
-function PlayerPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
-  const { data, mock, getTeam } = usePlatform();
-  const [query, setQuery] = useState("");
-  const remote = useCatalogPage<Player>("players", { q: query, size: 50, sort: "name" });
-  const selected = useCatalogPlayer(value || null).player;
-  const players = mock ? data.players.filter(p => `${p.name} ${p.english ?? ""}`.toLowerCase().includes(query.toLowerCase())) : remote.status === "ready" ? remote.data.items : [];
-  const options = [...new Map([...players, ...(selected ? [selected] : [])].map(p => [p.id, p])).values()];
-  return <div className="feed-player-picker">
-    <label className="input-search"><Search size={16} /><input aria-label="빠른 글쓰기 선수 검색" value={query} maxLength={100} placeholder="한글·영문 선수 검색" onChange={e => setQuery(e.target.value)} /></label>
-    <Select label="이야기할 선수" value={value} onChange={onChange} placeholder="선수 선택" options={options.map(p => ({ value: p.id, label: p.name, hint: getTeam(p.team)?.name, icon: <PlayerPortrait player={p} size="sm" /> }))} />
-    {!mock && remote.status === "error" && <button type="button" className="text-link" onClick={remote.reload}>선수 목록 다시 불러오기</button>}
-  </div>;
-}
-
 /** Fixed scope and, inside a lounge, fixed target. Requests retain their UUID on retry. */
 function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: CommunityScope; target?: string; targetName?: string; onSaved: () => void; onClose: () => void }) {
   const { data, mock, notify, getTeam, getPlayer } = usePlatform();
-  const [selected, setSelected] = useState(target ?? (scope === "club" ? supportedTeams(data.session?.profile)[0] ?? "" : ""));
+  const selected = target ?? (scope === "club" ? supportedTeams(data.session?.profile)[0] ?? "" : "");
   const [body, setBody] = useState(""), [title, setTitle] = useState(""), [transaction, setTransaction] = useState("");
   const [advanced, setAdvanced] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const attachments=usePostTradeAttachments(scope,selected,advanced);
+  const transactions=attachments.items;
   const request = useRef(""), lock = useRef(false), id = useId();
   const name = targetName || (scope === "club" ? getTeam(selected)?.name : getPlayer(selected)?.name);
   function changed() { request.current = ""; setError(""); }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (lock.current) return;
-    const draft = { scope, target: selected, title: postTitle(title, body), body, transaction };
-    const errors = validatePost(draft, { myTeam: data.session?.profile?.team ?? null, myTeams: supportedTeams(data.session?.profile), targets: selected ? [selected] : [], transactions: data.member?.transactions.map(t => t.id) ?? [] });
+    const draft = { scope, target: selected, title: title.normalize("NFC").trim(), body, transaction };
+    const errors = validatePost(draft, { myTeam: data.session?.profile?.team ?? null, myTeams: supportedTeams(data.session?.profile), targets: selected ? [selected] : [], transactions: transactions.map(t => t.id) });
     if (Object.keys(errors).length) { setError(Object.values(errors).join(" ")); return; }
     if (mock) { notify("예시 모드 · 실제로 저장되지 않습니다."); return; }
     lock.current = true; setBusy(true); setError(""); request.current ||= crypto.randomUUID();
@@ -60,16 +48,22 @@ function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: 
   return <form className="feed-composer-form" onSubmit={submit} aria-busy={busy}>
     <fieldset disabled={busy}>
       <div className="feed-composer-heading"><strong>{scope === "club" ? "구단 이야기" : "선수 이야기"}{name ? ` · ${name}` : ""}</strong><button type="button" className="icon-button" aria-label="빠른 글쓰기 닫기" onClick={() => { if ((!body && !title) || window.confirm("작성 중인 내용을 닫을까요?")) onClose(); }}><X size={17} /></button></div>
-      {scope === "player" && !target && <PlayerPicker value={selected} onChange={v => { changed(); setSelected(v); }} />}
+      <label htmlFor={`${id}-title`}>제목 <span className="req" aria-hidden="true">*</span></label>
+      <input id={`${id}-title`} aria-label="빠른 글 제목" required minLength={POST_LIMITS.titleMin} maxLength={POST_LIMITS.titleMax} value={title} placeholder="제목을 입력하세요" onChange={e => { changed(); setTitle(e.target.value); }}/>
+
       <label className="sr-only" htmlFor={`${id}-body`}>빠른 글 내용</label>
       <textarea id={`${id}-body`} value={body} rows={4} maxLength={POST_LIMITS.bodyMax} autoFocus placeholder={scope === "player" ? "경기력과 가격에 대한 생각을 나눠보세요." : "경기와 응원 구단에 대한 이야기를 나눠보세요."} onChange={e => { changed(); setBody(e.target.value); }} />
-      <div className="feed-composer-options"><button type="button" className="text-link" aria-expanded={advanced} onClick={() => setAdvanced(v => !v)}>제목·주제·거래 첨부 {advanced ? "닫기" : "추가"}</button><span className="fine-print num">{[...body].length} / {POST_LIMITS.bodyMax}</span></div>
+      <div className="feed-composer-options"><button type="button" className="text-link" aria-expanded={advanced} onClick={() => setAdvanced(v => !v)}>거래 내역 첨부 {advanced ? "닫기" : "추가"}</button><span className="fine-print num">{[...body].length} / {POST_LIMITS.bodyMax}</span></div>
       {advanced && <div className="feed-composer-advanced">
-        <label htmlFor={`${id}-title`}>제목 (선택)</label><input id={`${id}-title`} value={title} maxLength={POST_LIMITS.titleMax} onChange={e => { changed(); setTitle(e.target.value); }} />
-        {!!data.member?.transactions.length && <Select label="빠른 글 거래 첨부" value={transaction} onChange={v => { changed(); setTransaction(v); }} options={[{ value: "", label: "첨부 안 함" }, ...data.member.transactions.map(t => ({ value: t.id, label: `${t.playerName} · ${t.type === "buy" ? "매입" : "매각"} · ${money(t.price)} P`, hint: dateText(t.date) }))]} />}
+        {!!transactions.length && <Select label="빠른 글 거래 첨부" value={transaction} onChange={v => { changed(); setTransaction(v); }} options={[{ value: "", label: "첨부 안 함" }, ...transactions.map(t => ({ value: t.id, label: `${t.playerName} · ${t.type === "buy" ? "매입" : "매각"} · ${money(t.price)} P`, hint: dateText(t.date) }))]} />}
+        {!transactions.length && <p className="fine-print">{scope === "player" ? "이 선수의 첨부 가능한 거래 내역이 없습니다." : "첨부 가능한 거래 내역이 없습니다."}</p>}
+        {attachments.loading&&<small role="status">거래 내역을 확인하고 있습니다…</small>}
+        {attachments.error&&<button type="button" className="text-link" onClick={attachments.reload}>거래 내역 다시 불러오기</button>}
+        {attachments.hasMore&&<button type="button" className="text-link" onClick={attachments.loadMore}>이전 거래 더 불러오기</button>}
+        {transaction && <button type="button" className="text-link attachment-remove" aria-label="빠른 글 거래 첨부 취소" onClick={() => { changed(); setTransaction(""); }}><X size={14}/>거래 첨부 취소</button>}
       </div>}
       {error && <p className="field-error" role="alert">{error}</p>}
-      <div className="feed-composer-foot"><span className="fine-print">내용 {POST_LIMITS.bodyMin}자 이상 · {scope === "club" ? "응원 구단에 게시" : "선택한 선수에 게시"}</span><button className="button primary small" disabled={busy || !body.trim() || !selected}>{busy ? <LoaderCircle size={15} className="kx-spin" /> : <Send size={15} />}게시하기</button></div>
+      <div className="feed-composer-foot"><span className="fine-print">내용 {POST_LIMITS.bodyMin}자 이상 · {scope === "club" ? "응원 구단에 게시" : "이 선수에 게시"}</span><button className="button primary small" disabled={busy || !title.trim() || !body.trim() || !selected}>{busy ? <LoaderCircle size={15} className="kx-spin" /> : <Send size={15} />}게시하기</button></div>
     </fieldset>
   </form>;
 }
@@ -77,9 +71,9 @@ export function CommunityComposer(props: { scope: CommunityScope; target?: strin
   const { data, status, reload: reloadPlatform } = usePlatform();
   const [open, setOpen] = useState(false);
   const fan = props.scope === "player" || supportedTeams(data.session?.profile).length>0 && (!props.target || supportsTeam(data.session?.profile,props.target));
-  const canWrite = !!data.session?.profile && fan;
+  const canWrite = !!data.session?.profile && fan && (props.scope === "club" || !!props.target);
   return <section className="feed-composer panel" aria-label={`${props.scope === "club" ? "구단" : "선수"} 빠른 글쓰기`}>
-    {status !== "ready" ? <DataEmpty entity="커뮤니티" status={status} retry={reloadPlatform} rows={1} /> : !canWrite ? <div className="feed-composer-locked"><Lock size={16} aria-hidden="true" /><p>{!data.session ? "로그인하고 이야기를 나눠보세요." : !data.session.profile ? "프로필을 설정하면 이야기를 작성할 수 있습니다." : "구단 이야기는 해당 구단의 응원 팬만 작성할 수 있습니다."}</p><Link className="button secondary small" href={!data.session ? "/login" : "/mypage"}>{!data.session ? "로그인" : "프로필 설정"}</Link></div> : open ? <ComposerForm {...props} onSaved={() => { setOpen(false); props.onSaved(); }} onClose={() => setOpen(false)} /> : <button className="feed-composer-open" onClick={() => setOpen(true)}><UserAvatar className="rank-avatar" avatar={data.session?.profile?.avatar} seed={data.session?.userId ?? "guest"} /><span className="feed-composer-prompt">{props.target && props.targetName ? `${props.targetName}에 대한 이야기를 남겨보세요` : props.scope === "club" ? "응원 구단에 대한 이야기를 남겨보세요" : "선수에 대한 생각을 나눠보세요"}</span><span className="feed-composer-cta"><Pencil size={15} /></span></button>}
+    {status !== "ready" ? <DataEmpty entity="커뮤니티" status={status} retry={reloadPlatform} rows={1} /> : !canWrite ? <div className="feed-composer-locked"><Lock size={16} aria-hidden="true" /><p>{!data.session ? "로그인하고 이야기를 나눠보세요." : !data.session.profile ? "프로필을 설정하면 이야기를 작성할 수 있습니다." : props.scope === "player" ? "선수 상세페이지에서 글쓰기를 시작해 주세요." : "구단 이야기는 해당 구단의 응원 팬만 작성할 수 있습니다."}</p><Link className="button secondary small" href={!data.session ? "/login" : "/mypage"}>{!data.session ? "로그인" : "프로필 설정"}</Link></div> : open ? <ComposerForm {...props} onSaved={() => { setOpen(false); props.onSaved(); }} onClose={() => setOpen(false)} /> : <button className="feed-composer-open" onClick={() => setOpen(true)}><UserAvatar className="rank-avatar" avatar={data.session?.profile?.avatar} seed={data.session?.userId ?? "guest"} /><span className="feed-composer-prompt">{props.target && props.targetName ? `${props.targetName}에 대한 이야기를 남겨보세요` : props.scope === "club" ? "응원 구단에 대한 이야기를 남겨보세요" : "선수에 대한 생각을 나눠보세요"}</span><span className="feed-composer-cta"><Pencil size={15} /></span></button>}
   </section>;
 }
 

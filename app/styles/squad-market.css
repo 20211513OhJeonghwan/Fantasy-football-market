@@ -1,0 +1,63 @@
+/* Purchases and sales drive the 4-3-3 squad; keep the compact market beside the pitch. */
+.automatic-squad { grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr); gap: 20px; }
+.automatic-squad .squad-toolbar { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+.automatic-squad .squad-formation { grid-column: 1 / -1; font-size: 12px; }
+.automatic-squad .squad-team { flex-wrap: wrap; }
+.squad-market { min-width: 0; padding: 20px; }
+.squad-market .section-title { display: flex; justify-content: space-between; gap: 10px; }
+.squad-market .slot-hint { line-height: 1.6; }
+.squad-market-positions { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0; }
+.squad-market-positions button { display: flex; align-items: center; gap: 5px; min-height: 36px; padding: 7px 10px; border: var(--border); border-radius: 5px; font-weight: 800; }
+.squad-market-positions button.active { color: var(--yellow); background: var(--ink); }
+.squad-market-positions small { font-size: 11px; opacity: .75; }
+.squad-selected-player { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 0; border-bottom: var(--border); }
+.squad-selected-player > div { display: grid; gap: 3px; font-size: 13px; }
+.squad-selected-player strong { overflow-wrap: anywhere; }
+.squad-sale-hidden { visibility: hidden; pointer-events: none; }
+.squad-market-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.squad-market-list > li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 13px 0; border-bottom: var(--border); }
+.squad-market-name { display: grid; gap: 4px; min-width: 0; }
+.squad-market-name strong { font-size: 13px; overflow-wrap: anywhere; }
+.squad-market-name > span { font-size: 11px; color: var(--text-3); }
+.squad-market-name > b { display: flex; flex-wrap: wrap; gap: 5px; font-size: 12px; }
+.squad-market-name .change { font-size: 11px; }
+.squad-market-list .button { max-width: 105px; white-space: normal; text-align: center; font-size: 12px; padding: 7px 10px; }
+.squad-market .pagination { flex-wrap: wrap; }
+.squad-legacy { margin-top: 20px; }
+.squad-legacy h2 { font-size: 18px; }
+.squad-legacy p { color: var(--text-3); font-size: 13px; line-height: 1.6; }
+.squad-legacy ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.squad-legacy li { display: flex; gap: 10px; align-items: center; min-width: 0; padding: 10px; border: var(--border); }
+.squad-legacy li a { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.trade-capacity { margin: 16px 0; padding: 14px; border: var(--border); background: var(--surface-2); border-radius: 6px; }
+.trade-capacity > div { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.trade-capacity ul { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; gap: 6px; padding: 0; margin: 12px 0; }
+.trade-capacity li { display: grid; justify-items: center; gap: 6px; padding: 9px 2px; border: var(--border); border-radius: 4px; background: var(--surface); font-size: 12px; }
+.trade-capacity li.target { outline: 2px solid var(--ink); outline-offset: -1px; }
+.trade-capacity li.full b { color: var(--down); }
+.trade-capacity p { margin: 0; font-size: 12px; color: var(--text-3); line-height: 1.5; }
+.community-club-filter { flex: 0 1 250px; min-width: 180px; }
+.post-fixed-target { display: grid; gap: 6px; padding: 14px; border: var(--border); background: var(--surface-2); }
+.post-fixed-target small { color: var(--text-3); }
+.attachment-remove { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; min-height: 32px; }
+.attached-label { flex-wrap: wrap; }
+.feed-composer-form > fieldset > input { width: 100%; margin: 6px 0 12px; }
+.player-community-entry { min-height: 260px; border: 2px solid var(--ink); }
+.player-community-entry h2 { display: flex; align-items: flex-start; gap: 10px; margin: 10px 0; font-size: 21px; line-height: 1.4; overflow-wrap: anywhere; }
+.player-community-entry h2 svg { flex: 0 0 auto; margin-top: 3px; }
+.player-community-entry > p { margin-bottom: 16px; font-size: 13px; line-height: 1.7; color: var(--text-3); }
+.player-lounge-cta { display: flex; justify-content: space-between; width: 100%; min-height: 48px; margin-bottom: 16px; }
+@media (max-width: 1100px) { .automatic-squad { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .automatic-squad .pitch { aspect-ratio: 4 / 3; min-height: 300px; }
+  .squad-market { padding: 14px; }
+  .automatic-squad .squad-toolbar { padding: 12px; }
+  .automatic-squad .squad-team strong { font-size: 16px; }
+  .automatic-squad .squad-count .meter { width: 100px; }
+  .automatic-squad .squad-footer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .automatic-squad .squad-footer > .squad-composition { grid-column: 1 / -1; border-left: 0; border-top: var(--border); }
+  .squad-legacy ul { grid-template-columns: minmax(0, 1fr); }
+  .community-club-filter { flex: 1 0 100%; min-width: 0; }
+  .player-community-entry { min-height: 220px; }
+  .player-community-entry h2 { font-size: 19px; }
+}

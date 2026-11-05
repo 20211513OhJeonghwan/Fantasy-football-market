@@ -32,9 +32,9 @@ async function setup({watchCount=13}={}){
   if(path==='/api/auth/status')return route.fulfill({json:{enabled:true}});
   if(path==='/api/kickx/players'){
    const q=u.searchParams.get('q')||'',scope=u.searchParams.get('scope'),page=Number(u.searchParams.get('page')||1),size=Number(u.searchParams.get('size')||12);
-   requests.push({q,scope,page,size});
+   const position=u.searchParams.get('position');requests.push({q,scope,page,size,position});
    if(q.length>100)return route.fulfill({status:400,json:{error:'검색어는 100자 이내로 입력해 주세요.'}});
-   let rows=state.players.filter(p=>!q||p.name.includes(q));if(scope==='watch')rows=rows.filter(p=>state.member.watchlist.includes(p.id));
+   let rows=state.players.filter(p=>(!q||p.name.includes(q))&&(!position||p.position===position));if(scope==='watch')rows=rows.filter(p=>state.member.watchlist.includes(p.id));
    return route.fulfill({json:{status:'ready',data:{items:rows.slice((page-1)*size,page*size),total:rows.length,page,size}}});
   }
   return route.fulfill({json:{status:'ready',data:{items:[],total:0,page:1,size:20}}});
@@ -52,25 +52,21 @@ try{
  }
  await mkdir(out,{recursive:true});
  browser=await chromium.launch({executablePath:process.env.KICKX_CHROMIUM_PATH});
- await check('Slot position overrides the previous bench filter on desktop and mobile',async()=>{
+ await check('Selecting a vacant pitch slot opens its market position on desktop and mobile',async()=>{
   for(const width of [1440,390]){
-   const {c,p}=await setup();await p.setViewportSize({width,height:900});await goto(p,'/squad');
-   await p.getByRole('button',{name:'FW',exact:true}).click();
+   const {c,p,requests}=await setup();await p.setViewportSize({width,height:900});await goto(p,'/squad');
+   await p.locator('.squad-market-positions').getByRole('button',{name:/^FW/}).click();
    await p.getByRole('button',{name:/번 DF 자리/}).first().click();
-   assert.equal(await p.locator('.bench-player').count(),4);
-   await p.locator('.bench-player').first().getByRole('button',{name:'이동',exact:true}).click();
-   assert.equal(await p.locator('.slot-note').count(),0);
+   await p.waitForFunction(()=>document.querySelector('.squad-market-positions button[aria-pressed=true]')?.textContent.startsWith('DF'));
+   await p.locator('.squad-market-list li').first().waitFor();
+   assert.equal(requests.at(-1).position,'DF');assert.equal(await p.getByRole('button',{name:'배치',exact:true}).count(),0);
    await p.screenshot({path:`${out}/squad-filter-${width}.png`,fullPage:true});await c.close();
   }
  });
- await check('An empty edited lineup is worth zero; unknown finances stay unknown',async()=>{
-  const {c,p,state}=await setup();await goto(p,'/squad');
-  for(let i=1;i<=11;i++){
-   await p.getByRole('button',{name:new RegExp('^'+i+'번 ')}).click();
-   await p.getByRole('button',{name:'선택한 자리 비우기',exact:true}).click();
-  }
+ await check('An empty automatic squad is worth zero; unknown finances stay unknown',async()=>{
+  const {c,p,state}=await setup();state.member.holdings=[];state.member.squad=null;await goto(p,'/squad');
   assert.equal(await p.locator('.pitch-player.filled').count(),0);
-  assert.equal(await p.locator('.squad-footer>div').first().innerText(),'라인업 가치\n0P');
+  assert.equal(await p.locator('.squad-footer>div').first().innerText(),'스쿼드 가치\n0P');
   await p.screenshot({path:out+'/empty-lineup.png',fullPage:true});
   state.member.financialReady=false;await goto(p,'/squad');
   assert((await p.locator('.squad-footer>div').first().innerText()).includes('—'));

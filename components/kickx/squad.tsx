@@ -1,17 +1,18 @@
 "use client";
 import {MatchNotificationToggle} from "./notifications";
-import { useId, useState, useRef, type CSSProperties } from "react";
+import { useId, useState, type CSSProperties } from "react";
 import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
-import { Plus, RotateCcw, Save, X } from "lucide-react";
-import { apiRequest } from "@/lib/kickx/client";
+import { Plus, Search, X } from "lucide-react";
 import { money, score } from "@/lib/kickx/data";
-import { fixedSquadSlots, POSITION_LIMITS, SQUAD_FORMATION } from "@/lib/kickx/squad";
+import { ownedSquadSlots, squadCapacity, POSITION_LIMITS, SQUAD_FORMATION } from "@/lib/kickx/squad";
 import type { Player, Position } from "@/lib/kickx/types";
 import { usePlatform } from "./provider";
-import { Change, DataEmpty, MemberNotice, PageHeading, PlayerPortrait, PositionBadge, Tabs } from "./ui";
+import { useCatalogPage } from "./catalog";
+import { Pagination } from "./pagination";
+import Link from "next/link";
+import { Change, DataEmpty, MemberNotice, PageHeading, PlayerPortrait, PositionBadge, TradeButton } from "./ui";
 
 const ROWS: Position[] = ["FW", "MF", "DF", "GK"];
-const MAX_SQUAD = 11;
 /**
  * Kit colours from the presentation-only club identity (the football API has no kit images).
  * The trim keeps readable contrast; stripes appear only for clubs registered with striped colours.
@@ -127,184 +128,67 @@ export function Pitch({
     </div>
   );
 }
+const MARKET_SIZE = 8;
 export function SquadScreen() {
-  const { data, mock, notify, getPlayer, getTeam, reload } = usePlatform();
+  const { data, mock, status, getPlayer, getTeam, reload } = usePlatform();
   const member = data.member;
-  const [saving,setSaving]=useState(false);
-  const [saveError,setSaveError]=useState<{message:string;stale:boolean}|null>(null);
-  const [savedAt,setSavedAt]=useState<number|null>(null);
-  const lock=useRef(false);
-  const baseRevision=useRef<number|null>(null);
-  const [draft, setDraft] = useState<{ formationId: string; slots: (string | null)[] } | null>(null),
-    [selected, setSelected] = useState<number | null>(null),
-    [filter, setFilter] = useState("전체");
-  const formation = SQUAD_FORMATION.id;
-  const legacyFormation = !!member?.squad && member.squad.formationId !== formation;
-  const changed = !!draft || legacyFormation;
-  const slots = draft?.slots || member?.squad?.slots || [];
-  const rule = SQUAD_FORMATION,
-    target = selected == null ? null : rule?.positions[selected];
-  const owned = (member?.holdings.map(h=>getPlayer(h.playerId)).filter(Boolean) ?? []) as Player[];
-  const safeSlots = fixedSquadSlots(slots, draft?.formationId || member?.squad?.formationId || formation,
-    id => owned.find(p => p.id === id));
-  const filled = safeSlots.filter(Boolean).length;
-  const lineup = safeSlots.map((id) => getPlayer(id)).filter(Boolean) as Player[];
-  const visible = owned.filter((p) => target ? p.position === target : filter === "전체" || p.position === filter);
-  const lineupValue = member && member.financialReady !== false && lineup.every(p => p.price != null)
-    ? lineup.reduce((sum, p) => sum + p.price!, 0) : null;
-  const counts = ROWS.slice().reverse().map((pos) => [pos, rule?.positions.filter((x) => x === pos).length ?? 0, lineup.filter((p) => p.position === pos).length] as const);
-  function captureRevision(){if(baseRevision.current==null)baseRevision.current=member?.squad?.revision??0;setSavedAt(null);}
-  function discardDraft(){setDraft(null);baseRevision.current=null;setSelected(null);setSaveError(null);reload();}
-  async function save(){
-    if(!changed || lock.current)return;
-    if(mock){notify("스쿼드 저장 예시입니다. 실제로 저장되지 않습니다.");return;}
-    lock.current=true;setSaving(true);
-    setSaveError(null);
-    try{await apiRequest("/api/kickx/squad","PUT",{formationId:formation,slots:safeSlots,revision:baseRevision.current??member?.squad?.revision??0});setDraft(null);baseRevision.current=null;setSavedAt(Date.now());reload();notify("스쿼드를 저장했습니다.");}
-    catch(e){
-      const message=e instanceof Error?e.message:"저장하지 못했습니다.";
-      // A stale revision means another tab saved first; the draft stays so the user can compare before discarding.
-      setSaveError({message,stale:/다른 창/.test(message)});notify(message,"error");
-    }
-    finally{lock.current=false;setSaving(false);}
-  }
-  function place(p: Player) {
-    captureRevision();
-    if (saving || selected == null || !rule || p.position !== target) return;
-    setDraft({
-      formationId: formation,
-      slots: rule.positions.map((_, i) => (i === selected ? p.id : safeSlots[i] === p.id ? null : safeSlots[i] || null)),
-    });
-    setSelected(null);
-  }
-  return (
-    <>
-      <PageHeading
-        eyebrow="BUILD YOUR STARTING XI"
-        title="내 스쿼드"
-        description="4-3-3으로 선발 11명을 편성하세요. 보유 인원에는 제한이 없습니다."
-        action={
-          <>
-            <button className="button secondary" disabled={!changed} onClick={discardDraft}>
-              <RotateCcw size={16} />되돌리기
-            </button>
-            <button className="button primary" disabled={!changed || saving || !data.session} onClick={()=>void save()}><Save size={17} />{saving?"저장 중…":"스쿼드 저장"}</button>
-          </>
-        }
-      />
-      <MemberNotice />
-      <MatchNotificationToggle/>
-      <div className="squad-layout">
-        <section className="squad-board">
-          <div className="squad-toolbar">
-            <div className="squad-team">
-              <strong>{data.session?.profile?.nickname ? `${data.session.profile.nickname} FC` : "내 라인업"}</strong>
-              {changed ? <span className="tag yellow">편집 중 · 미저장</span> : savedAt && <span className="tag outline">저장됨</span>}
-            </div>
-            <div className="squad-count">
-              <span>등록 선수</span>
-              <strong className="num">{rule ? filled : "—"}<small> / {MAX_SQUAD}</small></strong>
-              <span className="meter yellow" aria-hidden="true"><i style={{ width: `${(filled / MAX_SQUAD) * 100}%` }} /></span>
-            </div>
-            <div className="squad-formation">
-              <span>포메이션</span> <strong>4-3-3</strong>
-            </div>
-          </div>
-          {legacyFormation && <p className="slot-hint">기존 라인업을 4-3-3에 맞춰 표시합니다. 확인 후 스쿼드를 저장해 주세요. 보유 선수는 유지됩니다.</p>}
-          {saveError && (
-            <div className={`squad-alert ${saveError.stale ? "stale" : ""}`} role="alert">
-              <span><b>{saveError.stale ? "다른 창에서 스쿼드가 먼저 저장되었습니다." : "스쿼드를 저장하지 못했습니다."}</b>{saveError.stale ? " 편집 중인 라인업은 그대로 두었습니다. 최신 스쿼드를 불러오면 편집 내용은 사라집니다." : ` ${saveError.message}`}</span>
-              {saveError.stale ? <button className="button primary small" onClick={discardDraft}>최신 스쿼드 불러오기</button> : <button className="button secondary small" onClick={() => setSaveError(null)}>닫기</button>}
-            </div>
-          )}
-          <Pitch slots={safeSlots} formation={formation || null} selected={selected} onSelect={(i) => setSelected(selected === i ? null : i)} />
-          <div className="squad-footer">
-            <div><span>라인업 가치</span><strong className="num">{money(lineupValue)}<span className="unit">P</span></strong></div>
-            <div><span>저장된 평균 Performance</span><strong className="num">{score(member?.squad?.performance)}</strong></div>
-            <div className="squad-composition">
-              <span>포지션 구성</span>
-              <span className="squad-pos-list">
-                {counts.map(([pos, need, have]) => (
-                  <span key={pos} className={rule && have < need ? "short" : ""}><PositionBadge position={pos} /><b className="num">{rule ? `${have}/${need}` : "—"}</b></span>
-                ))}
-              </span>
-            </div>
-          </div>
-        </section>
-        <section className="panel squad-bench">
-          <div className="section-title">
-            <h2>{target ? `${target} 선수 선택` : "보유 선수"}<span>{member ? `${owned.length}명` : ""}</span></h2>
-          </div>
-          {target ? (
-            <div className="slot-note" role="status">
-              <span><b>{selected! + 1}번 {target}</b> 자리에 배치할 선수를 고르세요.</span>
-              <button type="button" aria-label="선택 취소" className="icon-button" onClick={() => setSelected(null)}><X size={16} /></button>
-            </div>
-          ) : (
-            <p className="slot-hint">피치에서 자리를 먼저 선택하면 해당 포지션 선수만 표시됩니다.</p>
-          )}
-          {!target && <Tabs items={["전체", "FW", "MF", "DF", "GK"]} value={filter} onChange={setFilter} variant="segment" label="포지션 필터" />}
-          <div className="capacity-strip" role="group" aria-label="포지션별 선발 편성">
-            <ul>
-              {(["GK", "DF", "MF", "FW"] as const).map(pos => {
-                const capacity = {count:safeSlots.filter(id=>id && owned.find(p=>p.id===id)?.position===pos).length,limit:POSITION_LIMITS[pos],full:false};
-                capacity.full=capacity.count>=capacity.limit;
-                return (
-                  <li key={pos} className={capacity.full ? "full" : ""}>
-                    <span className="capacity-head"><PositionBadge position={pos} /><b className="num">{capacity.count}/{capacity.limit}</b></span>
-                    <span className="capacity-bar" aria-hidden="true"><i style={{ width: `${Math.min(100, (capacity.count / capacity.limit) * 100)}%` }} /></span>
-                    <small>{capacity.full ? "선발 편성 완료" : `${capacity.limit - capacity.count}자리 비어 있음`}</small>
-                  </li>
-                );
-              })}
-            </ul>
-            <p>보유 인원에는 제한이 없습니다. 선발 선수단은 4-3-3 포지션에 맞춰 최대 11명까지 편성합니다.</p>
-          </div>
-          <ul className="bench-list">
-            {visible.map((p) => {
-              const inLineup = safeSlots.includes(p.id);
-              return (
-                <li className={`bench-player ${inLineup ? "in-lineup" : ""}`} key={p.id}>
-                  <PlayerPortrait player={p} size="sm" />
-                  <span className="bench-text">
-                    <strong>{p.name}</strong>
-                    <span>{getTeam(p.team)?.name || "—"} · <b className="num">{money(p.price)}</b></span>
-                  </span>
-                  <PositionBadge position={p.position} />
-                  {target ? (
-                    <button type="button" className="button primary small" onClick={() => place(p)}>{inLineup ? "이동" : "배치"}</button>
-                  ) : (
-                    <span className={`bench-state ${inLineup ? "on" : ""}`}>{inLineup ? "출전" : "벤치"}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          {!visible.length && <DataEmpty financial entity="보유 선수" filtered={owned.length > 0} rows={3} />}
-          {selected !== null && safeSlots[selected] && (
-            <button
-              className="button danger full"
-              onClick={() => {
-                captureRevision();
-                setDraft({ formationId: formation, slots: safeSlots.map((id, i) => (i === selected ? null : id)) });
-                setSelected(null);
-              }}
-            >
-              선택한 자리 비우기
-            </button>
-          )}
-          {lineup.length > 0 && !target && (
-            <div className="bench-best">
-              <span>라인업 최고 상승</span>
-              {(() => {
-                const best = [...lineup].sort((a, b) => (b.change ?? -Infinity) - (a.change ?? -Infinity))[0];
-                return <strong>{best.name} <Change value={best.change} /></strong>;
-              })()}
-            </div>
-          )}
-          <p className="fine-print">{mock ? "예시 모드 · 편집 내용은 저장되지 않습니다." : "저장 버튼을 누르면 반영됩니다. 선수를 판매하면 해당 자리는 자동으로 비워집니다."}</p>
-        </section>
-      </div>
-    </>
-  );
+  const [selected, setSelected] = useState<number | null>(null);
+  const [position, setPosition] = useState<Position | null>(null);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const slots = ownedSquadSlots(member?.holdings ?? [], member?.squad?.slots ?? [], member?.squad?.formationId ?? SQUAD_FORMATION.id, getPlayer);
+  const selectedPosition = selected == null ? position : SQUAD_FORMATION.positions[selected];
+  const selectedPlayer = selected == null ? undefined : getPlayer(slots[selected]);
+  const capacity = squadCapacity(member?.holdings ?? [], getPlayer);
+  const remote = useCatalogPage<Player>("players", { q: query, position: selectedPosition ?? undefined, page, size: MARKET_SIZE, sort: "name" });
+  const local = data.players.filter(p => (!selectedPosition || p.position === selectedPosition) && `${p.name} ${p.english ?? ""} ${getTeam(p.team)?.name ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const players = mock ? local.slice((page - 1) * MARKET_SIZE, page * MARKET_SIZE) : remote.data.items;
+  const total = mock ? local.length : remote.data.total;
+  const listStatus = mock ? status : remote.status;
+  const filled = slots.filter(Boolean).length;
+  const lineup = slots.map(id => getPlayer(id)).filter(Boolean) as Player[];
+  const value = member?.financialReady !== false && member && lineup.every(p => p.price != null) ? lineup.reduce((sum, p) => sum + p.price!, 0) : null;
+  const excess = member?.holdings.filter(h => !slots.includes(h.playerId)) ?? [];
+  function selectSlot(i: number) { setSelected(selected === i ? null : i); setPosition(null); setPage(1); }
+  return <>
+    <PageHeading eyebrow="BUILD YOUR STARTING XI" title="내 스쿼드" description="4-3-3 · GK 1명, DF 4명, MF 3명, FW 3명. 매입하면 경기장에 바로 반영됩니다."/>
+    <MemberNotice/>
+    <MatchNotificationToggle/>
+    <div className="squad-layout automatic-squad">
+      <section className="squad-board">
+        <div className="squad-toolbar">
+          <div className="squad-team"><strong>{data.session?.profile?.nickname ? `${data.session.profile.nickname} FC` : "내 스쿼드"}</strong><span className="tag outline">자동 반영</span></div>
+          <div className="squad-count"><span>보유 선수</span><strong className="num">{member ? capacity.total : "—"}<small> / 11</small></strong><span className="meter yellow" aria-hidden="true"><i style={{ width: `${Math.min(100, filled / 11 * 100)}%` }}/></span></div>
+          <div className="squad-formation"><span>포메이션</span> <strong>4-3-3</strong></div>
+        </div>
+        <Pitch slots={slots} formation={SQUAD_FORMATION.id} selected={selected} onSelect={selectSlot}/>
+        <div className="squad-footer">
+          <div><span>스쿼드 가치</span><strong className="num">{money(value)}<span className="unit">P</span></strong></div>
+          <div><span>평균 Performance</span><strong className="num">{score(filled ? member?.squad?.performance : null)}</strong></div>
+          <div className="squad-composition"><span>포지션별 보유 현황</span><span className="squad-pos-list">{(["GK", "DF", "MF", "FW"] as const).map(pos => <span key={pos} className={capacity.counts[pos] < POSITION_LIMITS[pos] ? "short" : ""}><PositionBadge position={pos}/><b className="num">{capacity.counts[pos]}/{POSITION_LIMITS[pos]}</b></span>)}</span></div>
+        </div>
+      </section>
+      <section className="panel squad-market" aria-label="스쿼드 선수 시장">
+        <div className="section-title"><h2>선수 시장</h2><Link className="text-link" href="/market">전체 보기 →</Link></div>
+        <p className="slot-hint">빈자리를 누르면 해당 포지션을 검색합니다. 보유 선수를 누르면 바로 매각할 수 있습니다.</p>
+        {selected != null && <div className="slot-note" role="status"><span><b>{selectedPosition}</b> {selectedPlayer ? `${selectedPlayer.name} 보유 중` : "빈자리 · 매입할 선수 찾기"}</span><button type="button" aria-label="포지션 선택 해제" className="icon-button" onClick={() => setSelected(null)}><X size={16}/></button></div>}
+        {selected != null && <div className="squad-selected-player">{selectedPlayer ? <PlayerPortrait player={selectedPlayer} size="sm"/> : <span/>}<div>{selectedPlayer ? <><strong>{selectedPlayer.name}</strong><span className="num">{money(selectedPlayer.price)} P</span></> : <span>해당 포지션의 선수를 아래에서 매입하세요.</span>}</div><TradeButton player={selectedPlayer} side="sell" className={`button secondary small ${selectedPlayer ? "" : "squad-sale-hidden"}`}/></div>}
+        <div className="squad-market-positions" role="group" aria-label="스쿼드 시장 포지션">{([null, "GK", "DF", "MF", "FW"] as const).map(pos => <button key={pos ?? "all"} className={selectedPosition === pos ? "active" : ""} aria-pressed={selectedPosition === pos} onClick={() => { setPosition(pos); setSelected(null); setPage(1); }}>{pos ?? "전체"}{pos && <small className="num">{capacity.counts[pos]}/{POSITION_LIMITS[pos]}</small>}</button>)}</div>
+        <label className="input-search"><Search size={16}/><input aria-label="스쿼드 선수 검색" placeholder="선수·구단 검색" maxLength={100} value={query} onChange={e => { setQuery(e.target.value); setPage(1); }}/></label>
+        {capacity.excess && <p className="field-error" role="alert">기존 보유 정원을 초과했습니다. 초과 포지션 선수를 먼저 매각하면 새 선수를 매입할 수 있습니다.</p>}
+        {listStatus !== "ready" ? <DataEmpty entity="선수" status={listStatus} retry={mock ? reload : remote.reload} rows={3}/> : <>
+          <ul className="squad-market-list">{players.map(p => {
+            const owned = member?.holdings.some(h => h.playerId === p.id);
+            return <li key={p.id}><Link href={`/players/${p.id}`} aria-label={`${p.name} 상세`}><PlayerPortrait player={p} size="sm"/></Link><div className="squad-market-name"><Link href={`/players/${p.id}`}><strong>{p.name}</strong></Link><span>{getTeam(p.team)?.name ?? "—"} · {p.position ?? "—"}</span><b className="num">{money(p.price)} P <Change value={p.change}/></b></div><TradeButton player={p} side={owned ? "sell" : "buy"} className={`button ${owned ? "secondary" : "primary"} small`}/></li>;
+          })}</ul>
+          {!players.length && <p className="feed-empty">검색 조건에 맞는 선수가 없습니다.</p>}
+          <Pagination page={mock ? page : remote.data.page} total={total} size={MARKET_SIZE} onPage={setPage} label="스쿼드 선수"/>
+        </>}
+      </section>
+    </div>
+    {!!excess.length && <section className="panel squad-legacy" aria-label="정원 조정이 필요한 보유 선수"><h2>정원 조정이 필요한 보유 선수</h2><p>기존 보유 자산은 유지됩니다. 포지션 정원을 넘겨 경기장에 표시되지 않은 선수는 여기서 매각할 수 있습니다.</p><ul>{excess.map(h => {
+      const p = getPlayer(h.playerId);
+      return <li key={h.playerId}>{p ? <><PlayerPortrait player={p} size="sm"/><Link href={`/players/${p.id}`}>{p.name}</Link><PositionBadge position={p.position}/><TradeButton player={p} side="sell" className="button secondary small"/></> : <span>선수 정보를 확인하고 있습니다.</span>}</li>;
+    })}</ul></section>}
+  </>;
 }

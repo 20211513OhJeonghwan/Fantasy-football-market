@@ -334,7 +334,7 @@ try {
   state.session=memberSession;
   report.checks.push("Failed generation preserves figures; baseline and guest report buttons are hidden without requests");
   await visit(mockPage,base+"/transactions",{});
-  const totals=await mockPage.locator(".transaction-stats strong").allTextContents();
+  const totals=await mockPage.locator(".tx-summary strong").allTextContents();
   assert.ok(totals.length===3&&totals.every(text=>text.includes("—")));
   assert.ok(await mockPage.getByRole("heading",{name:"거래 내역 정보를 준비하고 있습니다",exact:true}).isVisible());
   report.checks.push("Unconnected finance remains unknown after login");
@@ -402,6 +402,7 @@ try {
   state.formations=[{id:'4-3-3',name:'4-3-3',positions:['GK','DF','DF','DF','DF','MF','MF','MF','FW','FW','FW']}];
   Object.assign(state.member,{financialReady:true,points:1300000,totalAssets:1300000,playerAssets:0,profit:0,returnRate:0,ownedPlayers:[]});
   let tradeCalls=0,quoteCalls=0;
+  await mock.route(/\/api\/kickx\/trades\?/,route=>{const id=new URL(route.request().url()).searchParams.get('playerId');const items=(state.member.transactions??[]).filter(t=>!id||t.playerId===id);return route.fulfill({json:{status:'ready',data:{items,total:items.length,page:1,size:50}}});});
   await mock.route('**/api/kickx/trades/quote',async route=>{
     quoteCalls++;const body=route.request().postDataJSON();assert.equal(body.playerId,'test-player');assert.equal(body.price,undefined);
     await route.fulfill({json:{id:'11111111-1111-1111-1111-111111111111',playerId:'test-player',side:body.side,quantity:1,price:100000,fee:0,settlement:100000,balance:1300000,balanceAfter:1200000,quotedAt:new Date().toISOString(),expiresAt:new Date(Date.now()+60000).toISOString()}});
@@ -425,6 +426,10 @@ try {
   await revisit(mockPage,{});
   assert.equal(await mockPage.getByRole('button',{name:'매입하기',exact:true}).isEnabled(),true);
   assert.equal(quoteCalls,1,'Opening a detail must not request a quote');
+  await mockPage.getByRole('button',{name:'매입하기',exact:true}).click();
+  await mockPage.getByRole('dialog').getByText(/FW 보유 정원 3명이 찼습니다/).waitFor();
+  assert.equal(await mockPage.getByRole('button',{name:'매입 확정',exact:true}).isDisabled(),true);assert.equal(quoteCalls,1);
+  await mockPage.getByRole('dialog').getByRole('button',{name:'취소',exact:true}).click();
   state.players[0].position='MF';
   await revisit(mockPage,{});
   assert.equal(await mockPage.getByRole('button',{name:'매입하기',exact:true}).isEnabled(),true);
@@ -432,19 +437,16 @@ try {
   await revisit(mockPage,{});
   assert.equal(await mockPage.getByRole('button',{name:'매입하기',exact:true}).isEnabled(),true);
   state.member.holdings=originalHoldings;state.member.ownedPlayers=originalOwned;
-  report.checks.push('Holdings above lineup positional counts keep new buys available; duplicate holding remains blocked');
-  let squadCalls=0;
-  await mock.route('**/api/kickx/squad',async route=>{
-    squadCalls++;const body=route.request().postDataJSON();assert.equal(body.revision,0);assert.equal(body.formationId,'4-3-3');assert.equal(body.slots.length,11);assert.equal(body.slots[8],'test-player');
-    state.member.squad={...body,revision:1,value:100000,performance:null};await route.fulfill({json:{revision:1}});
-  });
+  report.checks.push('Purchase modal enforces positional holding quotas while other positions remain available');
   await visit(mockPage,base+'/squad',{});
-  assert.equal(await mockPage.getByRole('combobox',{name:'포메이션',exact:true}).count(),0);
-  assert.equal(await mockPage.getByRole('button',{name:/자리 빈 자리/}).count(),11);
-  await mockPage.getByRole('button',{name:'9번 FW 자리 빈 자리',exact:true}).click();await mockPage.getByRole('button',{name:'배치',exact:true}).click();
-  await mockPage.getByRole('button',{name:'스쿼드 저장',exact:true}).click();await mockPage.getByText('스쿼드를 저장했습니다.',{exact:true}).waitFor();assert.equal(squadCalls,1);
-  await revisit(mockPage,{});assert.ok(await mockPage.getByRole('button',{name:'9번 FW 자리 CI-only player',exact:true}).isVisible());
-  report.checks.push('Squad saves 11 slots and revision; saved owned lineup survives reload');
+  assert.equal(await mockPage.getByRole('button',{name:'스쿼드 저장',exact:true}).count(),0);
+  assert.equal(await mockPage.getByRole('button',{name:'배치',exact:true}).count(),0);
+  assert.equal(await mockPage.getByRole('button',{name:/자리 빈 자리/}).count(),10);
+  assert.ok(await mockPage.getByRole('button',{name:'9번 FW 자리 CI-only player',exact:true}).isVisible());
+  await mockPage.getByRole('button',{name:'2번 DF 자리 빈 자리',exact:true}).click();
+  await mockPage.getByRole('textbox',{name:'스쿼드 선수 검색',exact:true}).waitFor();
+  assert.ok((await mockPage.locator('.slot-note').innerText()).includes('DF'));
+  report.checks.push('Bought holdings automatically occupy the pitch; vacancies open the position market without placement/save controls');
   let savedPost=null;const savedPosts=[];const savedComments=[];const communityActions=[];let quickAttempts=0,quickRequest=null;
   await mock.route(/\/api\/kickx\/community(?:\?|$)/,async route=>{
     const req=route.request();
@@ -478,7 +480,7 @@ try {
   await mockPage.getByRole('button',{name:'게시글 신고',exact:true}).click();await mockPage.getByLabel('신고 사유',{exact:true}).fill('신고 등록 테스트입니다');await mockPage.getByRole('button',{name:'신고 제출',exact:true}).click();
   assert.ok(['createPost','comment','like','report'].every(action=>communityActions.includes(action)));
   report.checks.push('Post creation, direct detail, comment, desired-state like and report use real endpoint contracts');
-  // Separate, body-first feeds and titleless composer use the existing write contract.
+  // Separate feeds require a title and retain the fixed player target.
   state.session.profile.team='test-team';state.session.profile.teams=['test-team'];
   savedPosts.push({...savedPost,id:'44444444-4444-4444-4444-444444444444',scope:'club',target:'test-team',targetName:'테스트 구단',title:'구단 전용 제목',body:'구단에서만 보여야 하는 이야기입니다.',likes:0,liked:false,commentCount:0});
   await visit(mockPage,base+'/community',{});
@@ -491,6 +493,7 @@ try {
   assert.equal(await mockPage.locator('.community-board-table tr[data-scope=club]').count(),0);
   await mockPage.locator('.feed-composer-open').click();
   assert.equal(await mockPage.getByRole('combobox',{name:'이야기할 선수'}).count(),0);
+  await mockPage.getByLabel('빠른 글 제목',{exact:true}).fill('실패해도 유지되는 선수 이야기입니다.');
   await mockPage.getByLabel('빠른 글 내용',{exact:true}).fill('실패해도 유지되는 선수 이야기입니다.');
   await mockPage.getByRole('button',{name:'게시하기',exact:true}).click();await mockPage.getByRole('alert').filter({hasText:'글 저장 테스트 오류'}).waitFor();
   assert.equal(await mockPage.getByLabel('빠른 글 내용',{exact:true}).inputValue(),'실패해도 유지되는 선수 이야기입니다.');
@@ -592,8 +595,8 @@ try {
   await visit(mockPage,base+'/rules',{});
   assert.equal(await mockPage.getByRole('heading',{name:'시즌 누적 가격',exact:true}).isVisible(),true);
   assert.equal(await mockPage.getByRole('heading',{name:'초기 가격',exact:true}).isVisible(),true);
-  assert.ok((await mockPage.locator('body').innerText()).includes('보유 인원에는 제한이 없으며'));
-  report.checks.push('Report rules explain cumulative seasons, positional baselines and unlimited holdings');
+  assert.ok((await mockPage.locator('body').innerText()).includes('최대 11명까지 보유하며'));
+  report.checks.push('Report rules explain cumulative seasons, positional baselines and 11-player holding quotas');
   await mock.close();
   const marketContext=await browser.newContext();
   await marketContext.route(/^https:\/\//,route=>route.abort());
