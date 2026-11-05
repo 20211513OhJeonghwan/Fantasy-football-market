@@ -1,5 +1,6 @@
 /* Purchases and sales drive the 4-3-3 squad; keep the compact market beside the pitch. */
 .automatic-squad { grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr); gap: 20px; }
+.automatic-squad .squad-board { min-width: 0; }
 .automatic-squad .squad-toolbar { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
 .automatic-squad .squad-formation { grid-column: 1 / -1; font-size: 12px; }
 .automatic-squad .squad-team { flex-wrap: wrap; }
@@ -49,7 +50,7 @@
 .player-lounge-cta { display: flex; justify-content: space-between; width: 100%; min-height: 48px; margin-bottom: 16px; }
 @media (max-width: 1100px) { .automatic-squad { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {
-  .automatic-squad .pitch { aspect-ratio: 4 / 3; min-height: 300px; }
+  .automatic-squad .pitch { aspect-ratio: auto; height: clamp(300px, 75vw, 440px); }
   .squad-market { padding: 14px; }
   .automatic-squad .squad-toolbar { padding: 12px; }
   .automatic-squad .squad-team strong { font-size: 16px; }

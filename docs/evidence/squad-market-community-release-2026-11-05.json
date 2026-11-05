@@ -1,0 +1,86 @@
+{
+  "migration": {
+    "version": "20261105130928",
+    "name": "automatic_squad_market_and_community",
+    "applied": true,
+    "capChangeAt": "2026-11-05T13:09:29.152Z",
+    "capChangeAtKST": "2026-11-05 22:09:29"
+  },
+  "policy": {
+    "s": 1,
+    "beta": 0.3,
+    "kappa": 4,
+    "maxUp": 0.1,
+    "lambda": 5,
+    "maxDown": 0.1,
+    "maxPrice": 1000000,
+    "minPrice": 10000,
+    "initialMax": 150000,
+    "initialMin": 50000,
+    "capChangeAtMs": 1793884169152,
+    "lowerQuantile": 0.05,
+    "previousMaxUp": 0.02,
+    "upperQuantile": 0.95,
+    "deviationLimit": 1,
+    "previousMaxDown": 0.02,
+    "valuationStartMs": 1791990000000,
+    "nonParticipationRate": 0.015
+  },
+  "financialIntegrityBefore": {
+    "trades": "bae91eaba4f020d6a7db528558ff6992",
+    "wallets": "368a3c66d6093b83368387c37abaa96b",
+    "holdings": "451d7b6b78cbd7c479982d2901fcd3a6"
+  },
+  "financialIntegrityAfter": {
+    "trades": "bae91eaba4f020d6a7db528558ff6992",
+    "wallets": "368a3c66d6093b83368387c37abaa96b",
+    "holdings": "451d7b6b78cbd7c479982d2901fcd3a6"
+  },
+  "countsBefore": {
+    "prices": 11632,
+    "trades": 446,
+    "wallets": 53,
+    "holdings": 402
+  },
+  "countsAfter": {
+    "prices": 11632,
+    "trades": 446,
+    "wallets": 53,
+    "holdings": 402
+  },
+  "squads": 53,
+  "invalidSlots": 0,
+  "internalHelperPublicExecute": false,
+  "internalHelperMemberExecute": false,
+  "liveAuthenticatedRollbackChecks": {
+    "up10": true,
+    "down10": true,
+    "sellFee": true,
+    "historical2": true,
+    "requiredTitle": true,
+    "sellFreesSlot": true,
+    "idempotentRetry": true,
+    "buyAutoPlacement": true,
+    "attachmentRemoval": true,
+    "authenticatedRole": true,
+    "committedTestData": false,
+    "staleQuoteCapacity": true,
+    "samePlayerAttachment": true
+  },
+  "remainingTestPosts": 0,
+  "addedSecurityAdvisories": [],
+  "localChecks": {
+    "unitTests": 267,
+    "sqlScenarios": 31,
+    "smokeRoutes": 52,
+    "smokeChecks": 29,
+    "browserWidths": [
+      320,
+      390,
+      768,
+      1024,
+      1440
+    ],
+    "mobileOverflowCorrected": true
+  }
+}
