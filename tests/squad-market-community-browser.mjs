@@ -63,7 +63,13 @@ try{
   assert.equal(await p.getByRole('button',{name:'스쿼드 저장',exact:true}).count(),0);
   await p.locator('.squad-market-list li').nth(1).getByRole('button',{name:'매입',exact:true}).click();
   await p.getByRole('dialog').getByText(/GK 보유 정원 1명이 찼습니다/).waitFor();assert.equal(quotesIssued(),1);assert(await p.getByRole('button',{name:'매입 확정',exact:true}).isDisabled());await p.getByRole('dialog').getByRole('button',{name:'취소',exact:true}).click();
-  await p.getByRole('button',{name:'1번 GK 자리 GK 테스트 선수 1',exact:true}).click();await p.getByRole('button',{name:'1번 GK 자리 GK 테스트 선수 1',exact:true}).click();
+  const ownedSlot=p.getByRole('button',{name:'1번 GK 자리 GK 테스트 선수 1',exact:true});
+  await ownedSlot.click();const unselectedHeight=(await ownedSlot.boundingBox()).height;
+  await ownedSlot.click();assert.equal(await ownedSlot.getAttribute('aria-pressed'),'true');
+  assert.equal(await ownedSlot.getByText('매각',{exact:true}).count(),0);
+  assert(Math.abs((await ownedSlot.boundingBox()).height-unselectedHeight)<1,'Selecting an owned player should not add a fake trade control or change its height');
+  assert(await p.locator('.squad-selected-player').getByRole('button',{name:'매각',exact:true}).isVisible());
+  await p.screenshot({path:`${out}/squad-selected-${width}.png`,fullPage:true});
   await p.locator('.squad-selected-player').getByRole('button',{name:'매각',exact:true}).click();await p.getByRole('button',{name:'매각 확정',exact:true}).click();await p.getByRole('heading',{name:'매각이 완료되었습니다',exact:true}).waitFor();await p.getByRole('button',{name:'확인',exact:true}).click();
   await p.waitForFunction(()=>document.querySelectorAll('.pitch-player.filled').length===0);assert.equal(state.member.squad.slots[0],null);
   await fits(p,'squad '+width);await p.screenshot({path:`${out}/squad-${width}.png`,fullPage:true});
@@ -82,7 +88,7 @@ try{
   await fits(p,'composer '+width);await p.screenshot({path:`${out}/composer-${width}.png`,fullPage:true});
   await go(p,'/community/clubs');await p.getByRole('combobox',{name:'게시판 구단 선택',exact:true}).click();await p.getByRole('option',{name:'다른 구단',exact:true}).click();await p.getByRole('heading',{name:/다른 구단 게시판/}).waitFor();assert.equal(await p.locator('.page-heading-action').getByRole('link',{name:'글쓰기',exact:true}).count(),0);await fits(p,'club selector '+width);
   await go(p,'/players/GK-1');await p.locator('.player-lounge-cta').waitFor();assert((await p.locator('.player-lounge-cta').boundingBox()).height>=40);await fits(p,'player community '+width);await p.screenshot({path:`${out}/player-${width}.png`,fullPage:true});
-  report.checks.push(`${width}px: position market, auto buy/sell, capacity before quote, fixed-target title/attachment/remove/reset, non-fan club filter, player community entry`);await c.close();
+  report.checks.push(`${width}px: pitch selection without a fake sale control or height jump, actual panel sale, position market, auto buy/sell, capacity before quote, fixed-target title/attachment/remove/reset, non-fan club filter, player community entry`);await c.close();
  }
  assert.deepEqual(report.errors,[]);console.log(JSON.stringify(report,null,2));
 }finally{await browser?.close();server.kill('SIGTERM');await writeFile(out+'/report.json',JSON.stringify(report,null,2));}

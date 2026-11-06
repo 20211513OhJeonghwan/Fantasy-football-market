@@ -1,0 +1,297 @@
+{
+  "dateKST": "2026-11-07",
+  "baseTree": "a3a94ab3ecb1995fa64ba95806b39a0052b5c94c",
+  "appliedFix": "Remove the non-interactive sell badge inside a selected squad pitch slot; preserve selection and the actual market-panel sale action.",
+  "checks": {
+    "build": "passed",
+    "lint": "passed",
+    "unit": {
+      "passed": 281,
+      "failed": 0
+    },
+    "browserSmoke": {
+      "routes": [
+        {
+          "path": "/",
+          "width": 1440
+        },
+        {
+          "path": "/login",
+          "width": 1440
+        },
+        {
+          "path": "/onboarding",
+          "width": 1440
+        },
+        {
+          "path": "/players",
+          "width": 1440
+        },
+        {
+          "path": "/players/missing",
+          "width": 1440
+        },
+        {
+          "path": "/market",
+          "width": 1440
+        },
+        {
+          "path": "/portfolio",
+          "width": 1440
+        },
+        {
+          "path": "/transactions",
+          "width": 1440
+        },
+        {
+          "path": "/squad",
+          "width": 1440
+        },
+        {
+          "path": "/ranking",
+          "width": 1440
+        },
+        {
+          "path": "/community",
+          "width": 1440
+        },
+        {
+          "path": "/community/clubs",
+          "width": 1440
+        },
+        {
+          "path": "/community/players",
+          "width": 1440
+        },
+        {
+          "path": "/community/clubs/missing",
+          "width": 1440
+        },
+        {
+          "path": "/community/players/missing",
+          "width": 1440
+        },
+        {
+          "path": "/community/posts/missing",
+          "width": 1440
+        },
+        {
+          "path": "/community/write",
+          "width": 1440
+        },
+        {
+          "path": "/mypage",
+          "width": 1440
+        },
+        {
+          "path": "/admin",
+          "width": 1440
+        },
+        {
+          "path": "/admin/data",
+          "width": 1440
+        },
+        {
+          "path": "/admin/users",
+          "width": 1440
+        },
+        {
+          "path": "/admin/trades",
+          "width": 1440
+        },
+        {
+          "path": "/admin/community",
+          "width": 1440
+        },
+        {
+          "path": "/fixtures",
+          "width": 1440
+        },
+        {
+          "path": "/teams/missing",
+          "width": 1440
+        },
+        {
+          "path": "/rules",
+          "width": 1440
+        },
+        {
+          "path": "/",
+          "width": 390
+        },
+        {
+          "path": "/login",
+          "width": 390
+        },
+        {
+          "path": "/onboarding",
+          "width": 390
+        },
+        {
+          "path": "/players",
+          "width": 390
+        },
+        {
+          "path": "/players/missing",
+          "width": 390
+        },
+        {
+          "path": "/market",
+          "width": 390
+        },
+        {
+          "path": "/portfolio",
+          "width": 390
+        },
+        {
+          "path": "/transactions",
+          "width": 390
+        },
+        {
+          "path": "/squad",
+          "width": 390
+        },
+        {
+          "path": "/ranking",
+          "width": 390
+        },
+        {
+          "path": "/community",
+          "width": 390
+        },
+        {
+          "path": "/community/clubs",
+          "width": 390
+        },
+        {
+          "path": "/community/players",
+          "width": 390
+        },
+        {
+          "path": "/community/clubs/missing",
+          "width": 390
+        },
+        {
+          "path": "/community/players/missing",
+          "width": 390
+        },
+        {
+          "path": "/community/posts/missing",
+          "width": 390
+        },
+        {
+          "path": "/community/write",
+          "width": 390
+        },
+        {
+          "path": "/mypage",
+          "width": 390
+        },
+        {
+          "path": "/admin",
+          "width": 390
+        },
+        {
+          "path": "/admin/data",
+          "width": 390
+        },
+        {
+          "path": "/admin/users",
+          "width": 390
+        },
+        {
+          "path": "/admin/trades",
+          "width": 390
+        },
+        {
+          "path": "/admin/community",
+          "width": 390
+        },
+        {
+          "path": "/fixtures",
+          "width": 390
+        },
+        {
+          "path": "/teams/missing",
+          "width": 390
+        },
+        {
+          "path": "/rules",
+          "width": 390
+        }
+      ],
+      "checks": [
+        "Guide opens and closes with Escape",
+        "Home search and reset",
+        "Disconnected services and cross-origin writes stay blocked",
+        "Disconnected community feeds show their actual state without indefinite loading",
+        "Catalog API validates parameters and keeps disconnected reads explicit",
+        "Public player list and detail render while dashboard bootstrap is still pending",
+        "Zero price renders; failed watchlist writes do not pretend to succeed",
+        "Saved watchlist feeds the filtered player list",
+        "Server search, second page, retry and direct detail outside bootstrap",
+        "Home uses fixed ten-row server pages instead of expanding the board",
+        "Home copy and shared header are simplified; centered pagination validates manual jumps, boundaries, Escape and mobile layout",
+        "BSD missing photo falls back; the removed stat strip stays removed",
+        "Match report loads only on open, generates once, shares cached text, and fits mobile",
+        "Failed generation preserves figures; baseline and guest report buttons are hidden without requests",
+        "Unconnected finance remains unknown after login",
+        "Profile errors preserve input; confirmed saves update the account",
+        "Admin visits have no collection mutation; member restriction and restore survive reload",
+        "Trade UI uses server quote; receipt reloads holdings; duplicate holding blocks buy",
+        "Purchase modal enforces positional holding quotas while other positions remain available",
+        "Bought holdings automatically occupy the pitch; vacancies open the position market without placement/save controls",
+        "Post creation, direct detail, comment, desired-state like and report use real endpoint contracts",
+        "Compact club board removes switches, popular posts, lounge explorer and quick composer; player discussion is entered from player detail; scoped writes retain retry UUID",
+        "Prototype team, squad, article and score rules fit desktop and mobile",
+        "Active v2 rules and simplified player detail fit desktop and mobile",
+        "Five support selectors save independently by league; monthly schedule defaults to the last seven KST days with accessible day/all toggles; today/latest navigation and all-competition club schedules remain intact",
+        "Report rules explain neutral match-based returns, positional baselines and 11-player holding quotas",
+        "Market selectors stay with the results; two-row card pages resize from desktop to mobile while preserving list/grid position, filter resets and direct page entry",
+        "Market shows only five regular leagues and their clubs; explorer redirects preserve search, watched scope and team",
+        "No browser JavaScript errors"
+      ]
+    },
+    "squadMarketCommunity": {
+      "widths": [
+        320,
+        390,
+        768,
+        1024,
+        1440
+      ],
+      "checks": [
+        "320px: pitch selection without a fake sale control or height jump, actual panel sale, position market, auto buy/sell, capacity before quote, fixed-target title/attachment/remove/reset, non-fan club filter, player community entry",
+        "390px: pitch selection without a fake sale control or height jump, actual panel sale, position market, auto buy/sell, capacity before quote, fixed-target title/attachment/remove/reset, non-fan club filter, player community entry",
+        "768px: pitch selection without a fake sale control or height jump, actual panel sale, position market, auto buy/sell, capacity before quote, fixed-target title/attachment/remove/reset, non-fan club filter, player community entry",
+        "1024px: pitch selection without a fake sale control or height jump, actual panel sale, position market, auto buy/sell, capacity before quote, fixed-target title/attachment/remove/reset, non-fan club filter, player community entry",
+        "1440px: pitch selection without a fake sale control or height jump, actual panel sale, position market, auto buy/sell, capacity before quote, fixed-target title/attachment/remove/reset, non-fan club filter, player community entry"
+      ],
+      "errors": []
+    }
+  },
+  "productionReadOnlyPages": [
+    "/",
+    "/market",
+    "/players/bsd-1632",
+    "/fixtures",
+    "/teams/bsd-79",
+    "/community/clubs",
+    "/community/posts/d1235cd7-62e3-4f0d-a4a2-22917ce1aa8e",
+    "/ranking",
+    "/rules"
+  ],
+  "limits": [
+    "Authenticated production trades, posts and polls were not executed.",
+    "Authenticated browser coverage uses local controlled API responses.",
+    "No new production AI generation was requested.",
+    "Automated route coverage includes empty and unavailable states; not every route was tested with production content."
+  ],
+  "excludedFinding": "EPL filter reset on detail-to-market navigation did not reproduce in the production browser and is excluded from confirmed defects.",
+  "screenshots": {
+    "data": "local controlled test member and players",
+    "mobile": "squad-selection-mobile-2026-11-07.png",
+    "desktop": "squad-selection-desktop-2026-11-07.png"
+  },
+  "pricingPolicyChanged": false
+}
