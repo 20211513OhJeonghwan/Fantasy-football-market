@@ -18,7 +18,7 @@ test('free model is explicit and an absent key cannot issue model requests',()=>
 });
 test('the prompt contains performance facts with exact outcome but without private identities',()=>{
  const prompt=JSON.parse(model.reportPrompt({...facts,raw:'private',portfolio:{balance:1000},userId:'secret'}));
- assert.equal(prompt.score,57);assert.equal(prompt.priceBefore,100000);assert.equal(prompt.priceAfter,92000);assert.equal(prompt.neutralScore,6);
+ assert.equal(prompt.score,57);assert.equal(prompt.priceBefore,100000);assert.equal(prompt.priceAfter,92000);assert.equal(prompt.neutralScore,undefined);
  for(const field of ['playerName','opponent','raw','portfolio','userId','playedAt','targetPrice','weightedForm','usedAppearances','direction','provisional','unverifiedItems'])assert.equal(prompt[field],undefined);
  assert.equal(prompt.contributions[1].item,'득점');
 });

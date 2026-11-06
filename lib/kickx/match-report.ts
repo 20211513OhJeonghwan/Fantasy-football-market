@@ -6,6 +6,10 @@ export function reportSentences(text: string): string[] {
   return text.split(/\r?\n+/u).flatMap(line=>[...segmenter.segment(line)].map(part=>part.segment.trim())).filter(Boolean);
 }
 export type ReportFacts = {
+  position?: string | null;
+  referenceScore?: number | null;
+  priceSensitivity?: number | null;
+  priceExposure?: number | null;
   playerName: string;
   opponent: string;
   playedAt: string;
@@ -35,12 +39,14 @@ export type MatchReport = {
 
 /** Exact outcome explanation always renders, including when AI is rate limited. */
 export function matchPriceExplanation(facts:ReportFacts):string{
- const exposure=Math.min(facts.minutes/60,1),score=facts.score;
- const raw=(score-6)*2.5*exposure,rate=Math.max(-10,Math.min(10,raw));
+ const reference=facts.referenceScore,score=facts.score;
  const direction=facts.priceAfter>facts.priceBefore?'상승':facts.priceAfter<facts.priceBefore?'하락':'유지';
- const basis=score===6?'기준 6점과 같아 가격 유지 대상입니다.':`기준 6점보다 ${Math.abs(score-6).toFixed(2).replace(/\.?0+$/,'')}점 ${score>6?'높아 상승':'낮아 하락'} 대상입니다.`;
- const time=facts.minutes<60?` ${facts.minutes}분 출전으로 ${Math.round(exposure*100)}%만 반영합니다.`:'';
- const limit=Math.abs(raw)>10?' 경기당 최대 변동률 10%를 적용합니다.':'';
- const bound=direction==='유지'&&rate!==0?' 가격 상하한 또는 포인트 반올림으로 실제 가격은 유지됐습니다.':'';
+ if(reference==null||!Number.isFinite(reference)||reference<=0)return `이번 경기의 실제 가격은 ${direction}했습니다. 상세 기준이 없는 과거 결과에는 현재 기준을 소급해 설명하지 않습니다.`;
+ const exposure=facts.priceExposure??Math.min(facts.minutes/60,1),sensitivity=facts.priceSensitivity??.1;
+ const raw=(score-reference)/Math.max(Math.abs(reference),1)*sensitivity*exposure;
+ const basis=score===reference?`포지션 기준 ${reference.toFixed(2)}점과 같아 가격 유지 대상입니다.`:`포지션 기준 ${reference.toFixed(2)}점보다 ${Math.abs(score-reference).toFixed(2)}점 ${score>reference?'높아 상승':'낮아 하락'} 대상입니다.`;
+ const time=facts.minutes<60?` ${facts.minutes}분 출전으로 변동폭의 ${Math.round(exposure*100)}%를 반영합니다.`:'';
+ const limit=Math.abs(raw)>.1?' 경기당 최대 변동률 10%를 적용합니다.':'';
+ const bound=direction==='유지'&&raw!==0?' 가격 상하한 또는 포인트 반올림으로 실제 가격은 유지됐습니다.':'';
  return `${basis}${time}${limit}${bound}`;
 }

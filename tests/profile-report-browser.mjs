@@ -19,8 +19,8 @@ try{
   state.session.profile={...state.session.profile,teams:[state.session.profile.team],avatar:null};
   const player=state.players[0],large=state.players[1];
   player.photo='https://sports.bzzoiro.com/img/player/9000001/?sor=true&bg=transparent';large.photo='https://sports.bzzoiro.com/img/player/9000002/?sor=true&bg=transparent';
-  player.records=[{id:'report-row',fixtureId:'report-browser-match',reportAvailable:true,playedAt:'2026-11-01T12:00:00Z',opponent:'지연 확인 상대',result:'승',minutes:90,goals:1,assists:0,performance:8}];
-  const facts={playerName:player.name,opponent:'지연 확인 상대',playedAt:'2026-11-01T12:00:00Z',minutes:90,score:8,scoreStatus:'ready',ruleVersion:'report-v3',contributions:[{metric:'minutes',value:90,points:2},{metric:'goals',value:1,points:4},{metric:'shots_on_target',value:2,points:2}],warningCount:0,priceBefore:100000,priceAfter:102000,targetPrice:103000,formScore:8,changePercent:2,windowSize:6};
+  player.records=[{id:'report-row',fixtureId:'report-browser-match',reportAvailable:true,playedAt:'2026-11-01T12:00:00Z',opponent:'지연 확인 상대',result:'승',minutes:90,goals:1,assists:0,performance:10}];
+  const facts={position:'FW',referenceScore:8,priceSensitivity:.1,priceExposure:1,playerName:player.name,opponent:'지연 확인 상대',playedAt:'2026-11-01T12:00:00Z',minutes:90,score:10,scoreStatus:'ready',ruleVersion:'report-v3',contributions:[{metric:'minutes',value:90,points:2},{metric:'goals',value:1,points:4},{metric:'shots_on_target',value:4,points:4}],warningCount:0,priceBefore:100000,priceAfter:102500,targetPrice:102500,formScore:10,changePercent:2.5,windowSize:6};
   const missing={status:'missing',facts,text:null,generatedAt:null,canGenerate:true};
   let reportGets=0,reportPosts=0,release,hang=false;
   const generated=new Promise(r=>{release=r;});
@@ -64,7 +64,7 @@ try{
   await p.goto(base+'/players/'+player.id,{waitUntil:'networkidle'});assert.equal(reportGets+reportPosts,0);
   await p.locator('.detail-photo .portrait.small-source img').waitFor();
   await p.getByRole('button',{name:'지연 확인 상대 경기 리포트',exact:true}).click();const dialog=p.getByRole('dialog');await dialog.locator('.report-numbers').waitFor();
-  assert.ok((await dialog.innerText()).includes('102,000'));assert.equal(reportPosts,1);assert.ok(await dialog.getByRole('status').getByText(/AI 경기력 설명을 작성/).isVisible());
+  assert.ok((await dialog.innerText()).includes('102,500'));assert.equal(reportPosts,1);assert.ok((await dialog.innerText()).includes('포지션 기준 8.00점'));assert.ok(await dialog.getByRole('status').getByText(/AI 경기력 설명을 작성/).isVisible());
   assert.equal(await dialog.getByText('리포트를 준비하고 있습니다.',{exact:true}).count(),0);
   release();await dialog.getByRole('heading',{name:'AI 경기력 설명',exact:true}).waitFor();assert.equal(await dialog.locator('.report-explanation p').count(),2);
   await p.screenshot({path:`test-artifacts/report-progress-${width}.png`,fullPage:true});await p.keyboard.press('Escape');

@@ -29,10 +29,10 @@ test('a date groups leagues before kickoff time without losing matches',()=>{
  assert.deepEqual(groups.map(g=>[g.leagueId,g.fixtures.map(f=>f.id)]),[['bsd-1',['a','b']],['bsd-3',['c']]]);
 });
 test('report always states neutral, positive, negative, short appearance and price-bound outcomes',()=>{
- const facts={score:4,minutes:90,priceBefore:100000,priceAfter:95000};
+ const facts={score:4,referenceScore:8,minutes:90,priceBefore:100000,priceAfter:95000};
  assert.match(matchPriceExplanation(facts),/낮아 하락/);
- assert.match(matchPriceExplanation({...facts,score:8,priceAfter:105000}),/높아 상승/);
- assert.match(matchPriceExplanation({...facts,score:6,priceAfter:100000}),/가격 유지/);
- assert.match(matchPriceExplanation({...facts,minutes:30}),/50%만 반영/);
+ assert.match(matchPriceExplanation({...facts,score:12,priceAfter:105000}),/높아 상승/);
+ assert.match(matchPriceExplanation({...facts,score:8,priceAfter:100000}),/가격 유지/);
+ assert.match(matchPriceExplanation({...facts,minutes:30}),/50%를 반영/);
  assert.match(matchPriceExplanation({...facts,priceBefore:10000,priceAfter:10000}),/가격 상하한/);
 });

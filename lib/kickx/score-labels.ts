@@ -1,6 +1,6 @@
 /** Presentation-only wording for stored Performance results. Scores themselves always come from the server. */
 export const METRIC_LABELS: Record<string, string> = {
-  minutes: "출전 기본 평가",
+  minutes: "출전 시간",
   score_range: "점수 범위 조정",
   goals: "득점",
   assists: "도움",
@@ -19,6 +19,14 @@ export const METRIC_LABELS: Record<string, string> = {
   conceded: "실점",
   saves: "선방",
   penalty_saves: "페널티킥 선방",
+  passes_completed: "패스 성공",
+  ball_recoveries: "볼 회수",
+  clearances: "클리어런스",
+  dribbles_completed: "드리블 성공",
+  shots_blocked: "슈팅 차단",
+  fouls_won: "피파울",
+  high_claims: "공중볼 처리",
+  keeper_sweeper_success: "스위퍼 성공",
 };
 export const SCORE_STATUS: Record<string, { label: string; tone: "ok" | "warn" | "off" }> = {
   ready: { label: "산정 완료", tone: "ok" },
