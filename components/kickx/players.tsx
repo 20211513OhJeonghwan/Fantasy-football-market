@@ -1,4 +1,5 @@
 "use client";
+import {MemberName} from "./avatar";
 import {CommunityFeed} from "./community-feed";
 import {PerformanceDetails} from "./performance";
 import { MatchReportDialog } from "./match-report";
@@ -476,7 +477,7 @@ export function PlayerDetail() {
                   <li key={post.id}>
                     <Link href={`/community/posts/${post.id}`}>
                       <strong>{post.title}</strong>
-                      <span>{post.author} · 댓글 {post.commentCount}</span>
+                      <span><MemberName primaryTeam={post.authorPrimaryTeam} holdsPlayer={post.authorHoldsPlayer}>{post.author}</MemberName> · 댓글 {post.commentCount}</span>
                     </Link>
                   </li>
                 ))}

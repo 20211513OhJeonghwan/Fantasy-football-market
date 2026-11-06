@@ -140,7 +140,7 @@
     "guest_save": false
   },
   "checks": {
-    "unitTests": 274,
+    "unitTests": 275,
     "databaseScripts": 33,
     "build": true,
     "lint": true,
@@ -160,6 +160,7 @@
       1024,
       1440
     ],
-    "browserErrors": 0
+    "browserErrors": 0,
+    "cachePolicyEpochVerified": true
   }
 }
