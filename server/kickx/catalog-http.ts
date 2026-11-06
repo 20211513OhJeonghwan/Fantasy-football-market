@@ -31,7 +31,7 @@ async function readCatalogPage(request: Request, kind: "players" | "fixtures") {
       return matches([p.name,p.english,t?.name,t?.english,l?.name].join(" ")) && (!input.team || p.team === input.team)
         && (!input.league || t?.leagueId === input.league) && (!input.position || p.position === input.position)
         && (input.scope !== "watch" || member?.watchlist.includes(p.id)) && (input.scope !== "owned" || member?.holdings.some(h=>h.playerId===p.id))
-        && (input.scope !== "rising" || (p.change ?? 0)>0) && (input.scope !== "falling" || (p.change ?? 0)<0);
+        && (input.scope !== "rising" || (p.change ?? 0)>0) && (input.scope !== "falling" || (p.change ?? 0)<0 && p.lastPriceReason!=="not-played");
     }).sort((a,b)=>{
       if(input.sort === "name") return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
       const key=(input.sort === "price-asc" ? "price" : input.sort) as "price"|"change"|"performance"|"volume";

@@ -193,7 +193,7 @@ export function HomeScreen() {
   const valued = !visible.length || visible.some(p => p.price != null);
   const known = data.players.filter(p => p.change != null);
   const rising = [...known].filter(p => (p.change ?? 0) > 0).sort((a, b) => (b.change ?? 0) - (a.change ?? 0)).slice(0, 5);
-  const falling = [...known].filter(p => (p.change ?? 0) < 0).sort((a, b) => (a.change ?? 0) - (b.change ?? 0)).slice(0, 5);
+  const falling = [...known].filter(p => (p.change ?? 0) < 0 && p.lastPriceReason!=="not-played").sort((a, b) => (a.change ?? 0) - (b.change ?? 0)).slice(0, 5);
   const trades = member?.transactions.slice(0, 5) ?? [];
   const reset = () => { setQuery(""); setSearch(""); setPosition("all"); setTeam("all"); setSort("default"); setPage(1); };
   const update = (fn: () => void) => { fn(); setPage(1); };

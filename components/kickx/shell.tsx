@@ -120,8 +120,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <span className="topbar-market">
           {data.market ? (
             <>
-              <span>상승 <b className="up num">{money(data.market.rising)}</b></span>
-              <span>하락 <b className="down num">{money(data.market.falling)}</b></span>
+              <span title="미출전을 제외한 직전 가격 상승 선수">상승 <b className="up num">{money(data.market.rising)}</b></span>
+              <span title="미출전을 제외한 직전 가격 하락 선수">하락 <b className="down num">{money(data.market.falling)}</b></span>
+              <span title="직전 가격 반영 경기에서 확인된 미출전 선수">미출전 <b className="num">{money(data.market.notPlayed)}</b></span>
               <span>가격 적용 <b className="num">{dateText(data.updatedAt)}</b></span>
             </>
           ) : <span>REAL FOOTBALL. YOUR GAME.</span>}

@@ -1,0 +1,70 @@
+{
+  "status": "awaiting_database_migration_confirmation",
+  "checks": {
+    "unit": 281,
+    "sqlScripts": 36,
+    "build": true,
+    "lint": true,
+    "desktopMobileReport": true
+  },
+  "storageBeforeBytes": 356428947,
+  "storageAfter": {
+    "checkedAt": "2026-11-06T08:47:31.606828+00:00",
+    "integrity": {
+      "trades": "bae91eaba4f020d6a7db528558ff6992",
+      "wallets": "368a3c66d6093b83368387c37abaa96b",
+      "holdings": "451d7b6b78cbd7c479982d2901fcd3a6"
+    },
+    "auditBytes": 31449088,
+    "databaseBytes": 291736723,
+    "revisionBytes": 26353664,
+    "scoringRevision": "neutral-six-20261106",
+    "performanceBytes": 26214400,
+    "repeatedAttempts": 65401
+  },
+  "audit": {
+    "scope": "identical automatic calculation.withheld only; same player, actor, reason and KST date",
+    "dailyGroups": 11302,
+    "preservedAttempts": 62724,
+    "removedDuplicateRows": 51422
+  },
+  "approved": {
+    "score": "Original report weights plus observed additive actions; no score cap",
+    "price": "Fixed point increments from a frozen prelaunch positional benchmark; maximum 10 percent per match",
+    "launch": "2026-10-15T00:00:00+09:00",
+    "priceUnit": 100000,
+    "priceSensitivity": 0.1,
+    "minimumPrice": 10000,
+    "gamePriceCeiling": null,
+    "nonParticipationRate": 0.015
+  },
+  "pricingApplied": false,
+  "display": {
+    "order": [
+      "rising",
+      "falling",
+      "notPlayed"
+    ],
+    "classification": "Latest verified issued price event, not inferred from blank score or rate",
+    "excludeDnpFrom": [
+      "rising",
+      "falling",
+      "falling catalog",
+      "falling top five"
+    ]
+  },
+  "pendingMigration": "20261106103458_additive_point_pricing_release.sql",
+  "deployment": {
+    "personalMain": false,
+    "teamMain": false,
+    "blocker": "Supabase apply_migration execution confirmations repeatedly expired; no new schema installed"
+  },
+  "liveCheck": {
+    "checkedAt": "2026-11-06T10:40:32.940121+00:00",
+    "databaseBytes": 291843219,
+    "replayInstalled": false,
+    "scoringRevision": "neutral-six-20261106",
+    "pricingModel": null,
+    "dnpReasonInstalled": false
+  }
+}

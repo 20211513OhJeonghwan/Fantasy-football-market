@@ -1,16 +1,18 @@
 /** Report sections 6 and 7. Explicit defaults; references are frozen before activation. */
 export const RULE_VERSION = "report-v3";
-export const SCORING_REVISION = "neutral-six-20261106";
+export const SCORING_REVISION = "report-additive-20261106";
+export const PRICING_REVISION = "position-points-20261106";
 export const SCORING = {
- base:6, goals:{GK:4,DF:3,MF:2.5,FW:2}, assist:{GK:2,DF:1.5,MF:1.5,FW:1.5},
- shotOnTarget:{MF:.2,FW:.25}, keyPass:{DF:.15,MF:.25,FW:.15}, cross:.1,
- passThreshold:1,passAccuracy:.85,passBonus:.3,
- cleanSheet:{GK:1,DF:1,MF:.3,FW:0},save:.5,penaltySave:3,
- yellow:-.7,red:-2.5,ownGoal:-1.5,
+ goals:{GK:10,DF:6,MF:5,FW:4}, assist:{GK:5,DF:4,MF:3,FW:3},
+ shotOnTarget:{MF:.5,FW:1}, keyPass:{DF:.5,MF:1,FW:.5}, cross:.5,
+ passThreshold:1,passAccuracy:.85,passBonus:1,
+ cleanSheet:{GK:4,DF:4,MF:1,FW:0},save:1,penaltySave:5,
+ yellow:-1,red:-3,ownGoal:-2,
+ completedPasses:.5,ballRecovery:.5,clearance:.25,dribble:.5,shotBlock:.5,foulWon:.25,highClaim:.5,keeperSweeper:.5,
 } as const;
 export const REPORT_PARAMETERS = {
  lambda:5,kappa:4,beta:.3,s:1,deviationLimit:1,
- initialMin:50000,initialMax:150000,minPrice:10000,maxPrice:1000000,
+ initialMin:50000,initialMax:150000,minPrice:10000,maxPrice:Number.MAX_SAFE_INTEGER,
  maxUp:.10,maxDown:.10,nonParticipationRate:.015,lowerQuantile:.05,upperQuantile:.95,
- neutralScore:6,pointRate:.025,
+ priceSensitivity:.10,priceUnit:100000,
 } as const;

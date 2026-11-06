@@ -31,7 +31,7 @@ do $$declare first jsonb;second jsonb;h text;t uuid;before_usage jsonb;begin
  first:=public.kickx_read_match_report('report-player','report-fixture');
  perform pg_temp.report_assert(first->>'status'='missing' and first#>>'{facts,priceAfter}'='92000','Read must return stored pricing, without a write');
  perform pg_temp.report_assert((select ai_report_usage=before_usage from public.kickx_policy),'Read consumed quota');
- perform pg_temp.report_assert(not(first?'text') and first->>'promptVersion'='match-report-outcome-v3','Old prompt text leaked instead of a lazy refresh');
+ perform pg_temp.report_assert(not(first?'text') and first->>'promptVersion'='match-report-points-v5','Old prompt text leaked instead of a lazy refresh');
  first:=public.kickx_claim_match_report('report-player','report-fixture','00000000-0000-0000-0000-000000000081');
  perform pg_temp.report_assert(first->>'status'='claimed','Initial claim failed');
  h:=first->>'inputHash';t:=(first->>'claimToken')::uuid;

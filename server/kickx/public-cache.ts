@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import {SCORING_REVISION} from "./engine/report-policy";
+import {SCORING_REVISION,PRICING_REVISION} from "./engine/report-policy";
 import type { CatalogQuery } from "@/lib/kickx/catalog-query";
 import { createPublicClient } from "./supabase";
 import { readCatalog } from "./catalog";
@@ -11,12 +11,12 @@ import { readPlayerPage, readFixturePage, readPlayerDetail } from "./catalog-pag
 // A policy rollout must not serve a previous scoring epoch on its first stale cache hit.
 const options = { revalidate: 15, tags: ["kickx-public"] };
 export const readCachedCatalog = unstable_cache(
-  async () => readCatalog(createPublicClient()), ["kickx-catalog-v2",SCORING_REVISION], options);
+  async () => readCatalog(createPublicClient()), ["kickx-catalog-v2",SCORING_REVISION,PRICING_REVISION], options);
 export const readCachedPlayerPage = unstable_cache(async (input: CatalogQuery) => {
   if (["watch", "owned"].includes(input.scope)) throw new Error("Private catalog cannot be cached");
   return readPlayerPage(createPublicClient(), input);
-}, ["kickx-player-page-v2",SCORING_REVISION], options);
+}, ["kickx-player-page-v2",SCORING_REVISION,PRICING_REVISION], options);
 export const readCachedFixturePage = unstable_cache(
-  async (input: CatalogQuery) => readFixturePage(createPublicClient(), input), ["kickx-fixture-page-v2",SCORING_REVISION], options);
+  async (input: CatalogQuery) => readFixturePage(createPublicClient(), input), ["kickx-fixture-page-v2",SCORING_REVISION,PRICING_REVISION], options);
 export const readCachedPlayerDetail = unstable_cache(
-  async (id: string) => readPlayerDetail(createPublicClient(), id), ["kickx-player-detail-v2",SCORING_REVISION], options);
+  async (id: string) => readPlayerDetail(createPublicClient(), id), ["kickx-player-detail-v2",SCORING_REVISION,PRICING_REVISION], options);

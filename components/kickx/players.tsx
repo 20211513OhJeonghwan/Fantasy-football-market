@@ -165,7 +165,7 @@ export function PlayerList({ market = false }: { market?: boolean }) {
         (pos === "전체" || p.position === pos) &&
         (tab !== "관심 선수" || data.member?.watchlist.includes(p.id)) &&
         (tab !== "상승 선수" || (p.change != null && p.change > 0)) &&
-        (tab !== "하락 선수" || (p.change != null && p.change < 0)) &&
+        (tab !== "하락 선수" || (p.change != null && p.change < 0 && p.lastPriceReason!=="not-played")) &&
         (tab !== "보유 선수" || data.member?.holdings.some((h) => h.playerId === p.id))
       );
     })

@@ -7,7 +7,7 @@ import { readPrototypePublic } from "./public-prototype";
 type Row = Record<string, unknown>;
 // Leave computed search_text out of normal reads. PostgreSQL can then avoid its
 // correlated league-name aggregation unless a search filter actually needs it.
-export const PLAYER_COLUMNS: string = "id,name,english,short_name,name_ko,display_name,aliases,team_id,position,country,birth_date,photo,season,stats_scope,matches_imported,price,change_percent,performance,volume,goals,assists,minutes,market_updated_at,updated_at,trade_status";
+export const PLAYER_COLUMNS: string = "id,name,english,short_name,name_ko,display_name,aliases,team_id,position,country,birth_date,photo,season,stats_scope,matches_imported,price,change_percent,performance,volume,goals,assists,minutes,market_updated_at,updated_at,trade_status,last_price_reason";
 export const FIXTURE_COLUMNS: string = "id,league_id,home_team_id,away_team_id,starts_at,status,home_score,away_score,stage,round_label,penalties_home,penalties_away,reflection_status";
 const text = (v: unknown) => typeof v === "string" ? v : null;
 const number = (v: unknown) => v != null && (typeof v === "number" || typeof v === "string") && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null;
@@ -46,6 +46,7 @@ export function mapPlayer(row: Row, snapshot?: Row): Player {
     photo:photo && /^https:\/\/sports\.bzzoiro\.com\/img\/player\/[0-9]+\//.test(photo) ? photo : null,
     season:number(row.season),statsScope:text(row.stats_scope),importedMatches:number(row.matches_imported),price:number(snapshot?.price),change:number(snapshot?.change_percent),performance:number(snapshot?.performance),volume:number(snapshot?.volume),
     goals:number(snapshot?.goals),assists:number(snapshot?.assists),minutes:number(snapshot?.minutes),history:[],records:[],analysis:null,
+    lastPriceReason:snapshot?.last_price_reason==='not-played'?'not-played':snapshot?.last_price_reason==='performance'?'performance':null,
     updatedAt:text(snapshot?.market_updated_at) || text(snapshot?.updated_at) || text(row.updated_at),status:text(row.trade_status),
   };
 }
@@ -59,7 +60,7 @@ export async function readCatalog(client: SupabaseClient): Promise<PublicData> {
   const query = async (table: string, column: string, ascending=false, limit=24, since?: string) => {
     const columns: string=table==='player_catalog'?PLAYER_COLUMNS:"id,league_id,home_team_id,away_team_id,starts_at,status,home_score,away_score,stage,round_label,penalties_home,penalties_away";
     let q=client.from(table).select(columns).order(column,{ascending,nullsFirst:false}).order("id").limit(limit);
-    if(table==='player_catalog')q=q.in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']);
+    if(table==='player_catalog'){q=q.in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']);if(column==='change_percent')q=q.or('last_price_reason.is.null,last_price_reason.neq.not-played');}
     if(table==='fixture_catalog')q=q.in('league_id',['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6']);
     if(since) q=q.gte("starts_at",since);
     const {data,error}=await q;
