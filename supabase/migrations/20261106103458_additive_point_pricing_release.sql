@@ -1,6 +1,10 @@
+-- Install the additive scoring and fixed-point pricing release atomically.
+-- Recalculation is an explicit private management action after application deployment.
+begin;
+
 -- Approved: restore the report's unbounded additive score and add observed everyday actions.
 -- Historical source evidence and frozen initial prices are preserved. Price events start Oct 15 KST.
-begin;
+
 -- A lower TOAST target compresses the expanded evidence instead of duplicating large inline rows.
 alter table public.performance_results set(toast_tuple_target=768);
 create function kickx_private.additive_points(metric text,v numeric,pos text) returns numeric language sql immutable set search_path='' as $$
@@ -159,4 +163,137 @@ declare before_hash jsonb;changed integer;price_count integer;refs jsonb;sample_
 end $$;
 revoke all on function kickx_private.apply_additive_assessments(jsonb)from public,anon,authenticated,service_role;
 notify pgrst,'reload schema';
+
+-- Repeated identical automated holds become one daily record with an exact attempt count.
+-- Member moderation, trades, source statistics and non-repeated audit events stay untouched.
+
+create index operation_audit_withheld_target_time_idx on public.operation_audit(target,created_at desc)where action='calculation.withheld';
+create function kickx_private.aggregate_repeated_audit()returns trigger language plpgsql set search_path='' as $$
+declare found_row public.operation_audit%rowtype;begin
+ if new.action<>'calculation.withheld'then return new;end if;
+ perform pg_advisory_xact_lock(hashtextextended('kickx:withheld:'||coalesce(new.target,'')||coalesce(new.actor::text,'')||(new.detail-'_repeat')::text,0));
+ select * into found_row from public.operation_audit a where a.action=new.action and a.target is not distinct from new.target and a.actor is not distinct from new.actor
+ and a.created_at>=date_trunc('day',new.created_at at time zone 'Asia/Seoul')at time zone 'Asia/Seoul'
+ and a.created_at<(date_trunc('day',new.created_at at time zone 'Asia/Seoul')+interval '1 day')at time zone 'Asia/Seoul'
+ and a.detail-'_repeat'=new.detail-'_repeat'order by a.created_at desc,a.id desc limit 1 for update;
+ if found_row.id is not null then
+  update public.operation_audit set detail=(detail-'_repeat')||jsonb_build_object('_repeat',jsonb_build_object('count',coalesce((detail#>>'{_repeat,count}')::bigint,1)+1,'firstAt',coalesce(detail#>>'{_repeat,firstAt}',created_at::text),'lastAt',new.created_at))where id=found_row.id;
+  return null;
+ end if;
+ return new;
+end $$;
+revoke all on function kickx_private.aggregate_repeated_audit()from public,anon,authenticated,service_role;
+create trigger operation_audit_repeat before insert on public.operation_audit for each row execute function kickx_private.aggregate_repeated_audit();
+create function kickx_private.compact_repeated_audit()returns jsonb language plpgsql set search_path='' as $$
+declare before_count bigint;after_count bigint;attempts_before bigint;attempts_after bigint;begin
+ lock table public.operation_audit in share row exclusive mode;
+ select count(*),sum(coalesce((detail#>>'{_repeat,count}')::bigint,1))into before_count,attempts_before from public.operation_audit where action='calculation.withheld';
+ create temporary table audit_groups on commit drop as
+ select (array_agg(id order by created_at desc,id desc))[1]keep_id,array_agg(id)ids,count(*)rows,
+ sum(coalesce((detail#>>'{_repeat,count}')::bigint,1))attempts,min(coalesce((detail#>>'{_repeat,firstAt}')::timestamptz,created_at))first_at,max(coalesce((detail#>>'{_repeat,lastAt}')::timestamptz,created_at))last_at
+ from public.operation_audit where action='calculation.withheld'group by target,actor,detail-'_repeat',(created_at at time zone 'Asia/Seoul')::date having count(*)>1;
+ update public.operation_audit a set detail=(detail-'_repeat')||jsonb_build_object('_repeat',jsonb_build_object('count',g.attempts,'firstAt',g.first_at,'lastAt',g.last_at))from pg_temp.audit_groups g where a.id=g.keep_id;
+ delete from public.operation_audit a using pg_temp.audit_groups g where a.id=any(g.ids)and a.id<>g.keep_id;
+ select count(*),sum(coalesce((detail#>>'{_repeat,count}')::bigint,1))into after_count,attempts_after from public.operation_audit where action='calculation.withheld';
+ if attempts_before is distinct from attempts_after then raise exception 'AUDIT_ATTEMPT_COUNT_CHANGED';end if;
+ return jsonb_build_object('beforeRows',before_count,'afterRows',after_count,'removedDuplicates',before_count-after_count,'attemptCount',attempts_after);
+end $$;
+revoke all on function kickx_private.compact_repeated_audit()from public,anon,authenticated,service_role;
+alter table public.operation_audit set(autovacuum_vacuum_scale_factor=.05,autovacuum_vacuum_threshold=50);
+notify pgrst,'reload schema';
+
+-- Fixed point increments remove multiplicative price growth and the old one-million game cap.
+-- Verified DNP remains a distinct reason; it is not counted as a performance decline.
+
+do $$declare d text;begin
+ d:=pg_get_functiondef('public.kickx_report_plan(jsonb,jsonb,jsonb)'::regprocedure);
+ d:=replace(d,'public.kickx_report_plan(', 'kickx_private.position_percent_report_plan(');execute d;
+end $$;
+revoke all on function kickx_private.position_percent_report_plan(jsonb,jsonb,jsonb)from public,anon,authenticated;
+create or replace function public.kickx_report_plan(p_results jsonb,p_baseline jsonb,p_parameters jsonb) returns jsonb
+language plpgsql immutable set search_path='' as $$
+declare r jsonb;steps jsonb:='[]';v bigint;before_v bigint;rate numeric;raw_rate numeric;raw_delta numeric;exposure numeric;t numeric;at text;ref numeric;pos text;begin
+ if p_parameters->>'pricingModel' is distinct from 'position-points' then return kickx_private.position_percent_report_plan(p_results,p_baseline,p_parameters);end if;
+ if jsonb_typeof(p_results) is distinct from 'array' or p_baseline is null or(p_parameters->>'benchmarkCutoffMs')::numeric is distinct from (p_parameters->>'valuationStartMs')::numeric then raise exception 'INVALID_REPORT_BASELINE';end if;
+ if jsonb_typeof(p_parameters->'priceUnit')is distinct from 'number'or(p_parameters->>'priceUnit')::numeric<=0 or(p_parameters->>'priceUnit')::numeric<>trunc((p_parameters->>'priceUnit')::numeric)or coalesce((p_parameters->>'priceSensitivity')::numeric,0)<=0 then raise exception 'INVALID_REPORT_PARAMETERS';end if;
+ v:=(p_baseline->>'price')::bigint;
+ for r in select value from jsonb_array_elements(p_results) where (value->>'season')::integer>(p_baseline->>'season')::integer
+ and ((value->>'status' in('ready','provisional') and jsonb_typeof(value->'score')='number' and (value->>'minutes')::numeric>0 and (value->>'minutes')::numeric<=180) or(value->>'status'='not-played' and (value->>'minutes')::numeric=0))
+ order by coalesce(value->>'endedAt',value->>'startedAt')::timestamptz,value->>'fixtureId' loop
+  at:=coalesce(r->>'endedAt',r->>'startedAt');
+  if extract(epoch from at::timestamptz)*1000<(p_parameters->>'valuationStartMs')::numeric then continue;end if;
+  pos:=r->>'position';ref:=null;exposure:=least((r->>'minutes')::numeric/60,1);
+  if r->>'status'='not-played' then raw_delta:=-v*coalesce((p_parameters->>'nonParticipationRate')::numeric,.015);exposure:=0;
+  else
+   ref:=(p_parameters#>>array['positionBenchmarks',pos])::numeric;
+   if ref is null or ref<=0 then raise exception 'POSITION_BENCHMARK_REQUIRED';end if;
+   raw_delta:=(p_parameters->>'priceUnit')::numeric*((r->>'score')::numeric-ref)/greatest(abs(ref),(p_parameters->>'s')::numeric)*(p_parameters->>'priceSensitivity')::numeric*exposure;
+  end if;
+  raw_rate:=raw_delta/v;
+  rate:=greatest(-(p_parameters->>'maxDown')::numeric,least((p_parameters->>'maxUp')::numeric,raw_rate));
+  before_v:=v;t:=greatest((p_parameters->>'minPrice')::numeric,least((p_parameters->>'maxPrice')::numeric,v*(1+rate)));
+  v:=greatest((p_parameters->>'minPrice')::bigint,ceil(before_v*(1-(p_parameters->>'maxDown')::numeric))::bigint,least((p_parameters->>'maxPrice')::bigint,floor(before_v*(1+(p_parameters->>'maxUp')::numeric))::bigint,floor(t+.5)::bigint));
+  steps:=steps||jsonb_build_array(jsonb_build_object('fixtureId',r->>'fixtureId','playedAt',at,'priceBefore',before_v,'priceAfter',v,'targetPrice',floor(t+.5)::bigint,
+   'formScore',coalesce((r->>'score')::numeric,0),'changePercent',floor((v-before_v)*100.0/before_v*10000+.5)/10000,'window',jsonb_build_array(r->>'fixtureId'),
+   'evidence',jsonb_build_object('reason',case when r->>'status'='not-played' then 'NON_PARTICIPATION' else 'POSITION_MATCH_SCORE' end,'position',pos,'referenceScore',ref,'rawScore',r->'score','exposure',exposure,'rawDelta',raw_delta,'priceUnit',p_parameters->'priceUnit','rawRate',raw_rate,'rate',rate,'sensitivity',p_parameters->'priceSensitivity','benchmarkCutoffMs',p_parameters->'benchmarkCutoffMs')));
+ end loop;
+ return jsonb_build_object('version','report-v3','baseline',p_baseline,'price',v,'steps',steps);
+end $$;
+
+alter table public.player_market_snapshots add column last_price_reason text check(last_price_reason in('performance','not-played'));
+create function kickx_private.snapshot_price_reason()returns trigger language plpgsql set search_path=''as $$begin
+ select case when r.status='not-played'then 'not-played'else 'performance'end into new.last_price_reason
+ from public.player_price_results v join public.performance_results r on r.player_id=v.player_id and r.fixture_id=v.fixture_id and r.rule_version=v.rule_version
+ where v.player_id=new.id and v.rule_version=new.pricing_rule_version order by v.played_at desc,v.fixture_id desc limit 1;
+ return new;
+end $$;
+revoke all on function kickx_private.snapshot_price_reason()from public,anon,authenticated,service_role;
+create trigger market_snapshot_reason before insert or update of price,change_percent,pricing_rule_version on public.player_market_snapshots for each row execute function kickx_private.snapshot_price_reason();
+update public.player_market_snapshots s set last_price_reason=(select case when r.status='not-played'then 'not-played'else 'performance'end from public.player_price_results v join public.performance_results r on r.player_id=v.player_id and r.fixture_id=v.fixture_id and r.rule_version=v.rule_version where v.player_id=s.id and v.rule_version=s.pricing_rule_version order by v.played_at desc,v.fixture_id desc limit 1);
+do $patch$declare d text;old_d text;sig text;begin
+ old_d:=pg_get_viewdef('public.player_catalog'::regclass,true);
+ d:=regexp_replace(old_d,'p.name_ko\s+FROM\s+','p.name_ko, s.last_price_reason FROM ');
+ if d=old_d then raise exception 'CATALOG_VIEW_CHANGED';end if;
+ execute 'create or replace view public.player_catalog with(security_invoker=true)as '||d;
+ d:=pg_get_functiondef('kickx_private.apply_additive_assessments(jsonb)'::regprocedure);
+ d:=replace(d,$from$report_parameters->>'scoringRevision'='report-additive-20261106')$from$,$to$report_parameters->>'scoringRevision'='report-additive-20261106'and report_parameters->>'pricingModel'='position-points')$to$);
+ d:=replace(d,$from$'pricingModel','position-match','priceSensitivity',.1$from$,$to$'pricingModel','position-points','priceSensitivity',.1,'priceUnit',100000,'maxPrice',9007199254740991$to$);execute d;
+ d:=pg_get_functiondef('public.kickx_match_report_context(text,text)'::regprocedure);
+ d:=replace(d,$from$'priceSensitivity',(select$from$,$to$'priceUnit',(select(report_parameters->>'priceUnit')::numeric from public.kickx_policy),'priceSensitivity',(select$to$);execute d;
+ foreach sig in array array['public.kickx_read_match_report(text,text)','public.kickx_claim_match_report(text,text,uuid)','public.kickx_finish_match_report(text,text,uuid,text,jsonb,text,text)']loop
+  d:=pg_get_functiondef(sig::regprocedure);d:=replace(d,'match-report-additive-v4','match-report-points-v5');
+  d:=replace(d,$from$'priceSensitivity',facts->'priceSensitivity')$from$,$to$'priceSensitivity',facts->'priceSensitivity','priceUnit',facts->'priceUnit')$to$);execute d;
+ end loop;
+end $patch$;
+create or replace function public.kickx_market_summary() returns jsonb
+language sql stable security definer set search_path='' as $$
+ with scoped as materialized (
+  select p.id,p.team_id,p.trade_status,s.price,s.change_percent,s.pricing_status,s.updated_at,s.last_price_reason
+  from public.players p join public.teams t on t.id=p.team_id
+  left join public.player_market_snapshots s on s.id=p.id
+  where t.league_id in('bsd-1','bsd-3','bsd-4','bsd-5','bsd-6')
+ ), active_fixtures as materialized (
+  select f.id,f.home_team_id,f.away_team_id from public.fixtures f
+  where f.league_id in('bsd-1','bsd-3','bsd-4','bsd-5','bsd-6')
+   and now()>=f.starts_at-interval '90 minutes' and f.status not in('PST','CANC')
+   and (f.status not in('FT','AET','PEN','AWD','WO') or f.finished_observed_at is null or now()<f.finished_observed_at+interval '10 minutes')
+ ), locked as materialized (
+  select p.id from scoped p join active_fixtures f on p.team_id in(f.home_team_id,f.away_team_id)
+  union select m.player_id from public.football_match_stats m join active_fixtures f on f.id=m.fixture_id
+ )
+ select jsonb_build_object(
+  'totalPlayers',count(*),
+  'readyPlayers',count(*) filter(where price is not null and pricing_status='ready' and trade_status is null),
+  'pricedPlayers',count(*) filter(where price is not null and pricing_status='ready' and trade_status is null and locked.id is null),
+  'volume',(select count(*) from public.trades t join scoped p on p.id=t.player_id),
+  'rising',count(*) filter(where pricing_status='ready' and change_percent>0 and last_price_reason is distinct from 'not-played'),
+  'falling',count(*) filter(where pricing_status='ready' and change_percent<0 and last_price_reason is distinct from 'not-played'),
+  'notPlayed',count(*)filter(where pricing_status='ready'and last_price_reason='not-played'),
+  'calculatedAt',max(updated_at)) from scoped left join locked on locked.id=scoped.id
+$$;
+revoke all on function public.kickx_market_summary() from public;
+grant execute on function public.kickx_market_summary() to anon,authenticated;
+
+notify pgrst,'reload schema';
+
 commit;

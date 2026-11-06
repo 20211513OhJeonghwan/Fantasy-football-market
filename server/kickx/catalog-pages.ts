@@ -16,7 +16,7 @@ export async function readPlayerPage(client: SupabaseClient, input: CatalogQuery
   if (input.team) query = query.eq("team_id", input.team);
   if (input.position) query = query.eq("position", input.position);
   if (input.scope === "rising") query = query.gt("change_percent", 0);
-  if (input.scope === "falling") query = query.lt("change_percent", 0);
+  if (input.scope === "falling") query = query.lt("change_percent", 0).or("last_price_reason.is.null,last_price_reason.neq.not-played");
   const column = { price:"price", "price-asc":"price", change:"change_percent", performance:"performance", volume:"volume", name:"name" }[input.sort]!;
   const { data, error, count } = await query.order(column, { ascending: ["price-asc","name"].includes(input.sort), nullsFirst:false }).order("name").order("id")
     .range((input.page-1)*input.size, input.page*input.size-1);

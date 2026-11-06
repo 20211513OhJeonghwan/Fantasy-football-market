@@ -46,6 +46,7 @@ export type Player = {
   importedMatches?: number | null;
   price: number | null;
   change: number | null;
+  lastPriceReason?: "performance" | "not-played" | null;
   performance: number | null;
   volume: number | null;
   goals: number | null;
@@ -190,7 +191,7 @@ export type PublicData = {
   policy?: {
     version:string;initialPoints:number;initialPrice:number;sellFeeBps:number;quoteSeconds:number;clubCompetitionsEnabled?:boolean;
     pricingReferenceAt?:string|null;
-    reportParameters?:Partial<Record<'initialMin'|'initialMax'|'minPrice'|'maxPrice'|'valuationStartMs'|'priceSensitivity',number>> & {positionBenchmarks?:Partial<Record<'GK'|'DF'|'MF'|'FW',number>>};
+    reportParameters?:Partial<Record<'initialMin'|'initialMax'|'minPrice'|'maxPrice'|'valuationStartMs'|'priceSensitivity'|'priceUnit',number>> & {positionBenchmarks?:Partial<Record<'GK'|'DF'|'MF'|'FW',number>>};
   } | null;
   /** Total DB catalog count; players below are bounded previews. */
   playerTotal?: number;
@@ -209,6 +210,7 @@ export type PublicData = {
     volume: number | null;
     rising: number | null;
     falling: number | null;
+    notPlayed?: number | null;
     calculatedAt: string | null;
   } | null;
   updatedAt: string | null;

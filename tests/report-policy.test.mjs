@@ -7,7 +7,7 @@ const policy=loadTs('../server/kickx/engine/report-policy.ts');
 const {calculatePerformance:calc}=loadTs('../server/kickx/engine/report-performance.ts',{'./report-policy':policy});
 const {calculateReportPricing:price,reportBaseline}=loadTs('../server/kickx/engine/report-pricing.ts',{'./report-policy':policy});
 // Historical reference examples retain the previous 2% cap. New policy is tested separately.
-const current={...policy.REPORT_PARAMETERS,pricingModel:'position-match',positionBenchmarks:{GK:8,DF:8,MF:8,FW:8}};
+const current={...policy.REPORT_PARAMETERS,pricingModel:'position-points',positionBenchmarks:{GK:8,DF:8,MF:8,FW:8}};
 const p={...current,maxUp:.02,maxDown:.02};
 const baseline={source:'previous-season',season:2025,gameCount:20,meanScore:6,seedScore:6,percentile:.5,price:100000,lower:-20,upper:100,referenceHash:'fixed',fixtures:[],warnings:[]};
 const game=(id,score,season=2026)=>({fixtureId:`bsd-${id}`,score,position:'DF',status:'provisional',minutes:90,season,startedAt:`${season}-09-${String(id).padStart(2,'0')}T12:00:00Z`});
@@ -110,9 +110,9 @@ test('frozen positional midranks and prior fallback do not ingest current-season
 });
 test('independent PostgreSQL and TypeScript agree for cumulative seasons and integer percentage caps',async()=>{
  const db=new PGlite();try{
-  const name=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(x=>x.endsWith('_additive_report_position_pricing.sql'));
+  const name=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(x=>x.endsWith('_additive_point_pricing_release.sql'));
   const sql=readFileSync(new URL('../supabase/migrations/'+name,import.meta.url),'utf8');
-  await db.exec(sql.match(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$\$;/i)[0]);
+  await db.exec([...sql.matchAll(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$\$;/gi)].at(-1)[0]);
   let seed=7654;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   for(let c=0;c<40;c++){
    const rows=Array.from({length:1+Math.floor(rand()*24)},(_,i)=>game(i+1,Math.round((rand()*60-15)*2)/2));
@@ -130,9 +130,9 @@ test('verified non-participation compounds 1.5 percent without diluting seasonal
  const plan=price(rows,baseline,p);assert.equal(plan.steps.length,3);assert.equal(plan.steps[1].priceAfter,100470);assert.equal(plan.price,98963);
  assert.equal(plan.steps[2].evidence.reason,'NON_PARTICIPATION');assert.equal(plan.steps[2].formScore,0);assert.equal(plan.steps[1].evidence.reason,'NON_PARTICIPATION');
  const db=new PGlite();try{
-  const name=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(x=>x.endsWith('_additive_report_position_pricing.sql'));
+  const name=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(x=>x.endsWith('_additive_point_pricing_release.sql'));
   const sql=readFileSync(new URL('../supabase/migrations/'+name,import.meta.url),'utf8');
-  await db.exec(sql.match(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$\$;/i)[0]);
+  await db.exec([...sql.matchAll(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$\$;/gi)].at(-1)[0]);
   const pg=(await db.query('select public.kickx_report_plan($1,$2,$3) plan',[rows,baseline,p])).rows[0].plan;
   assert.equal(pg.price,plan.price);assert.deepEqual(pg.steps.map(x=>x.priceAfter),plan.steps.map(x=>x.priceAfter));
  }finally{await db.close();}

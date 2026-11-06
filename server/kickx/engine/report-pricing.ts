@@ -14,11 +14,11 @@ const rounded=(n:number,p=6)=>Math.round(n*10**p)/10**p;
 export function validateReportParameters(p:ReportParameters) {
  if(Object.entries(p).some(([key,x])=>!['scoringRevision','pricingModel','positionBenchmarks','benchmarkCounts'].includes(key)&&!Number.isFinite(x)) || (p.scoringRevision!=null&&p.scoringRevision!==SCORING_REVISION) || p.lambda<=0 || p.kappa<=0 || p.beta<=0 || p.s<=0 || p.deviationLimit<=0 ||
   !Number.isSafeInteger(p.minPrice)||!Number.isSafeInteger(p.maxPrice)||!Number.isSafeInteger(p.initialMin)||!Number.isSafeInteger(p.initialMax)||
-  p.minPrice<=0 || p.minPrice>p.initialMin || p.initialMin>p.initialMax || p.initialMax>p.maxPrice || p.maxPrice>1_000_000_000 ||
-  p.maxUp<0 || p.maxUp>=1 || p.maxDown<0 || p.maxDown>=1 || p.priceSensitivity<=0 || p.priceSensitivity>1 || (p.nonParticipationRate??.015)<0 || (p.nonParticipationRate??.015)>=1 || (p.valuationStartMs!=null&&(!Number.isSafeInteger(p.valuationStartMs)||p.valuationStartMs<0)) || p.lowerQuantile<0 || p.upperQuantile>1 || p.lowerQuantile>=p.upperQuantile)
+  p.minPrice<=0 || p.minPrice>p.initialMin || p.initialMin>p.initialMax || p.initialMax>p.maxPrice || p.maxPrice>Number.MAX_SAFE_INTEGER ||
+  p.maxUp<0 || p.maxUp>=1 || p.maxDown<0 || p.maxDown>=1 || p.priceSensitivity<=0 || p.priceSensitivity>1 || !Number.isSafeInteger(p.priceUnit) || p.priceUnit<=0 || (p.nonParticipationRate??.015)<0 || (p.nonParticipationRate??.015)>=1 || (p.valuationStartMs!=null&&(!Number.isSafeInteger(p.valuationStartMs)||p.valuationStartMs<0)) || p.lowerQuantile<0 || p.upperQuantile>1 || p.lowerQuantile>=p.upperQuantile)
   throw new Error('INVALID_REPORT_PARAMETERS');
  if(p.positionBenchmarks && (Object.keys(p.positionBenchmarks).length!==4 || ['GK','DF','MF','FW'].some(pos=>!Number.isFinite(p.positionBenchmarks![pos])||p.positionBenchmarks![pos]<=0)))throw new Error('INVALID_POSITION_BENCHMARKS');
- if(p.pricingModel!=null&&p.pricingModel!=='position-match')throw new Error('INVALID_REPORT_PARAMETERS');
+ if(p.pricingModel!=null&&p.pricingModel!=='position-points')throw new Error('INVALID_REPORT_PARAMETERS');
  if(p.benchmarkCutoffMs!=null&&p.benchmarkCutoffMs!==p.valuationStartMs)throw new Error('INVALID_BENCHMARK_CUTOFF');
  if (p.capChangeAtMs != null && (!Number.isSafeInteger(p.capChangeAtMs) || p.capChangeAtMs < 0 ||
   p.previousMaxUp == null || p.previousMaxDown == null || p.previousMaxUp < 0 || p.previousMaxUp >= 1 || p.previousMaxDown < 0 || p.previousMaxDown >= 1))
@@ -61,14 +61,15 @@ export function calculateReportPricing(matches:PricingMatch[],baseline:ReportBas
   if(!dnp&&(!Number.isFinite(reference)||reference!<=0))throw new Error('POSITION_BENCHMARK_REQUIRED');
   const exposure=dnp?0:Math.min(m.minutes!/60,1);
   const deviation=dnp?null:(m.score!-reference!)/Math.max(Math.abs(reference!),p.s);
-  const rawRate=dnp?-(p.nonParticipationRate??.015):p.priceSensitivity*deviation!*exposure;
+  const rawDelta=dnp?-price*(p.nonParticipationRate??.015):p.priceUnit*p.priceSensitivity*deviation!*exposure;
+  const rawRate=rawDelta/price;
   const rate=clamp(rawRate,-p.maxDown,p.maxUp);
   const before=price;
   const target=clamp(before*(1+rate),p.minPrice,p.maxPrice);
   price=clamp(Math.round(target),Math.max(p.minPrice,Math.ceil(before*(1-p.maxDown))),Math.min(p.maxPrice,Math.floor(before*(1+p.maxUp))));
   steps.push({fixtureId:m.fixtureId,playedAt:at(m),priceBefore:before,priceAfter:price,targetPrice:Math.round(target),
    formScore:dnp?0:(m.score!||0),changePercent:rounded((price-before)*100/before,4),window:[m.fixtureId],
-   evidence:{reason:dnp?'NON_PARTICIPATION':'POSITION_MATCH_SCORE',position,referenceScore:reference,exposure,rawRate,rate,sensitivity:p.priceSensitivity,
+   evidence:{reason:dnp?'NON_PARTICIPATION':'POSITION_MATCH_SCORE',position,referenceScore:reference,exposure,rawDelta,rawRate,rate,priceUnit:p.priceUnit,sensitivity:p.priceSensitivity,
     rawScore:m.score,nonParticipationRate:dnp?(p.nonParticipationRate??.015):null,benchmarkCutoffMs:p.benchmarkCutoffMs??p.valuationStartMs,referenceHash:baseline.referenceHash}});
  }
  return {version:RULE_VERSION,baseline,price,steps};

@@ -1,8 +1,8 @@
 {
   "status": "awaiting_database_migration_confirmation",
   "checks": {
-    "unit": 278,
-    "sqlScripts": 35,
+    "unit": 281,
+    "sqlScripts": 36,
     "build": true,
     "lint": true,
     "desktopMobileReport": true
@@ -30,8 +30,41 @@
   },
   "approved": {
     "score": "Original report weights plus observed additive actions; no score cap",
-    "price": "Frozen prelaunch positional benchmark; maximum 10 percent change",
-    "launch": "2026-10-15T00:00:00+09:00"
+    "price": "Fixed point increments from a frozen prelaunch positional benchmark; maximum 10 percent per match",
+    "launch": "2026-10-15T00:00:00+09:00",
+    "priceUnit": 100000,
+    "priceSensitivity": 0.1,
+    "minimumPrice": 10000,
+    "gamePriceCeiling": null,
+    "nonParticipationRate": 0.015
   },
-  "pricingApplied": false
+  "pricingApplied": false,
+  "display": {
+    "order": [
+      "rising",
+      "falling",
+      "notPlayed"
+    ],
+    "classification": "Latest verified issued price event, not inferred from blank score or rate",
+    "excludeDnpFrom": [
+      "rising",
+      "falling",
+      "falling catalog",
+      "falling top five"
+    ]
+  },
+  "pendingMigration": "20261106103458_additive_point_pricing_release.sql",
+  "deployment": {
+    "personalMain": false,
+    "teamMain": false,
+    "blocker": "Supabase apply_migration execution confirmations repeatedly expired; no new schema installed"
+  },
+  "liveCheck": {
+    "checkedAt": "2026-11-06T10:40:32.940121+00:00",
+    "databaseBytes": 291843219,
+    "replayInstalled": false,
+    "scoringRevision": "neutral-six-20261106",
+    "pricingModel": null,
+    "dnpReasonInstalled": false
+  }
 }

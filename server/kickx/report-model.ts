@@ -2,7 +2,7 @@ import "server-only";
 import type { ReportFacts, ReportText } from "@/lib/kickx/match-report";
 import { METRIC_LABELS } from "@/lib/kickx/score-labels";
 
-export const REPORT_PROMPT_VERSION = "match-report-additive-v4";
+export const REPORT_PROMPT_VERSION = "match-report-points-v5";
 export const DEFAULT_REPORT_MODEL = "gemini-3.5-flash-lite";
 export const REPORT_MODEL_TIMEOUT_MS = 22000;
 export class ReportModelError extends Error {
@@ -36,7 +36,7 @@ export function reportPrompt(facts: ReportFacts) {
     score: facts.score,
     contributions: facts.contributions.map(c => ({ item: METRIC_LABELS[c.metric] || c.metric, value: c.value, points: c.points })),
     minutes: facts.minutes,
-    position:facts.position,referenceScore:facts.referenceScore,priceSensitivity:facts.priceSensitivity,priceExposure:facts.priceExposure,
+    position:facts.position,referenceScore:facts.referenceScore,priceSensitivity:facts.priceSensitivity,priceUnit:facts.priceUnit,priceExposure:facts.priceExposure,
     assessment:facts.priceAfter<facts.priceBefore?"가격 하락":facts.priceAfter>facts.priceBefore?"가격 상승":"가격 유지",
     priceBefore:facts.priceBefore,priceAfter:facts.priceAfter,changePercent:facts.changePercent,
   };
@@ -50,7 +50,7 @@ performance 문자열 하나만 JSON으로 반환한다. 보통 세 문장부터
 영향이 큰 추가 가점과 감점이 총점을 어떻게 구성했는지 연결해서 설명한다. 항목을 단순 나열하거나 같은 내용을 반복하지 않는다.
 확인된 항목이 적으면 설명도 짧게 쓴다. 입력에 없는 기록은 없었다고 단정하지 않는다.
 잠정 점수, 미확인 통계, 추후 정정, 데이터 누락에 대한 안내 문구는 쓰지 않는다.
-이번 경기 점수가 기준보다 높으면 상승, 낮으면 하락, 같으면 유지된다고 설명한다. 포지션별 기준은 운영 시작 이전 자료로 고정한 값이다. 출전 반영 비율과 가격 상하한으로 변동 크기가 제한될 수 있다. 숫자·수치·퍼센트는 본문에 쓰지 않는다. 정확한 수치는 화면에 별도 표시된다.
+이번 경기 점수와 기준의 비교는 상승·하락 압력을 설명하는 근거로 사용한다. 최종 가치 변동 방향은 입력된 전후 가격과 반드시 일치시킨다. 최저 가격이나 정수 반올림으로 가격이 유지됐다면 하락했다고 쓰지 않는다. 포지션별 기준은 운영 시작 이전 자료로 고정한 값이다. 점수에 따른 포인트 증감을 정한 뒤 경기당 변동 한도를 적용하며 같은 활약의 수익이 현재 가격에 비례해 복리로 커지지 않는다. 출전 반영 비율·경기당 변동 한도·최저 가격으로 변동 크기가 제한될 수 있다. 숫자·수치·퍼센트는 본문에 쓰지 않는다. 정확한 수치는 화면에 별도 표시된다.
 기록만으로 알 수 없는 경기 장면, 전술, 부상, 이적, 상대 평가, 미래 전망이나 매수·매도 권유를 만들지 않는다. 제목·마크다운·링크를 쓰지 않는다.`;
 
 export async function generateReport(facts: ReportFacts, config: NonNullable<ReturnType<typeof reportModelConfig>>, fetcher = fetch): Promise<ReportText> {

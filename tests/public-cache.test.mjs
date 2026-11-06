@@ -9,7 +9,7 @@ test('shared public caches use an anonymous client, separate keys, and reject me
   const entries=new Map();return async(...args)=>{const key=JSON.stringify([keys,args]);if(!entries.has(key))entries.set(key,await fn(...args));return entries.get(key);};
  };
  const page=(db,input)=>{assert.equal(db,'anonymous');reads.push(input);return {items:[input]};};
- const cache=loadTs('../server/kickx/public-cache.ts',{'server-only':{},'./engine/report-policy':{SCORING_REVISION:'current'},'next/cache':{unstable_cache},
+ const cache=loadTs('../server/kickx/public-cache.ts',{'server-only':{},'./engine/report-policy':{SCORING_REVISION:'current',PRICING_REVISION:'points'},'next/cache':{unstable_cache},
   './supabase':{createPublicClient:()=> 'anonymous'},'./catalog':{readCatalog:db=>page(db,'bootstrap')},
   './catalog-pages':{readPlayerPage:page,readFixturePage:page,readPlayerDetail:page}});
  await cache.readCachedCatalog();await cache.readCachedCatalog();
@@ -36,7 +36,7 @@ test('member likes are read outside the shared public cache and never mutate its
 test('a policy rollout cannot reuse a previous scoring epoch while preserving its cache cadence',async()=>{
  const entries=new Map();let reads=0;
  const unstable_cache=(fn,keys,options)=>{assert.equal(options.revalidate,15);return async(...args)=>{const key=JSON.stringify([keys,args]);if(!entries.has(key))entries.set(key,await fn(...args));return entries.get(key);};};
- const load=(revision,score)=>loadTs('../server/kickx/public-cache.ts',{'server-only':{},'./engine/report-policy':{SCORING_REVISION:revision},'next/cache':{unstable_cache},'./supabase':{createPublicClient:()=> 'anonymous'},'./catalog':{readCatalog:()=>({})},'./catalog-pages':{readPlayerPage:()=>({}),readFixturePage:()=>({}),readPlayerDetail:()=>{reads++;return {score};}}});
+ const load=(revision,score)=>loadTs('../server/kickx/public-cache.ts',{'server-only':{},'./engine/report-policy':{SCORING_REVISION:revision,PRICING_REVISION:'points'},'next/cache':{unstable_cache},'./supabase':{createPublicClient:()=> 'anonymous'},'./catalog':{readCatalog:()=>({})},'./catalog-pages':{readPlayerPage:()=>({}),readFixturePage:()=>({}),readPlayerDetail:()=>{reads++;return {score};}}});
  const old=load('previous',1);assert.equal((await old.readCachedPlayerDetail('bsd-1')).score,1);
  const current=load('current',5.5);assert.equal((await current.readCachedPlayerDetail('bsd-1')).score,5.5);assert.equal((await current.readCachedPlayerDetail('bsd-1')).score,5.5);assert.equal(reads,2);
 });

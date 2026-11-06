@@ -34,5 +34,5 @@ test('report always states neutral, positive, negative, short appearance and pri
  assert.match(matchPriceExplanation({...facts,score:12,priceAfter:105000}),/높아 상승/);
  assert.match(matchPriceExplanation({...facts,score:8,priceAfter:100000}),/가격 유지/);
  assert.match(matchPriceExplanation({...facts,minutes:30}),/50%를 반영/);
- assert.match(matchPriceExplanation({...facts,priceBefore:10000,priceAfter:10000}),/가격 상하한/);
+ assert.match(matchPriceExplanation({...facts,priceBefore:10000,priceAfter:10000}),/최소 가격/);
 });

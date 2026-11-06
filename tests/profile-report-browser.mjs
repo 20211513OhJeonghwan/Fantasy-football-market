@@ -17,10 +17,11 @@ try{
   const leagueIds={epl:'bsd-1',laliga:'bsd-3',bundesliga:'bsd-4',seriea:'bsd-5',ligue1:'bsd-6'};
   state.leagues=state.leagues.map(l=>({...l,id:leagueIds[l.id]}));state.teams=state.teams.map(t=>({...t,leagueId:leagueIds[t.leagueId]}));
   state.session.profile={...state.session.profile,teams:[state.session.profile.team],avatar:null};
+  state.market={...state.market,notPlayed:3};
   const player=state.players[0],large=state.players[1];
   player.photo='https://sports.bzzoiro.com/img/player/9000001/?sor=true&bg=transparent';large.photo='https://sports.bzzoiro.com/img/player/9000002/?sor=true&bg=transparent';
   player.records=[{id:'report-row',fixtureId:'report-browser-match',reportAvailable:true,playedAt:'2026-11-01T12:00:00Z',opponent:'지연 확인 상대',result:'승',minutes:90,goals:1,assists:0,performance:10}];
-  const facts={position:'FW',referenceScore:8,priceSensitivity:.1,priceExposure:1,playerName:player.name,opponent:'지연 확인 상대',playedAt:'2026-11-01T12:00:00Z',minutes:90,score:10,scoreStatus:'ready',ruleVersion:'report-v3',contributions:[{metric:'minutes',value:90,points:2},{metric:'goals',value:1,points:4},{metric:'shots_on_target',value:4,points:4}],warningCount:0,priceBefore:100000,priceAfter:102500,targetPrice:102500,formScore:10,changePercent:2.5,windowSize:6};
+  const facts={position:'FW',referenceScore:8,priceSensitivity:.1,priceUnit:100000,priceExposure:1,playerName:player.name,opponent:'지연 확인 상대',playedAt:'2026-11-01T12:00:00Z',minutes:90,score:10,scoreStatus:'ready',ruleVersion:'report-v3',contributions:[{metric:'minutes',value:90,points:2},{metric:'goals',value:1,points:4},{metric:'shots_on_target',value:4,points:4}],warningCount:0,priceBefore:100000,priceAfter:102500,targetPrice:102500,formScore:10,changePercent:2.5,windowSize:6};
   const missing={status:'missing',facts,text:null,generatedAt:null,canGenerate:true};
   let reportGets=0,reportPosts=0,release,hang=false;
   const generated=new Promise(r=>{release=r;});
@@ -48,7 +49,7 @@ try{
    return route.fulfill({json:{status:'ready',data:{items:[],total:0,page:1,size:20}}});
   });
   const p=await c.newPage();p.on('pageerror',e=>errors.push(e.message));
-  await p.goto(base+'/mypage',{waitUntil:'networkidle'});
+  await p.goto(base+'/mypage',{waitUntil:'networkidle'});assert.match(await p.locator('.topbar-market:visible').first().innerText(),/상승[\s\S]*하락[\s\S]*미출전\s*3/);
   const picker=p.locator('.avatar-picker'),trophy=picker.getByRole('radio',{name:'트로피',exact:true});await trophy.click();
   assert.equal(await trophy.innerText(),'');assert.equal(await picker.getByRole('radio',{name:'기본 아이콘',exact:true}).innerText(),'');
   const clubName=state.teams.find(t=>t.id===state.session.profile.team).name;assert.ok(await picker.getByText(clubName,{exact:true}).isVisible());
