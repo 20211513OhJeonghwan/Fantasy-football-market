@@ -54,7 +54,7 @@
 .community-board-table td { padding:11px 12px; border-bottom:1px solid var(--line); text-align:center; color:var(--text-2); }
 .community-board-table tr:hover td { background:#fdfcf6; }
 .community-board-table th.board-number { width:64px; }
-.community-board-table th:nth-child(3) { width:120px; }
+.community-board-table th:nth-child(3) { width:150px; }
 .community-board-table th:nth-child(4) { width:130px; }
 .community-board-table th.board-views,.community-board-table th.board-likes { width:65px; }
 .community-board-table td.board-subject { text-align:left; color:var(--ink); overflow:hidden; }

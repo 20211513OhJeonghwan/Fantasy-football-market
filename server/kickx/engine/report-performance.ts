@@ -119,7 +119,7 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
  const add = (metric: string, value: number, points: number, evidence = "incident") => result.breakdown.push({ metric, value, points:points===0?0:points, evidence });
  const position = result.position as keyof typeof SCORING.goals;
 
- add("minutes",minutes,minutes >= 60 ? 2 : 1,"verified minutes including added time; one appearance band");
+ add("minutes",minutes,SCORING.base,"verified appearance; neutral starting assessment, not a minutes bonus");
  add("goals",scored,scored * SCORING.goals[position]);
  add("yellow_cards",yellow,SCORING.yellow * yellow);add("red_cards",red.length,SCORING.red * red.length);add("own_goals",own,SCORING.ownGoal * own);
  // BSD's zero defaults remain unknown. Optional metrics contribute only when positively
@@ -140,17 +140,19 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
   if (position === "DF" || position === "MF") {
    const tackles=count(input.stats.won_tackle), interceptions=count(input.stats.interception);
    const actions=(tackles ?? 0)+(interceptions ?? 0);
-   if(actions>0)add("defensive_actions",actions,position==="DF" ? Math.floor(actions/3) : actions*0.5,"won_tackle + interception; DF per three, MF per action");
+   if(actions>0)add("defensive_actions",actions,position==="DF" ? Math.floor(actions/3)*.3 : actions*.15,"won_tackle + interception; verified actions only");
    if(!tackles || !interceptions)result.warnings.push("defensive_actions:PARTIAL_OR_UNVERIFIED_COUNTERS");
   }
  }
 
  if (position !== "FW") add("clean_sheet",conceded===0 && minutes>=60 && !red.length ? 1 : 0,conceded===0 && minutes>=60 && !red.length ? SCORING.cleanSheet[position] : 0,"no concessions during participation; >=60 minutes; no dismissal");
- if(position==='GK' || position==='DF') add("conceded",conceded,-Math.floor(conceded/2),"goals during participation only");
+ if(position==='GK' || position==='DF') add("conceded",conceded,-Math.floor(conceded/2)*.5,"goals during participation only");
  if(position==='GK'){positive("saves","saves",SCORING.save,3);if(input.status!=='PEN')positive("penalty_save","penalty_saves",SCORING.penaltySave,1,input.legacy ?? {});else result.warnings.push('SHOOTOUT_PENALTY_SAVE_COUNTER_UNVERIFIED_EXCLUDED');}
  // Round each displayed contribution so its visible sum equals the stored total.
  result.breakdown = result.breakdown.map(b => ({...b,points:Math.round(b.points * 100) / 100}));
- result.score=Math.round(result.breakdown.reduce((sum,x)=>sum+x.points,0) * 100) / 100;
+ const total=Math.round(result.breakdown.reduce((sum,x)=>sum+x.points,0) * 100) / 100;
+ result.score=Math.max(0,Math.min(10,total));
+ if(total!==result.score)add('score_range',total,Math.round((result.score-total)*100)/100,'assessment bounded to 0–10');
  result.status="provisional";
  result.warnings.push("BSD_OPTIONAL_METRICS_PROVISIONAL");
  return result;

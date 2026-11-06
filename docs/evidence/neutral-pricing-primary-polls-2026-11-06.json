@@ -1,0 +1,165 @@
+{
+  "checkedAt": "2026-11-06T02:37:28.287Z",
+  "designBaseline": "9f3ea1717f76b9bdb53c3fd0067f3f217be42139",
+  "policy": {
+    "neutralScore": 6,
+    "pointRate": 0.025,
+    "maxUp": 0.1,
+    "maxDown": 0.1,
+    "nonParticipationRate": 0.015,
+    "scoreRange": [
+      0,
+      10
+    ],
+    "launch": "2026-10-15T00:00:00+09:00",
+    "primaryTeamImmutable": true,
+    "subteamChangeWindows": "February 1–7 and September 1–7 KST; once per league; first-hour exception"
+  },
+  "before": {
+    "examples": [
+      {
+        "name": "이봉 음보고",
+        "score": 1,
+        "player_id": "bsd-1465",
+        "fixture_id": "bsd-210511",
+        "price_after": 130664,
+        "price_before": 128102,
+        "change_percent": 2
+      },
+      {
+        "name": "노아 음밤바",
+        "score": 1,
+        "player_id": "bsd-7602",
+        "fixture_id": "bsd-210511",
+        "price_after": 105600,
+        "price_before": 103823,
+        "change_percent": 1.7116
+      },
+      {
+        "name": "제이 이즈스",
+        "score": 1,
+        "player_id": "bsd-2845",
+        "fixture_id": "bsd-210155",
+        "price_after": 106593,
+        "price_before": 104503,
+        "change_percent": 1.9999
+      }
+    ],
+    "lowScoreRises": 143,
+    "highScoreFalls": 61
+  },
+  "replay": {
+    "scores": 14034,
+    "players": 2934,
+    "priceSteps": 8218,
+    "providerRequests": 0,
+    "financialIntegrityUnchanged": true
+  },
+  "archivedRepair": {
+    "archivedPlayers": 77,
+    "financialIntegrityUnchanged": true
+  },
+  "verification": {
+    "backup": {
+      "groups": 164,
+      "storedBytes": 11683429
+    },
+    "maxRise": 10,
+    "capErrors": 0,
+    "integrity": {
+      "trades": "bae91eaba4f020d6a7db528558ff6992",
+      "wallets": "368a3c66d6093b83368387c37abaa96b",
+      "holdings": "451d7b6b78cbd7c479982d2901fcd3a6"
+    },
+    "priceRecords": 8312,
+    "directionErrors": 0,
+    "scoringRevision": "neutral-six-20261106",
+    "reportPairErrors": 0,
+    "priceNotifications": 360
+  },
+  "scoreDistribution": {
+    "max": 10,
+    "min": 2.3,
+    "above6": 9768,
+    "below6": 1990,
+    "average": 6.69,
+    "neutral": 2276
+  },
+  "scoreSumErrors": 0,
+  "examples": [
+    {
+      "name": "이봉 음보고",
+      "score": 5.5,
+      "player_id": "bsd-1465",
+      "fixture_id": "bsd-210511",
+      "price_after": 130879,
+      "price_before": 132536,
+      "change_percent": -1.2502
+    },
+    {
+      "name": "제이 이즈스",
+      "score": 5.3,
+      "player_id": "bsd-2845",
+      "fixture_id": "bsd-210155",
+      "price_after": 102674,
+      "price_before": 104503,
+      "change_percent": -1.7502
+    },
+    {
+      "name": "노아 음밤바",
+      "score": 6,
+      "player_id": "bsd-7602",
+      "fixture_id": "bsd-210511",
+      "price_after": 103823,
+      "price_before": 103823,
+      "change_percent": 0
+    }
+  ],
+  "checkpoint": {
+    "groups": 163,
+    "records": 81380,
+    "afterBytes": 11683429,
+    "beforeBytes": 43528839,
+    "contentHash": "1bf977f9becba959d1c99edd1aa28f19",
+    "contentUnchanged": true
+  },
+  "storage": {
+    "database_bytes": 356215955,
+    "checkpoint_bytes": 12386304,
+    "checkpoint_groups": 164
+  },
+  "financialIntegrityUnchanged": true,
+  "providerRequests": 0,
+  "aiBatchGenerations": 0,
+  "acl": {
+    "primary_read": true,
+    "window_read": true,
+    "primary_write": false,
+    "teams_write": false,
+    "raw_votes": false,
+    "guest_save": false
+  },
+  "checks": {
+    "unitTests": 274,
+    "databaseScripts": 33,
+    "build": true,
+    "lint": true,
+    "smokeRoutes": 52,
+    "smokeChecks": 29,
+    "uiChecks": 9,
+    "newBrowserWidths": [
+      320,
+      390,
+      768,
+      1440
+    ],
+    "squadWidths": [
+      320,
+      390,
+      768,
+      1024,
+      1440
+    ],
+    "browserErrors": 0
+  }
+}

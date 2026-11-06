@@ -65,6 +65,7 @@ jobs:
           node tests/profile-report-browser.mjs
           node tests/browser-ui-errors.mjs
           node tests/squad-market-community-browser.mjs
+          node tests/primary-polls-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

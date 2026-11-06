@@ -12,3 +12,18 @@
 @import "./styles/account.css";
 @import "./styles/mobile.css";
 @import "./styles/squad-market.css";
+
+/* Primary club identity and community polls, Nov 6. */
+.member-name{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;max-width:100%;vertical-align:middle;overflow-wrap:anywhere}
+.primary-name-crest{display:inline-flex;flex:0 0 auto}.primary-name-crest .club-crest{width:19px;height:19px}
+.ownership-badge{display:inline-flex;padding:2px 5px;border:1px solid #b7d8c8;border-radius:4px;color:#08794b;background:#edf9f1;font-size:10px;white-space:nowrap}
+.profile-primary-locked{display:flex;align-items:center;gap:10px;padding:14px;border:1px solid var(--line);border-radius:8px}.profile-primary-locked>span:last-child{margin-left:auto;font-size:12px;color:var(--muted)}
+.primary-warning{font-size:13px!important;line-height:1.7;color:#8d4317!important}.subteam-lock-note{grid-column:1/-1;color:var(--muted);font-size:11px}
+.primary-club-fields{margin-bottom:20px}.my-hero-name h2{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.poll-editor{border:1px solid var(--line);padding:16px;border-radius:8px;margin:18px 0;min-width:0}.poll-editor legend{font-weight:800;padding:0 4px}.poll-editor legend small{font-weight:400;color:var(--muted)}
+.poll-editor input{width:100%;min-width:0;margin:5px 0}.poll-option-input{display:flex;align-items:center;gap:10px}.poll-editor-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0}.poll-editor-actions label{display:flex;align-items:center;gap:8px}.poll-editor-actions select{border:1px solid var(--line);padding:7px;border-radius:5px}.poll-editor>small{display:block;color:var(--muted);line-height:1.7}
+.community-poll{padding:22px;margin:24px 0;border:1px solid var(--line);border-radius:10px}.community-poll h3{font-size:18px;margin-bottom:7px;overflow-wrap:anywhere}.community-poll>small{color:var(--muted)}.community-poll>div{display:grid;gap:8px;margin:16px 0}
+.poll-option{position:relative;display:flex;justify-content:space-between;gap:12px;text-align:left;padding:12px;border:1px solid var(--line);border-radius:6px;overflow:hidden;isolation:isolate;min-width:0}.poll-option>span:not(.poll-option-fill){overflow-wrap:anywhere;min-width:0}.poll-option strong{font-size:12px;white-space:nowrap;align-self:center}.poll-option-fill{position:absolute;inset:0 auto 0 0;background:#edf3fa;z-index:-1}.poll-option.selected{border-color:#2765b3;box-shadow:0 0 0 1px #2765b3}.poll-option:disabled{opacity:1;color:inherit;cursor:default}
+.match-league-group{padding:0 16px 14px}.match-league-group>h3{display:flex;align-items:center;gap:8px;padding:14px 4px 8px;font-size:13px}.match-league-group>h3 small{margin-left:auto;color:var(--muted);font-weight:400}
+.report-price-reason{padding:14px 16px;margin:14px 0;background:#f4f7fa;border-left:3px solid #44719c;line-height:1.8;font-size:13px}.report-price-reason strong{display:block}
+@media(max-width:640px){.community-poll{padding:14px}.poll-option{padding:10px;gap:7px}.member-name{gap:4px}.primary-name-crest .club-crest{width:17px;height:17px}.ownership-badge{font-size:9px}.match-league-group{padding:0 6px 10px}}

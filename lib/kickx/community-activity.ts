@@ -1,6 +1,6 @@
 export type ActivityKind = 'posts' | 'comments';
 export type CommunityActivity = {
-  author: { id: string; nickname: string; avatar: string | null } | null;
+  author: { id: string; nickname: string; avatar: string | null;primaryTeam?:string|null } | null;
   items: { id: string; postId: string; title: string; body: string; date: string; reply: boolean; scope: 'club' | 'player'; target: string; targetName: string | null }[];
   total: number; page: number; size: number; postCount: number; commentCount: number;
 };

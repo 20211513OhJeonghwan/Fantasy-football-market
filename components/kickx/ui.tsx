@@ -686,9 +686,16 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
             <Change value={player.change} />
           </div>
           {data.member && <section className="trade-capacity" aria-label="현재 포지션별 보유 현황">
-            <div><strong>현재 보유 현황</strong><span className="num">{capacity.total} / 11명</span></div>
-            <ul>{(["GK", "DF", "MF", "FW"] as const).map(pos => <li key={pos} className={`${player.position === pos ? "target" : ""} ${capacity.counts[pos] >= POSITION_LIMITS[pos] ? "full" : ""}`}><PositionBadge position={pos}/><b className="num">{capacity.counts[pos]} / {POSITION_LIMITS[pos]}</b></li>)}</ul>
-            <p>{side === "buy" ? "매입 즉시 해당 포지션의 빈자리에 자동으로 반영됩니다." : "매각 즉시 경기장에서도 제외됩니다."}</p>
+            <div><strong>현재 보유 현황</strong><span className={`num trade-capacity-total ${capacity.total >= 11 ? "full" : ""}`}>{capacity.total} / 11명</span></div>
+            <ul>{(["GK", "DF", "MF", "FW"] as const).map(pos => {
+              const full = capacity.counts[pos] >= POSITION_LIMITS[pos], target = player.position === pos;
+              return <li key={pos} className={`${target ? "target" : ""} ${full ? "full" : ""}`}>
+                <PositionBadge position={pos}/>
+                <b className="num">{capacity.counts[pos]} / {POSITION_LIMITS[pos]}</b>
+                <small>{target ? (side === "buy" ? (full ? "정원 마감" : "이번 매입") : "이번 매각") : full ? "정원 마감" : `${POSITION_LIMITS[pos] - capacity.counts[pos]}자리`}</small>
+              </li>;
+            })}</ul>
+            <p>{side === "buy" ? (positionBlocked ? "지금은 매입을 확정할 수 없습니다. 스쿼드나 내 자산에서 같은 포지션 선수를 매각하면 다시 매입할 수 있습니다." : "매입 즉시 해당 포지션의 빈자리에 자동으로 반영됩니다.") : "매각 즉시 경기장에서도 제외되고 그 자리가 비워집니다."}</p>
           </section>}
           <dl className="trade-summary">
             {rows.map(([term, value, tone]) => (

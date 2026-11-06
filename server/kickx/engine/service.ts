@@ -5,7 +5,7 @@ import { calculatePerformance, RULE_VERSION } from "./performance";
 import { calculatePerformance as calculateLegacy } from "./legacy-performance";
 import { calculatePricing } from "./pricing";
 import { calculatePerformance as calculateReport } from "./report-performance";
-import { RULE_VERSION as REPORT_VERSION } from "./report-policy";
+import { RULE_VERSION as REPORT_VERSION, SCORING_REVISION } from "./report-policy";
 import { HttpError } from "../http";
 import { checkDatabase } from "../prototype";
 type ScoringJson = Record<string, unknown>;
@@ -32,7 +32,7 @@ export async function calculatePlayer(db: SupabaseClient, playerId: string, acto
     status:m.fixtures.status,homeTeam:m.fixtures.home_team_id,awayTeam:m.fixtures.away_team_id,
     homeScore:m.fixtures.home_score,awayScore:m.fixtures.away_score,stats:m.stats,legacy:m.legacy_stats,
     source:m.fixtures.football_event_sources??{},clubCompetitions:clubs,durationMinutes:m.fixtures.durationMinutes,...(report?{regularSeasonOnly:true}:{})})),ruleVersion:report?REPORT_VERSION:RULE_VERSION,
-    ...(report?{scoringRevision:'regular-season-20261030'}:clubs?{scoringRevision:'club-competitions-v1'}:{})}));
+    ...(report?{scoringRevision:SCORING_REVISION}:clubs?{scoringRevision:'club-competitions-v1'}:{})}));
    const saved=await db.rpc("kickx_publish_calculation_delta",{p_actor:actor,p_player:playerId,
     p_token:input.data.token,p_results:results});
    checkDatabase(saved.error);

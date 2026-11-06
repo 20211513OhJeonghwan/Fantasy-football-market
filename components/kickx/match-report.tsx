@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
-import { reportSentences } from '@/lib/kickx/match-report';
+import { reportSentences, matchPriceExplanation } from '@/lib/kickx/match-report';
 import { createReportLoader, emptyReportLoad, type ReportLoadState } from '@/lib/kickx/report-client';
 import type { PlayerRecord } from "@/lib/kickx/types";
 import { dateText, money, score } from "@/lib/kickx/data";
@@ -38,6 +38,7 @@ export function MatchReportDialog({ playerId, record, onClose }: { playerId: str
           <div><span>Performance</span><strong className="num">{score(facts.score)}<small>점</small></strong><small>{facts.minutes}분 출전 · {facts.scoreStatus === "provisional" ? "확인 기록 기준" : "산정 완료"}</small></div>
           <div><span>이번 경기 가치 변동</span><strong><Change value={facts.changePercent} /></strong><small>{money(facts.priceBefore)} P → {money(facts.priceAfter)} P</small></div>
         </div>
+        <div className="report-price-reason"><strong>이번 경기 가격 반영 기준</strong>{matchPriceExplanation(facts)}</div>
         {text && <section className="report-section">
           <h3><Sparkles size={16} />AI 경기력 설명</h3>
           <div className="report-explanation">{reportSentences(text.performance).map((sentence,i)=><p key={i}>{sentence}</p>)}</div>

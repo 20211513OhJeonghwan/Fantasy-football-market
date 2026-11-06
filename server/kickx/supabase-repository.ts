@@ -30,7 +30,7 @@ export class SupabaseKickxRepository implements KickxRepository {
     if (!data.user) return null;
     const readProfile = (columns: string) => client.from("profiles").select(columns).eq("id", data.user.id).maybeSingle();
     const [firstProfile, role] = await Promise.all([
-      readProfile("nickname,team_id,team_ids,avatar"),
+      readProfile("nickname,team_id,team_ids,avatar,primary_team_id,created_at,support_change_window,support_changed_leagues"),
       client.from("user_roles").select("role").eq("user_id", data.user.id).maybeSingle(),
     ]);
     let profile = firstProfile;
@@ -40,7 +40,7 @@ export class SupabaseKickxRepository implements KickxRepository {
     if (role.error) throw role.error;
     return {
       userId: data.user.id, role: role.data?.role === "admin" ? "admin" : "member",
-      profile: profile.data ? (p => ({ nickname: p.nickname, team: p.team_id, teams: p.team_ids ?? (p.team_id ? [p.team_id] : []), avatar: p.avatar ?? null }))(profile.data as unknown as { nickname: string; team_id: string | null; team_ids: string[] | null; avatar?: string | null }) : null,
+      profile: profile.data ? (p => ({ nickname: p.nickname, team: p.team_id, teams: p.team_ids ?? (p.team_id ? [p.team_id] : []), avatar: p.avatar ?? null,primaryTeam:p.primary_team_id??null,createdAt:p.created_at,supportChangeWindow:p.support_change_window,supportChangedLeagues:p.support_changed_leagues??[] }))(profile.data as unknown as { nickname: string; team_id: string | null; team_ids: string[] | null; avatar?: string | null;primary_team_id?:string|null;created_at?:string;support_change_window?:string|null;support_changed_leagues?:string[] }) : null,
     };
   }
   async getPublicData() {

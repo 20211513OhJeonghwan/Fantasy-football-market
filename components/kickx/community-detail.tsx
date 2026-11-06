@@ -1,7 +1,8 @@
 "use client";
 import type { CSSProperties } from "react";
 import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
-import { UserAvatar } from "./avatar";
+import {CommunityPoll} from "./community-poll";
+import { UserAvatar, MemberName } from "./avatar";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -11,7 +12,7 @@ import { apiRequest } from "@/lib/kickx/client";
 import { dateText, money, relativeTime } from "@/lib/kickx/data";
 import {postHeading} from "@/lib/kickx/community";
 import { createViewRecorder, viewDay } from '@/lib/kickx/community-views';
-import { supportsTeam } from '@/lib/kickx/support';
+import { supportsTeam,canPostToClub } from '@/lib/kickx/support';
 import { usePlatform, useResource } from "./provider";
 import { BackLink, ClubCrest, DataEmpty, Empty, Modal, PlayerPortrait } from "./ui";
 
@@ -135,12 +136,12 @@ function PostDetailContent({ postId, focusComment }: { postId: string; focusComm
         <div className="article-author">
           <Link href={`/community/authors/${post.authorId}`} aria-label={`${post.author} 활동 보기`}><UserAvatar className="rank-avatar" avatar={owner ? data.session?.profile?.avatar : post.authorAvatar} seed={post.authorId} /></Link>
           <div>
-            <strong><Link href={`/community/authors/${post.authorId}`}>{post.author}</Link></strong>
+            <strong><Link href={`/community/authors/${post.authorId}`}><MemberName primaryTeam={post.authorPrimaryTeam} holdsPlayer={post.authorHoldsPlayer}>{post.author}</MemberName></Link></strong>
             <span>{dateText(post.date)} · 조회 {money(post.views)}</span>
           </div>
           {owner && (
             <div className="button-row">
-              <Link className="icon-button" href={`/community/write?edit=${post.id}`} aria-label="글 수정" title="글 수정"><Pencil size={17} /></Link>
+              {(post.scope==='player'||canPostToClub(data.session?.profile,post.target))&&<Link className="icon-button" href={`/community/write?edit=${post.id}`} aria-label="글 수정" title="글 수정"><Pencil size={17} /></Link>}
               <button className="icon-button" aria-label="글 삭제" title="글 삭제" onClick={() => setAction({ kind: "deletePost" })}><Trash2 size={17} /></button>
             </div>
           )}
@@ -157,10 +158,11 @@ function PostDetailContent({ postId, focusComment }: { postId: string; focusComm
             </div>
           </div>
         )}
+        {post.poll&&<CommunityPoll key={`${post.id}:${post.poll.myVote}:${post.poll.total}`} poll={post.poll} postId={post.id} canVote={canWrite} onSaved={resource.reload}/>}
         <div className="article-actions">
           <button
             className={`like-button ${post.liked ? "on" : ""}`}
-            disabled={!data.session || busy}
+            disabled={!canWrite || busy}
             aria-pressed={!!post.liked}
             aria-label={`공감 ${post.likes}`}
             title={data.session ? undefined : "로그인 후 공감할 수 있습니다."}
@@ -210,7 +212,7 @@ function PostDetailContent({ postId, focusComment }: { postId: string; focusComm
                 <Link href={`/community/authors/${c.authorId}`} aria-label={`${c.author} 활동 보기`}><UserAvatar className="rank-avatar" avatar={mine ? data.session?.profile?.avatar : c.authorAvatar} seed={c.authorId} /></Link>
                 <div>
                   <div className="comment-head">
-                    <strong><Link href={`/community/authors/${c.authorId}`}>{c.author}</Link></strong>
+                    <strong><Link href={`/community/authors/${c.authorId}`}><MemberName primaryTeam={c.authorPrimaryTeam} holdsPlayer={c.authorHoldsPlayer}>{c.author}</MemberName></Link></strong>
                     {c.authorId === post.authorId && <span className="tag yellow">작성자</span>}
                     <time dateTime={c.date} title={dateText(c.date)}>{relativeTime(c.date)}</time>
                   </div>
@@ -218,7 +220,7 @@ function PostDetailContent({ postId, focusComment }: { postId: string; focusComm
                   <p>{c.body}</p>
                   <div className="comment-actions">
                     {canWrite && !isReply && <button onClick={() => startReply(c)}><CornerDownRight size={13} />답글</button>}
-                    {mine && <button onClick={() => startEdit(c)}><Pencil size={13} />수정</button>}
+                    {mine && canWrite && <button onClick={() => startEdit(c)}><Pencil size={13} />수정</button>}
                     {mine && <button onClick={() => setAction({ kind: "deleteComment", comment: c })}><Trash2 size={13} />삭제</button>}
                     {data.session && !mine && <button onClick={() => setAction({ kind: "report", comment: c })}><Flag size={13} />신고</button>}
                   </div>

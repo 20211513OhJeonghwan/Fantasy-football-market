@@ -57,7 +57,7 @@ test("detail marks only ended matches with their own price result as reportable 
   fixtures:[{id:'priced',status:'FT'},{id:'baseline',status:'FT'},{id:'live',status:'HT'},{id:'dnp',status:'FT'}],
  };
  const calls=[];
- const db={from(table){calls.push(table);const q=new Proxy({then(resolve){return Promise.resolve({data:rows[table],error:null}).then(resolve);}},{get(target,key){return key in target?target[key]:()=>q;}});return q;}};
+ const db={rpc:async(name)=>{calls.push(name);return {data:[],error:null};},from(table){calls.push(table);const q=new Proxy({then(resolve){return Promise.resolve({data:rows[table],error:null}).then(resolve);}},{get(target,key){return key in target?target[key]:()=>q;}});return q;}};
  const player=await readPlayerDetail(db,'report-player');
  assert.deepEqual(player.records.map(r=>r.reportAvailable),[true,false,false,false]);
  assert.equal(calls.filter(t=>t==='player_price_results').length,1);

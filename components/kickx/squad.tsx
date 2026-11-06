@@ -94,11 +94,12 @@ export function Pitch({
                   <Jersey kit={kit(getTeam(p.team))} />
                   <span className="pitch-name">{p.short || p.name}</span>
                   {!compact && <span className="pitch-value num">{money(p.price)}</span>}
+                  {onSelect && selected === i && <span className="pitch-action sell" aria-hidden="true">매각</span>}
                 </>
               ) : (
                 <>
                   <span className="jersey-wrap"><Jersey empty />{rule && !compact && <Plus size={18} className="jersey-plus" />}</span>
-                  {rule && <span className="pitch-name open">{pos}</span>}
+                  {rule && <span className="pitch-name open">{onSelect && !compact ? `${pos} 매입` : pos}</span>}
                 </>
               );
               return onSelect && rule ? (
@@ -170,16 +171,25 @@ export function SquadScreen() {
       </section>
       <section className="panel squad-market" aria-label="스쿼드 선수 시장">
         <div className="section-title"><h2>선수 시장</h2><Link className="text-link" href="/market">전체 보기 →</Link></div>
-        <p className="slot-hint">빈자리를 누르면 해당 포지션을 검색합니다. 보유 선수를 누르면 바로 매각할 수 있습니다.</p>
-        {selected != null && <div className="slot-note" role="status"><span><b>{selectedPosition}</b> {selectedPlayer ? `${selectedPlayer.name} 보유 중` : "빈자리 · 매입할 선수 찾기"}</span><button type="button" aria-label="포지션 선택 해제" className="icon-button" onClick={() => setSelected(null)}><X size={16}/></button></div>}
-        {selected != null && <div className="squad-selected-player">{selectedPlayer ? <PlayerPortrait player={selectedPlayer} size="sm"/> : <span/>}<div>{selectedPlayer ? <><strong>{selectedPlayer.name}</strong><span className="num">{money(selectedPlayer.price)} P</span></> : <span>해당 포지션의 선수를 아래에서 매입하세요.</span>}</div><TradeButton player={selectedPlayer} side="sell" className={`button secondary small ${selectedPlayer ? "" : "squad-sale-hidden"}`}/></div>}
-        <div className="squad-market-positions" role="group" aria-label="스쿼드 시장 포지션">{([null, "GK", "DF", "MF", "FW"] as const).map(pos => <button key={pos ?? "all"} className={selectedPosition === pos ? "active" : ""} aria-pressed={selectedPosition === pos} onClick={() => { setPosition(pos); setSelected(null); setPage(1); }}>{pos ?? "전체"}{pos && <small className="num">{capacity.counts[pos]}/{POSITION_LIMITS[pos]}</small>}</button>)}</div>
+        {selected == null && <p className="slot-hint">경기장의 <b>빈자리</b>를 누르면 그 포지션 선수를 찾아 <b>매입</b>하고, <b>보유 선수</b>를 누르면 <b>매각</b>할 수 있습니다.</p>}
+        {/* One selection card: an empty slot leads to buying, an owned slot to selling. */}
+        {selected != null && <div className={`squad-selected-player ${selectedPlayer ? "owned" : "open"}`} role="status">
+          {selectedPlayer ? <PlayerPortrait player={selectedPlayer} size="sm"/> : <span className="squad-selected-slot" aria-hidden="true"><Plus size={18}/></span>}
+          <div>
+            <small><PositionBadge position={selectedPosition}/>{selectedPlayer ? "보유 중 · 매각 가능" : "빈자리 · 아래에서 선수 매입"}</small>
+            {selectedPlayer ? <><strong>{selectedPlayer.name}</strong><span className="num">{money(selectedPlayer.price)} P</span></> : <strong>{selectedPosition} {selectedPosition ? `${capacity.counts[selectedPosition]}/${POSITION_LIMITS[selectedPosition]}` : ""}</strong>}
+          </div>
+          {/* Always mounted so an open sale dialog survives the slot emptying after the sale. */}
+          <TradeButton player={selectedPlayer} side="sell" className={`button secondary small ${selectedPlayer ? "" : "squad-sale-hidden"}`}/>
+          <button type="button" aria-label="포지션 선택 해제" className="icon-button" onClick={() => setSelected(null)}><X size={16}/></button>
+        </div>}
+        {capacity.excess && <p className="squad-notice danger" role="alert"><b>보유 정원 초과</b>기존 보유 선수가 정원을 넘었습니다. 아래 &lsquo;정원 조정이 필요한 보유 선수&rsquo;에서 초과 포지션 선수를 먼저 매각하면 새 선수를 매입할 수 있습니다.</p>}
+        <div className="squad-market-positions" role="group" aria-label="스쿼드 시장 포지션">{([null, "GK", "DF", "MF", "FW"] as const).map(pos => <button key={pos ?? "all"} className={`${selectedPosition === pos ? "active" : ""} ${pos && capacity.counts[pos] >= POSITION_LIMITS[pos] ? "full" : ""}`} aria-pressed={selectedPosition === pos} onClick={() => { setPosition(pos); setSelected(null); setPage(1); }}>{pos ?? "전체"}{pos && <small className="num">{capacity.counts[pos]}/{POSITION_LIMITS[pos]}</small>}</button>)}</div>
         <label className="input-search"><Search size={16}/><input aria-label="스쿼드 선수 검색" placeholder="선수·구단 검색" maxLength={100} value={query} onChange={e => { setQuery(e.target.value); setPage(1); }}/></label>
-        {capacity.excess && <p className="field-error" role="alert">기존 보유 정원을 초과했습니다. 초과 포지션 선수를 먼저 매각하면 새 선수를 매입할 수 있습니다.</p>}
         {listStatus !== "ready" ? <DataEmpty entity="선수" status={listStatus} retry={mock ? reload : remote.reload} rows={3}/> : <>
           <ul className="squad-market-list">{players.map(p => {
             const owned = member?.holdings.some(h => h.playerId === p.id);
-            return <li key={p.id}><Link href={`/players/${p.id}`} aria-label={`${p.name} 상세`}><PlayerPortrait player={p} size="sm"/></Link><div className="squad-market-name"><Link href={`/players/${p.id}`}><strong>{p.name}</strong></Link><span>{getTeam(p.team)?.name ?? "—"} · {p.position ?? "—"}</span><b className="num">{money(p.price)} P <Change value={p.change}/></b></div><TradeButton player={p} side={owned ? "sell" : "buy"} className={`button ${owned ? "secondary" : "primary"} small`}/></li>;
+            return <li key={p.id} className={owned ? "owned" : ""}><Link href={`/players/${p.id}`} aria-label={`${p.name} 상세`}><PlayerPortrait player={p} size="sm"/></Link><div className="squad-market-name"><Link href={`/players/${p.id}`}><strong>{p.name}</strong>{owned && <span className="tag ink">보유</span>}</Link><span>{getTeam(p.team)?.name ?? "—"} · {p.position ?? "—"}</span><b className="num">{money(p.price)} P <Change value={p.change}/></b></div><TradeButton player={p} side={owned ? "sell" : "buy"} className={`button ${owned ? "secondary" : "primary"} small`}/></li>;
           })}</ul>
           {!players.length && <p className="feed-empty">검색 조건에 맞는 선수가 없습니다.</p>}
           <Pagination page={mock ? page : remote.data.page} total={total} size={MARKET_SIZE} onPage={setPage} label="스쿼드 선수"/>

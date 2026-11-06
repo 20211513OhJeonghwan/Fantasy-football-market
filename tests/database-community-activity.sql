@@ -66,7 +66,7 @@ select pg_temp.activity_assert((select count(*)=1 and min(day)=(now()at time zon
 -- Deleted/hidden content must disappear from inbox facts and the red dot.
 insert into public.ranking_snapshots(period,starts_at,ends_at,calculated_at,rows)values('weekly',now()-interval '1 day',now()+interval '1 day',now()+interval '1 minute','[{"userId":"00000000-0000-0000-0000-000000000301"},{"userId":"00000000-0000-0000-0000-000000000302"}]');
 set local role anon;
-select pg_temp.activity_assert(public.kickx_ranking_avatars()->>'00000000-0000-0000-0000-000000000301'='icon:trophy','Ranked public avatar missing');
+select pg_temp.activity_assert(public.kickx_ranking_avatars()#>>'{00000000-0000-0000-0000-000000000301,avatar}'='icon:trophy','Ranked public avatar missing');
 reset role;
 update public.community_posts set status='hidden' where id='00000000-0000-0000-0001-000000000301';
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000302',true);

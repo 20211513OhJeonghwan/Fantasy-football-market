@@ -1,6 +1,7 @@
 /** Presentation-only wording for stored Performance results. Scores themselves always come from the server. */
 export const METRIC_LABELS: Record<string, string> = {
-  minutes: "출전",
+  minutes: "출전 기본 평가",
+  score_range: "점수 범위 조정",
   goals: "득점",
   assists: "도움",
   yellow_cards: "경고",

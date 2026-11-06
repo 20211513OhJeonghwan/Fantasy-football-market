@@ -352,7 +352,7 @@ export function PlayerDetail() {
         </section>
       </>
     );
-  const points = seriesForDays(p.history, period === "1주" ? 7 : period === "2주" ? 14 : 30);
+  const points = period === "전체" ? p.history : seriesForDays(p.history,period === "3개월"?90:30);
   const high = points.length ? Math.max(...points.map((x) => x.value)) : null,
     low = points.length ? Math.min(...points.map((x) => x.value)) : null;
   return (
@@ -403,7 +403,7 @@ export function PlayerDetail() {
           <section className="panel player-value-history">
             <div className="section-title">
               <h2>변동 기록<span>VALUE HISTORY</span></h2>
-              <Tabs items={["1주", "2주", "1개월"]} value={period} onChange={setPeriod} variant="segment" label="기간 선택" />
+              <Tabs items={["1개월", "3개월", "전체"]} value={period} onChange={setPeriod} variant="segment" label="기간 선택" />
             </div>
             <div className="chart-summary">
               <div><span>기간 최고</span><b className="num">{money(high)} P</b></div>

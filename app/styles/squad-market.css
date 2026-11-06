@@ -9,14 +9,36 @@
 .squad-market .slot-hint { line-height: 1.6; }
 .squad-market-positions { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0; }
 .squad-market-positions button { display: flex; align-items: center; gap: 5px; min-height: 36px; padding: 7px 10px; border: var(--border); border-radius: 5px; font-weight: 800; }
-.squad-market-positions button.active { color: var(--yellow); background: var(--ink); }
+.squad-market-positions button.active { color: var(--yellow); background: var(--ink); border-color: var(--ink); }
 .squad-market-positions small { font-size: 11px; opacity: .75; }
-.squad-selected-player { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 0; border-bottom: var(--border); }
-.squad-selected-player > div { display: grid; gap: 3px; font-size: 13px; }
-.squad-selected-player strong { overflow-wrap: anywhere; }
-.squad-sale-hidden { visibility: hidden; pointer-events: none; }
+.squad-market-positions button.full:not(.active) { background: var(--surface-2); color: var(--text-2); }
+.squad-market-positions button.full small::after { content: " 마감"; }
+/* Selection card: dashed yellow = empty slot to buy into; ink edge = owned player to sell. */
+.squad-selected-player { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 10px; align-items: center; margin: 4px 0 2px; padding: 12px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface); }
+.squad-selected-player.open { border: 1.5px dashed var(--ink); background: var(--yellow-wash); }
+.squad-selected-player.owned { box-shadow: inset 4px 0 0 var(--ink); }
+.squad-selected-player > div { display: grid; gap: 3px; min-width: 0; font-size: 13px; }
+.squad-selected-player > div > small { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; color: var(--text-2); }
+.squad-selected-player strong { font-size: 15px; font-weight: 900; overflow-wrap: anywhere; }
+.squad-sale-hidden { display: none; }
+.squad-selected-slot { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1.5px dashed var(--ink); background: var(--surface); }
+.squad-notice { display: grid; gap: 2px; margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; font-size: 12.5px; line-height: 1.55; }
+.squad-notice b { font-size: 13px; }
+.squad-notice.danger { background: var(--down-bg); color: var(--down); box-shadow: inset 3px 0 0 var(--down); }
+.squad-market .slot-hint b { color: var(--ink); }
+/* Pitch slot actions: empty slots read as "buy", the selected owned slot as "sell". */
+.automatic-squad .pitch-player:not(.filled) .pitch-name.open { padding: 2px 8px; border: 1px dashed rgba(255, 255, 255, 0.8); border-radius: 4px; background: rgba(255, 255, 255, 0.14); color: #fff; }
+.automatic-squad button.pitch-player:not(.filled):hover .pitch-name.open, .automatic-squad .pitch-player.selected:not(.filled) .pitch-name.open { background: var(--yellow); border-color: var(--ink); color: var(--ink); text-shadow: none; }
+.automatic-squad .pitch-player.selected:not(.filled) .jersey.jersey-empty path { fill: rgba(255, 226, 58, 0.35); stroke: var(--yellow); stroke-width: 2; stroke-dasharray: 3 3; }
+.automatic-squad .pitch-player.selected:not(.filled)::after { border-color: var(--yellow); }
+.feed-composer-form > fieldset > label:not(.sr-only) { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 13px; font-weight: 800; }
+.pitch-action { padding: 1px 8px; border-radius: 4px; font-size: 11px; font-weight: 900; }
+.pitch-action.sell { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
 .squad-market-list { list-style: none; margin: 12px 0 0; padding: 0; }
-.squad-market-list > li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 13px 0; border-bottom: var(--border); }
+.squad-market-list > li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 11px 0; border-bottom: var(--border); }
+.squad-market-list > li.owned { margin: 0 -8px; padding: 11px 8px; background: #fbfbf6; }
+.squad-market-name > a { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.squad-market-name .tag { height: 18px; padding: 0 5px; font-size: 10px; flex-shrink: 0; }
 .squad-market-name { display: grid; gap: 4px; min-width: 0; }
 .squad-market-name strong { font-size: 13px; overflow-wrap: anywhere; }
 .squad-market-name > span { font-size: 11px; color: var(--text-3); }
@@ -33,14 +55,28 @@
 .trade-capacity { margin: 16px 0; padding: 14px; border: var(--border); background: var(--surface-2); border-radius: 6px; }
 .trade-capacity > div { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
 .trade-capacity ul { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; gap: 6px; padding: 0; margin: 12px 0; }
-.trade-capacity li { display: grid; justify-items: center; gap: 6px; padding: 9px 2px; border: var(--border); border-radius: 4px; background: var(--surface); font-size: 12px; }
-.trade-capacity li.target { outline: 2px solid var(--ink); outline-offset: -1px; }
-.trade-capacity li.full b { color: var(--down); }
+.trade-capacity li { display: grid; justify-items: center; gap: 4px; padding: 9px 2px 7px; border: var(--border); border-radius: 6px; background: var(--surface); font-size: 12px; }
+.trade-capacity li small { font-size: 10.5px; font-weight: 700; color: var(--text-3); }
+.trade-capacity li.full:not(.target) { background: var(--surface-2); }
+.trade-capacity li.full:not(.target) b { color: var(--text-2); }
+.trade-capacity li.target { outline: 2px solid var(--ink); outline-offset: -1px; background: var(--yellow-wash); }
+.trade-capacity li.target small { color: var(--ink); }
+.trade-capacity li.target.full b, .trade-capacity li.target.full small { color: var(--down); }
+.trade-capacity-total.full { color: var(--ink); font-weight: 900; }
 .trade-capacity p { margin: 0; font-size: 12px; color: var(--text-3); line-height: 1.5; }
 .community-club-filter { flex: 0 1 250px; min-width: 180px; }
-.post-fixed-target { display: grid; gap: 6px; padding: 14px; border: var(--border); background: var(--surface-2); }
-.post-fixed-target small { color: var(--text-3); }
-.attachment-remove { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; min-height: 32px; }
+/* Fixed post target: who the post is about, locked to the route it was opened from. */
+.post-fixed-target { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface-2); }
+.post-fixed-target.missing { border-style: dashed; }
+.post-fixed-text { display: grid; gap: 2px; min-width: 0; }
+.post-fixed-text strong { font-size: 15px; font-weight: 900; overflow-wrap: anywhere; }
+.post-fixed-text small { font-size: 12px; color: var(--text-3); }
+.post-fixed-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--surface); }
+.post-fixed-lock { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: var(--ink); color: var(--yellow); font-size: 11px; font-weight: 800; }
+/* Attachment preview carries its own cancel; no reliance on an empty dropdown option. */
+.attached-trade.compact .attached-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+.attachment-remove { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; min-height: 30px; padding: 0 10px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--surface); font-size: 12px; font-weight: 800; color: var(--text-2); }
+.attachment-remove:hover:not(:disabled) { border-color: var(--down); color: var(--down); }
 .attached-label { flex-wrap: wrap; }
 .feed-composer-form > fieldset > input { width: 100%; margin: 6px 0 12px; }
 .player-community-entry { min-height: 260px; border: 2px solid var(--ink); }
@@ -59,6 +95,12 @@
   .automatic-squad .squad-footer > .squad-composition { grid-column: 1 / -1; border-left: 0; border-top: var(--border); }
   .squad-legacy ul { grid-template-columns: minmax(0, 1fr); }
   .community-club-filter { flex: 1 0 100%; min-width: 0; }
+  .squad-selected-player { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .squad-selected-player > .icon-button { grid-row: 1; grid-column: 3; }
+  .squad-selected-player > .button { grid-column: 1 / -1; width: 100%; }
+  .squad-market-positions button { min-height: 32px; padding: 5px 9px; }
+  .automatic-squad .pitch-player:not(.filled) .pitch-name.open { padding: 1px 5px; font-size: 10px; }
+  .pitch-action { font-size: 9.5px; padding: 0 5px; }
   .player-community-entry { min-height: 220px; }
   .player-community-entry h2 { font-size: 19px; }
 }

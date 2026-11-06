@@ -1,6 +1,6 @@
 "use client";
 import Link from 'next/link';
-import { UserAvatar } from "./avatar";
+import { UserAvatar, MemberName } from "./avatar";
 import { Select } from "./select";
 import { useState, type CSSProperties } from "react";
 import { Medal } from "lucide-react";
@@ -46,7 +46,7 @@ export function RankingScreen() {
               <div className="podium-user">
                 <TeamBadge id={r.team} size="large" />
                 <div>
-                  <strong><Link href={`/community/authors/${r.userId}`}>{r.nickname}</Link></strong>
+                  <strong><Link href={`/community/authors/${r.userId}`}><MemberName primaryTeam={r.userId===data.session?.userId?data.session?.profile?.primaryTeam:r.primaryTeam}>{r.nickname}</MemberName></Link></strong>
                   <span>{getTeam(r.team)?.name || "응원 구단 없음"}</span>
                 </div>
               </div>
@@ -62,7 +62,7 @@ export function RankingScreen() {
         <UserAvatar className="my-rank-avatar" avatar={data.session?.profile?.avatar} seed={data.session?.userId ?? "guest"} />
         <div className="my-rank-text">
           <span>나의 {period} 순위</span>
-          <strong>{data.session?.profile?.nickname || (data.session ? "내 계정" : "로그인 후 확인")}</strong>
+          <strong><MemberName primaryTeam={data.session?.profile?.primaryTeam}>{data.session?.profile?.nickname || (data.session ? "내 계정" : "로그인 후 확인")}</MemberName></strong>
         </div>
         <div className="my-rank-figure"><span>순위</span><b className="num">{mine ? `${mine.rank}위` : "—"}</b></div>
         <div className="my-rank-figure"><span>수익률</span><Change value={mine?.returnRate} /></div>
@@ -91,7 +91,7 @@ export function RankingScreen() {
                   <td>
                     <div className="rank-user">
                       <UserAvatar className="rank-avatar" avatar={r.userId === data.session?.userId ? data.session?.profile?.avatar : r.avatar} seed={r.userId} style={avatarStyle(getTeam(r.team))} />
-                      <strong><Link href={`/community/authors/${r.userId}`}>{r.nickname}</Link></strong>
+                      <strong><Link href={`/community/authors/${r.userId}`}><MemberName primaryTeam={r.userId===data.session?.userId?data.session?.profile?.primaryTeam:r.primaryTeam}>{r.nickname}</MemberName></Link></strong>
                       {r.userId === data.session?.userId && <span className="tag yellow">나</span>}
                     </div>
                   </td>

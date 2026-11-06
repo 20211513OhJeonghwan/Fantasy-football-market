@@ -51,11 +51,10 @@ export async function readPlayerDetail(client: SupabaseClient, id: string): Prom
   const {data,error} = await client.from("player_catalog").select(PLAYER_COLUMNS).eq("id",id).maybeSingle();
   if(error) throw error;
   if(!data) return null;
-  const since=new Date(Date.now()-31*86400000).toISOString();
   const snapshot=data as unknown as Record<string,unknown>;
   const player=mapPlayer(snapshot,snapshot);
   const [history,records,scores,baseline,priceSteps]=await Promise.all([
-    client.from("price_history").select("recorded_at,value").eq("player_id",id).gte("recorded_at",since).order("recorded_at",{ascending:false}).limit(1000),
+    client.rpc("kickx_player_value_history",{p_player:id}),
     client.from("scoped_player_match_records").select("id,fixture_id,played_at,opponent,result,minutes,goals,assists,performance").eq("player_id",id).order("played_at",{ascending:false}).limit(20),
     client.from("scoped_performance_results").select("fixture_id,score,status,rule_version,breakdown,warnings").eq("player_id",id).order("played_at",{ascending:false}).limit(20),
     client.from("player_initial_values").select("detail").eq("player_id",id).maybeSingle(),
@@ -75,7 +74,7 @@ export async function readPlayerDetail(client: SupabaseClient, id: string): Prom
   const leagueOf = new Map((competitions.data ?? []).map(row => [row.id,row.league_id]));
   const finished = new Set((competitions.data ?? []).filter(row => ["FT","AET","PEN"].includes(row.status)).map(row => row.id));
   const priced = new Set(priceSteps.error ? [] : (priceSteps.data ?? []).map(row => row.fixture_id));
-  player.history=(history.data||[]).reverse().map(row=>({at:row.recorded_at,value:Number(row.value)}));
+  player.history=Array.isArray(history.data)?history.data:[];
   player.records=(records.data||[]).map(row=>({id:row.id,fixtureId:row.fixture_id ?? null,leagueId:leagueOf.get(row.fixture_id) ?? null,reportAvailable:finished.has(row.fixture_id) && priced.has(row.fixture_id) && row.minutes>0 && row.performance!=null,playedAt:row.played_at,opponent:localized.get(row.opponent) || row.opponent,result:row.result,minutes:row.minutes,goals:row.goals,assists:row.assists,performance:row.performance == null ? null : Number(row.performance)}));
   if(!migrationMissing(scores.error)){checkDatabase(scores.error);player.scoreDetails=scores.data??[];}
   for(const result of [baseline,priceSteps])if(!migrationMissing(result.error))checkDatabase(result.error);

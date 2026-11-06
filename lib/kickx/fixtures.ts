@@ -23,3 +23,12 @@ export function selectFeaturedFixtures(fixtures: Fixture[], limit = 3) {
     return fixtureGroup(a.status) === "finished" ? Date.parse(b.startsAt) - Date.parse(a.startsAt) : Date.parse(a.startsAt) - Date.parse(b.startsAt);
   }).slice(0, limit);
 }
+
+/** Within each date, leagues stay together and each league is chronological. */
+export function fixturesByLeague(fixtures:Fixture[]):{leagueId:string|null;fixtures:Fixture[]}[]{
+ const order=['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6'];
+ const groups=new Map<string|null,Fixture[]>();
+ for(const f of fixtures)groups.set(f.leagueId,[...(groups.get(f.leagueId)??[]),f]);
+ const rank=(id:string|null)=>order.includes(id??'')?order.indexOf(id!):99;
+ return [...groups].sort(([a],[b])=>rank(a)-rank(b)||(a??'').localeCompare(b??'')).map(([leagueId,rows])=>({leagueId,fixtures:[...rows].sort((a,b)=>Date.parse(a.startsAt)-Date.parse(b.startsAt)||a.id.localeCompare(b.id))}));
+}

@@ -1,8 +1,9 @@
 "use client";
-import { UserAvatar } from "./avatar";
+import {PollEditor,pollDraftError,type PollDraft} from "./community-poll";
+import { UserAvatar, MemberName } from "./avatar";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import { supportsTeam, supportedTeams } from "@/lib/kickx/support";
+import { canPostToClub, supportedTeams } from "@/lib/kickx/support";
 import { Pagination } from "./pagination";
 import { LoaderCircle, Lock, Paperclip, Pencil, Search, Send, X } from "lucide-react";
 import type { Post } from "@/lib/kickx/types";
@@ -23,7 +24,8 @@ const emptyFeed = () => ({ items: [] as Post[], total: 0, page: 1, size: SIZE })
 /** Fixed scope and, inside a lounge, fixed target. Requests retain their UUID on retry. */
 function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: CommunityScope; target?: string; targetName?: string; onSaved: () => void; onClose: () => void }) {
   const { data, mock, notify, getTeam, getPlayer } = usePlatform();
-  const selected = target ?? (scope === "club" ? supportedTeams(data.session?.profile)[0] ?? "" : "");
+  const selected = target ?? (scope === "club" ? data.session?.profile?.primaryTeam ?? "" : "");
+  const [poll,setPoll]=useState<PollDraft|null>(null);
   const [body, setBody] = useState(""), [title, setTitle] = useState(""), [transaction, setTransaction] = useState("");
   const [advanced, setAdvanced] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const attachments=usePostTradeAttachments(scope,selected,advanced);
@@ -35,19 +37,20 @@ function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: 
     event.preventDefault();
     if (lock.current) return;
     const draft = { scope, target: selected, title: title.normalize("NFC").trim(), body, transaction };
-    const errors = validatePost(draft, { myTeam: data.session?.profile?.team ?? null, myTeams: supportedTeams(data.session?.profile), targets: selected ? [selected] : [], transactions: transactions.map(t => t.id) });
+    const errors = validatePost(draft, { myTeam: data.session?.profile?.team ?? null, myTeams: supportedTeams(data.session?.profile),primaryTeam:data.session?.profile?.primaryTeam??null, targets: selected ? [selected] : [], transactions: transactions.map(t => t.id) });
+    const pollError=pollDraftError(poll);if(pollError){setError(pollError);return;}
     if (Object.keys(errors).length) { setError(Object.values(errors).join(" ")); return; }
     if (mock) { notify("예시 모드 · 실제로 저장되지 않습니다."); return; }
     lock.current = true; setBusy(true); setError(""); request.current ||= crypto.randomUUID();
     try {
-      await apiRequest<{ id: string }>("/api/kickx/community", "POST", { ...draft, title, action: "createPost", requestId: request.current });
+      await apiRequest<{ id: string }>("/api/kickx/community", "POST", { ...draft, title, poll, action: "createPost", requestId: request.current });
       notify("이야기를 게시했습니다."); onSaved();
     } catch (e) { setError(e instanceof Error ? e.message : "게시하지 못했습니다."); }
     finally { lock.current = false; setBusy(false); }
   }
   return <form className="feed-composer-form" onSubmit={submit} aria-busy={busy}>
     <fieldset disabled={busy}>
-      <div className="feed-composer-heading"><strong>{scope === "club" ? "구단 이야기" : "선수 이야기"}{name ? ` · ${name}` : ""}</strong><button type="button" className="icon-button" aria-label="빠른 글쓰기 닫기" onClick={() => { if ((!body && !title) || window.confirm("작성 중인 내용을 닫을까요?")) onClose(); }}><X size={17} /></button></div>
+      <div className="feed-composer-heading"><strong>{scope === "club" ? "구단 이야기" : "선수 이야기"}{name ? ` · ${name}` : ""}</strong><button type="button" className="icon-button" aria-label="빠른 글쓰기 닫기" onClick={() => { if ((!body && !title && !poll) || window.confirm("작성 중인 내용을 닫을까요?")) onClose(); }}><X size={17} /></button></div>
       <label htmlFor={`${id}-title`}>제목 <span className="req" aria-hidden="true">*</span></label>
       <input id={`${id}-title`} aria-label="빠른 글 제목" required minLength={POST_LIMITS.titleMin} maxLength={POST_LIMITS.titleMax} value={title} placeholder="제목을 입력하세요" onChange={e => { changed(); setTitle(e.target.value); }}/>
 
@@ -60,8 +63,9 @@ function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: 
         {attachments.loading&&<small role="status">거래 내역을 확인하고 있습니다…</small>}
         {attachments.error&&<button type="button" className="text-link" onClick={attachments.reload}>거래 내역 다시 불러오기</button>}
         {attachments.hasMore&&<button type="button" className="text-link" onClick={attachments.loadMore}>이전 거래 더 불러오기</button>}
-        {transaction && <button type="button" className="text-link attachment-remove" aria-label="빠른 글 거래 첨부 취소" onClick={() => { changed(); setTransaction(""); }}><X size={14}/>거래 첨부 취소</button>}
+        {(() => { const t = transactions.find(x => x.id === transaction); return t ? <div className="attached-trade compact"><span className="attached-label"><Paperclip size={14} />첨부 미리보기</span><div className="attached-row"><span className={`trade-type ${t.type}`}>{t.type === "buy" ? "매입" : "매각"}</span><strong>{t.playerName}</strong><span className="num">{money(t.price)} P</span><span className="muted">{dateText(t.date)}</span><button type="button" className="attachment-remove" aria-label="빠른 글 거래 첨부 취소" onClick={() => { changed(); setTransaction(""); }}><X size={14}/>첨부 취소</button></div></div> : null; })()}
       </div>}
+      <PollEditor value={poll} onChange={value=>{changed();setPoll(value);}} disabled={busy}/>
       {error && <p className="field-error" role="alert">{error}</p>}
       <div className="feed-composer-foot"><span className="fine-print">내용 {POST_LIMITS.bodyMin}자 이상 · {scope === "club" ? "응원 구단에 게시" : "이 선수에 게시"}</span><button className="button primary small" disabled={busy || !title.trim() || !body.trim() || !selected}>{busy ? <LoaderCircle size={15} className="kx-spin" /> : <Send size={15} />}게시하기</button></div>
     </fieldset>
@@ -70,10 +74,10 @@ function ComposerForm({ scope, target, targetName, onSaved, onClose }: { scope: 
 export function CommunityComposer(props: { scope: CommunityScope; target?: string; targetName?: string; onSaved: () => void }) {
   const { data, status, reload: reloadPlatform } = usePlatform();
   const [open, setOpen] = useState(false);
-  const fan = props.scope === "player" || supportedTeams(data.session?.profile).length>0 && (!props.target || supportsTeam(data.session?.profile,props.target));
+  const fan = props.scope === "player" || canPostToClub(data.session?.profile,props.target);
   const canWrite = !!data.session?.profile && fan && (props.scope === "club" || !!props.target);
   return <section className="feed-composer panel" aria-label={`${props.scope === "club" ? "구단" : "선수"} 빠른 글쓰기`}>
-    {status !== "ready" ? <DataEmpty entity="커뮤니티" status={status} retry={reloadPlatform} rows={1} /> : !canWrite ? <div className="feed-composer-locked"><Lock size={16} aria-hidden="true" /><p>{!data.session ? "로그인하고 이야기를 나눠보세요." : !data.session.profile ? "프로필을 설정하면 이야기를 작성할 수 있습니다." : props.scope === "player" ? "선수 상세페이지에서 글쓰기를 시작해 주세요." : "구단 이야기는 해당 구단의 응원 팬만 작성할 수 있습니다."}</p><Link className="button secondary small" href={!data.session ? "/login" : "/mypage"}>{!data.session ? "로그인" : "프로필 설정"}</Link></div> : open ? <ComposerForm {...props} onSaved={() => { setOpen(false); props.onSaved(); }} onClose={() => setOpen(false)} /> : <button className="feed-composer-open" onClick={() => setOpen(true)}><UserAvatar className="rank-avatar" avatar={data.session?.profile?.avatar} seed={data.session?.userId ?? "guest"} /><span className="feed-composer-prompt">{props.target && props.targetName ? `${props.targetName}에 대한 이야기를 남겨보세요` : props.scope === "club" ? "응원 구단에 대한 이야기를 남겨보세요" : "선수에 대한 생각을 나눠보세요"}</span><span className="feed-composer-cta"><Pencil size={15} /></span></button>}
+    {status !== "ready" ? <DataEmpty entity="커뮤니티" status={status} retry={reloadPlatform} rows={1} /> : !canWrite ? <div className="feed-composer-locked"><Lock size={16} aria-hidden="true" /><p>{!data.session ? "로그인하고 이야기를 나눠보세요." : !data.session.profile ? "프로필을 설정하면 이야기를 작성할 수 있습니다." : props.scope === "player" ? "선수 상세페이지에서 글쓰기를 시작해 주세요." : "게시글은 본진 구단에만 작성할 수 있습니다. 서브팀에서는 댓글과 투표에 참여할 수 있습니다."}</p><Link className="button secondary small" href={!data.session ? "/login" : "/mypage"}>{!data.session ? "로그인" : "프로필 설정"}</Link></div> : open ? <ComposerForm {...props} onSaved={() => { setOpen(false); props.onSaved(); }} onClose={() => setOpen(false)} /> : <button className="feed-composer-open" onClick={() => setOpen(true)}><UserAvatar className="rank-avatar" avatar={data.session?.profile?.avatar} seed={data.session?.userId ?? "guest"} /><span className="feed-composer-prompt">{props.target && props.targetName ? `${props.targetName}에 대한 이야기를 남겨보세요` : props.scope === "club" ? "응원 구단에 대한 이야기를 남겨보세요" : "선수에 대한 생각을 나눠보세요"}</span><span className="feed-composer-cta"><Pencil size={15} /></span></button>}
   </section>;
 }
 
@@ -102,9 +106,9 @@ export function CommunityFeed({ scope, target, targetName, title = "게시글", 
           const clubStyle=club?{'--club':luminance(club.primary)>0.8?club.secondary:club.primary} as CSSProperties:undefined;
           return <tr key={post.id} data-scope={post.scope} className={club&&!target?'has-club':''} style={clubStyle}><td className="board-number num">{total-(shownPage-1)*SIZE-index}</td>
             <td className="board-subject">{!target&&<Link className="board-target" href={`${COMMUNITY_PATHS[scope]}/${post.target}`}>{scope==='club'&&<ClubCrest id={post.target} size="small"/>}<span>{name}</span></Link>}
-              <Link className="board-post-link" href={`/community/posts/${post.id}`}>{post.title||postTitle('',post.body)}{post.transaction&&<Paperclip size={13} aria-label="거래 첨부"/>}{post.commentCount>0&&<b className="board-comment-count num">[{post.commentCount}]</b>}</Link>
-              <span className="board-mobile-meta"><Link href={`/community/authors/${post.authorId}`}>{post.author}</Link> · {dateText(post.date,false)} · 조회 {money(post.views)} · 추천 {money(post.likes)}</span>
-            </td><td className="board-author"><Link className="board-author-link" href={`/community/authors/${post.authorId}`}><UserAvatar className="rank-avatar" avatar={post.authorId===data.session?.userId?data.session?.profile?.avatar:post.authorAvatar} seed={post.authorId}/><span>{post.author}</span></Link></td><td className="board-date"><time dateTime={post.date}>{dateText(post.date,false)}</time></td><td className="board-views num">{money(post.views)}</td><td className="board-likes num">{money(post.likes)}</td></tr>;
+              <Link className="board-post-link" href={`/community/posts/${post.id}`}>{post.title||postTitle('',post.body)}{post.poll&&<span className="tag outline">투표</span>}{post.transaction&&<Paperclip size={13} aria-label="거래 첨부"/>}{post.commentCount>0&&<b className="board-comment-count num">[{post.commentCount}]</b>}</Link>
+              <span className="board-mobile-meta"><Link href={`/community/authors/${post.authorId}`}><MemberName primaryTeam={post.authorPrimaryTeam} holdsPlayer={post.authorHoldsPlayer}>{post.author}</MemberName></Link> · {dateText(post.date,false)} · 조회 {money(post.views)} · 추천 {money(post.likes)}</span>
+            </td><td className="board-author"><Link className="board-author-link" href={`/community/authors/${post.authorId}`}><UserAvatar className="rank-avatar" avatar={post.authorId===data.session?.userId?data.session?.profile?.avatar:post.authorAvatar} seed={post.authorId}/><MemberName primaryTeam={post.authorPrimaryTeam} holdsPlayer={post.authorHoldsPlayer}>{post.author}</MemberName></Link></td><td className="board-date"><time dateTime={post.date}>{dateText(post.date,false)}</time></td><td className="board-views num">{money(post.views)}</td><td className="board-likes num">{money(post.likes)}</td></tr>;
         })}
       </tbody></table></div>:<div className="feed-empty"><h3>{query?'조건에 맞는 게시글이 없습니다':'아직 게시글이 없습니다'}</h3><p>{query?'검색어를 바꿔보세요.':'첫 게시글을 작성해 보세요.'}</p></div>}
       {feedStatus==='ready'&&<Pagination page={shownPage} total={total} size={SIZE} onPage={setPage} label="게시글"/>}

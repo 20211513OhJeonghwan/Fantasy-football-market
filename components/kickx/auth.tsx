@@ -14,7 +14,7 @@ import { apiRequest } from "@/lib/kickx/client";
 import { dateText, money } from "@/lib/kickx/data";
 import { AVATAR_ICONS, parseProfile, PROFILE_LIMITS, safeReturnPath } from "@/lib/kickx/validation";
 import type { Profile } from "@/lib/kickx/types";
-import { DOMESTIC_LEAGUES, supportedTeams } from '@/lib/kickx/support';
+import { DOMESTIC_LEAGUES, supportedTeams, canChangeSubteam, supportWindow } from '@/lib/kickx/support';
 import { CommunityActivityPanel } from './community-activity';
 import { CommunityNotificationSettings } from './notifications';
 
@@ -101,6 +101,10 @@ function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
   const search = useSearchParams(), router = useRouter();
   const [draftName, setDraftName] = useState<string | null>(null), [draftTeams, setDraftTeams] = useState<string[] | null>(null), [draftAvatar, setDraftAvatar] = useState<string | null | undefined>(undefined);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const [draftPrimary,setDraftPrimary]=useState<string|null>(null);
+  const profile=data.session?.profile;
+  const primary=draftPrimary??profile?.primaryTeam??"";
+  const primaryLeague=data.teams.find(t=>t.id===primary)?.leagueId;
   const lock = useRef(false);
   const nickname = draftName ?? data.session?.profile?.nickname ?? "";
   const teams = draftTeams ?? supportedTeams(data.session?.profile);
@@ -111,16 +115,19 @@ function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
   const leagues = data.leagues.filter(l => DOMESTIC_LEAGUES.includes(l.id as typeof DOMESTIC_LEAGUES[number]) || !l.id.startsWith('bsd-') && data.teams.some(t=>t.leagueId===l.id));
   const teamOptions = useTeamOptions("나중에 선택", "all", "");
   const canSave = status === "ready" && !!data.session;
-  const dirty = !data.session?.profile || nickname !== data.session.profile.nickname || JSON.stringify(teams) !== JSON.stringify(supportedTeams(data.session.profile)) || avatar !== savedAvatar;
+  const dirty = primary!==(profile?.primaryTeam??"") || !data.session?.profile || nickname !== data.session.profile.nickname || JSON.stringify(teams) !== JSON.stringify(supportedTeams(data.session.profile)) || avatar !== savedAvatar;
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!canSave || lock.current) return;
     setError("");
     try {
-      const values = parseProfile({ nickname, teams, avatar });
+      if(onboarding&&!primary)throw new Error('본진 구단을 선택해 주세요.');
+      const confirmPrimary=!!primary&&!profile?.primaryTeam;
+      if(confirmPrimary&&!window.confirm(`${data.teams.find(t=>t.id===primary)?.name??'선택한 구단'}을 본진으로 영구 고정합니다.\n가입 후에는 변경하거나 해제할 수 없으며, 닉네임 앞에 공식 엠블럼이 계속 표시됩니다.\n이 구단으로 확정할까요?`))return;
+      const values = parseProfile({ nickname, teams, avatar,primaryTeam:primary||null,confirmPrimary });
       lock.current = true; setBusy(true);
-      const profile = mock ? values : (await apiRequest<{ profile: Profile }>("/api/kickx/profile", "POST", values)).profile;
-      updateProfile(profile); setDraftName(null); setDraftTeams(null); setDraftAvatar(undefined);
+      const savedProfile = mock ? values : (await apiRequest<{ profile: Profile }>("/api/kickx/profile", "POST", values)).profile;
+      updateProfile(savedProfile); setDraftName(null); setDraftTeams(null); setDraftAvatar(undefined);setDraftPrimary(null);
       notify(mock ? "프로필을 저장했습니다. (예시 모드 · 저장되지 않음)" : "프로필을 저장했습니다.");
       if (onboarding) { router.replace(safeReturnPath(search.get("next"))); router.refresh(); }
     } catch (error) { setError(error instanceof Error ? error.message : "프로필을 저장하지 못했습니다."); }
@@ -134,12 +141,17 @@ function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
         <input id="profile-nickname" aria-labelledby="profile-nickname-label" value={nickname} onChange={(event) => setDraftName(event.target.value)} placeholder="사용할 닉네임을 입력하세요" autoComplete="nickname" required minLength={PROFILE_LIMITS.min} maxLength={PROFILE_LIMITS.max} disabled={busy} aria-describedby="nickname-help" aria-invalid={!!error} />
         <small id="nickname-help">2–20자 · 문자, 숫자, 공백, 밑줄, 하이픈</small>
       </label>
+      <fieldset className="supported-club-fields primary-club-fields" disabled={busy}><legend>본진 구단 · 영구 고정</legend>
+        {profile?.primaryTeam ? <div className="profile-primary-locked"><TeamBadge id={primary}/><strong>{data.teams.find(t=>t.id===primary)?.name}</strong><span>변경 불가</span></div> : <Select id="profile-primary" label="본진 구단" value={primary} onChange={id=>{setDraftPrimary(id);const league=data.teams.find(t=>t.id===id)?.leagueId;setDraftTeams([id,...teams.filter(t=>data.teams.find(x=>x.id===t)?.leagueId!==league)]);}} options={teamOptions.filter(o=>!!o.value)} placeholder="평생 응원할 본진 구단을 선택하세요"/>}
+        <p className="primary-warning">본진은 한 번 확정하면 영구적으로 변경·해제할 수 없습니다. 공식 엠블럼이 닉네임 앞에 표시되며, 이 구단에서 게시글을 작성할 수 있습니다.</p>
+      </fieldset>
       <fieldset className="supported-club-fields" disabled={busy}><legend>응원 구단 <small>{teams.length} / 5</small></legend>
-        <p id="team-help">리그별 1개씩 최대 5개를 선택할 수 있습니다. 선택한 구단 게시판에서 글과 댓글을 작성할 수 있습니다.</p>
-        {leagues.map(league=>{const picked=teams.find(id=>data.teams.find(t=>t.id===id)?.leagueId===league.id)??'';return <div className={`supported-club-field${picked?' picked':''}`} key={league.id}><label htmlFor={`profile-team-${league.id}`}><LeagueMark league={league} size="sm"/><span>{league.name}</span><small>{picked?'선택됨':'미선택'}</small></label>
-          <Select id={`profile-team-${league.id}`} label={`${league.name} 응원 구단`} describedBy="team-help" value={picked} disabled={busy || !data.teams.length}
+        <p id="team-help">본진을 포함해 리그별 1개씩 최대 5개입니다. 서브팀은 댓글·투표에 참여할 수 있습니다. 가입 후 1시간 동안 변경할 수 있고, 이후에는 2월·9월 1~7일에 리그별 한 번씩 변경할 수 있습니다. 구단 해제도 변경에 포함됩니다.</p>
+        {leagues.map(league=>{const picked=teams.find(id=>data.teams.find(t=>t.id===id)?.leagueId===league.id)??'';return <div className={`supported-club-field${picked?' picked':''}`} key={league.id}><label htmlFor={`profile-team-${league.id}`}><LeagueMark league={league} size="sm"/><span>{league.name}</span><small>{league.id===primaryLeague?'본진 · 변경 불가':picked?'서브팀':'미선택'}</small></label>
+          <Select id={`profile-team-${league.id}`} label={`${league.name} 응원 구단`} describedBy="team-help" value={picked} disabled={busy || !data.teams.length || league.id===primaryLeague || !canChangeSubteam(profile,league.id)}
             onChange={id=>setDraftTeams([...teams.filter(team=>data.teams.find(t=>t.id===team)?.leagueId!==league.id),...(id?[id]:[])])}
             options={[{value:'',label:'선택 안 함'},...teamOptions.filter(o=>data.teams.some(t=>t.id===o.value&&t.leagueId===league.id))]} placeholder="선택 안 함"/>
+          {league.id!==primaryLeague&&!canChangeSubteam(profile,league.id)&&<small className="subteam-lock-note">{supportWindow()&&profile?.supportChangeWindow===supportWindow()&&profile.supportChangedLeagues?.includes(league.id)?"이번 주간 변경 완료":"다음 변경: 2월·9월 1~7일"}</small>}
         </div>;})}
       </fieldset>
       <fieldset className="avatar-picker" disabled={busy}><legend>프로필 아이콘</legend>
@@ -199,7 +211,7 @@ export function MyPageScreen() {
       <section className="my-hero" aria-label="내 프로필">
         <UserAvatar className="profile-avatar" avatar={profile?.avatar} seed={data.session?.userId ?? "guest"} label="프로필 아이콘" />
         <div className="my-hero-text">
-          <div className="my-hero-name"><h2>{profile?.nickname || (data.session ? "프로필을 완성해 주세요" : "로그인이 필요합니다")}</h2><MockBadge compact /></div>
+          <div className="my-hero-name"><h2>{profile?.primaryTeam&&<TeamBadge id={profile.primaryTeam}/>} {profile?.nickname || (data.session ? "프로필을 완성해 주세요" : "로그인이 필요합니다")}</h2><MockBadge compact /></div>
           <div className="profile-supported-clubs" aria-label="선택한 응원 구단">{supportedTeams(profile).length ? supportedTeams(profile).map(id=><div className="profile-club" key={id}><TeamBadge id={id}/><strong>{getTeam(id)?.name||'구단 정보 없음'}</strong></div>) : <div className="profile-club">응원 구단 미선택</div>}</div>
         </div>
         <dl className="profile-facts">

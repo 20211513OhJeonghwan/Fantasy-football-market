@@ -12,7 +12,7 @@ import type { Fixture } from "@/lib/kickx/types";
 import { DataEmpty, LeagueMark, PageHeading, Tabs, TeamBadge } from "./ui";
 import { clubIdentity } from "@/lib/kickx/club-identity";
 import { dateText } from "@/lib/kickx/data";
-import { fixtureGroup, fixtureStatus, koreanDay } from "@/lib/kickx/fixtures";
+import { fixtureGroup, fixtureStatus, koreanDay, fixturesByLeague } from "@/lib/kickx/fixtures";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 /** Weekday for a KST calendar day string (YYYY-MM-DD). */
@@ -121,7 +121,7 @@ export function FixturesScreen() {
       </div>
       {status==='ready'?days.map(([day,fixtures])=>{const open=dayExpanded(day),contentId=`match-day-${day}`;return <section className={`match-day${day===today?' today':''}`} key={day} ref={day===today?todayRef:undefined} data-date={day}>
         <h2><button type="button" className="match-day-toggle" aria-expanded={open} aria-controls={contentId} aria-label={`${Number(day.slice(5,7))}월 ${Number(day.slice(8))}일 경기 ${open?'접기':'펼치기'}`} onClick={()=>toggleDay(day)}><span className="match-day-date num">{Number(day.slice(5,7))}월 {Number(day.slice(8))}일</span><span className={`match-day-week ${['토','일'].includes(weekday(day))?'weekend':''}`}>({weekday(day)})</span>{day===today&&<span className="tag yellow">오늘</span>}<small className="num">{fixtures.length}경기</small><ChevronDown size={18} aria-hidden="true"/></button></h2>
-        <div id={contentId} hidden={!open}>{fixtures.length?<ul>{fixtures.map(f=><MatchRow key={f.id} fixture={f}/>)}</ul>:<p className="schedule-no-match">오늘은 선택한 조건에 맞는 경기가 없습니다.</p>}</div>
+        <div id={contentId} hidden={!open}>{fixtures.length?<div>{fixturesByLeague(fixtures).map(group=><section className="match-league-group" key={group.leagueId??"unknown"} aria-label={data.leagues.find(l=>l.id===group.leagueId)?.name??"대회"}><h3><LeagueMark league={data.leagues.find(l=>l.id===group.leagueId)} size="sm"/>{data.leagues.find(l=>l.id===group.leagueId)?.name??"대회 정보 없음"}<small>{group.fixtures.length}경기</small></h3><ul>{group.fixtures.map(f=><MatchRow key={f.id} fixture={f}/>)}</ul></section>)}</div>:<p className="schedule-no-match">오늘은 선택한 조건에 맞는 경기가 없습니다.</p>}</div>
       </section>}):<DataEmpty entity="경기 일정" status={status} retry={remote.enabled?remote.reload:undefined}/>}
       {status==='ready'&&!total&&<p className="schedule-no-match">{year}년 {monthNumber}월에 수집된 경기가 없습니다.</p>}
       {total>500&&<Pagination page={page} total={total} size={500} onPage={setPage} label="경기"/>}

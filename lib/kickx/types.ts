@@ -103,6 +103,9 @@ export type Post = {
   author: string;
   authorId: string;
   authorAvatar?: string | null;
+  authorPrimaryTeam?: string | null;
+  authorHoldsPlayer?: boolean;
+  poll?: Poll | null;
   scope: "club" | "player";
   target: string;
   title: string;
@@ -122,6 +125,8 @@ export type Comment = {
   author: string;
   authorId: string;
   authorAvatar?: string | null;
+  authorPrimaryTeam?: string | null;
+  authorHoldsPlayer?: boolean;
   parentAuthor?: string | null;
   parentBody?: string | null;
   body: string;
@@ -130,7 +135,8 @@ export type Comment = {
   revision?: number;
 };
 /** `avatar` is `icon:<name>` or `club:<teamId>` (see lib/kickx/avatar.ts); null uses a stable default icon. */
-export type Profile = { nickname: string; team: string | null; teams?: string[]; avatar?: string | null };
+export type Poll = { question:string; options:string[]; endsAt:string; counts:number[]; total:number; myVote:number|null; closed:boolean };
+export type Profile = { nickname: string; team: string | null; teams?: string[]; avatar?: string | null; primaryTeam?:string|null;createdAt?:string;supportChangeWindow?:string|null;supportChangedLeagues?:string[] };
 export type Session = {
   userId: string;
   role: "member" | "admin";
@@ -165,6 +171,7 @@ export type RankingRow = {
   rank: number;
   nickname: string;
   avatar?: string | null;
+  primaryTeam?: string | null;
   team: string | null;
   teams?: string[];
   assets: number | null;

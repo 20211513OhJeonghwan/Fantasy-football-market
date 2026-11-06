@@ -31,7 +31,7 @@ do $$declare first jsonb;second jsonb;h text;t uuid;before_usage jsonb;begin
  first:=public.kickx_read_match_report('report-player','report-fixture');
  perform pg_temp.report_assert(first->>'status'='missing' and first#>>'{facts,priceAfter}'='92000','Read must return stored pricing, without a write');
  perform pg_temp.report_assert((select ai_report_usage=before_usage from public.kickx_policy),'Read consumed quota');
- perform pg_temp.report_assert(not(first?'text') and first->>'promptVersion'='match-report-performance-v2','Old prompt text leaked instead of a lazy refresh');
+ perform pg_temp.report_assert(not(first?'text') and first->>'promptVersion'='match-report-outcome-v3','Old prompt text leaked instead of a lazy refresh');
  first:=public.kickx_claim_match_report('report-player','report-fixture','00000000-0000-0000-0000-000000000081');
  perform pg_temp.report_assert(first->>'status'='claimed','Initial claim failed');
  h:=first->>'inputHash';t:=(first->>'claimToken')::uuid;
@@ -47,11 +47,11 @@ do $$declare first jsonb;second jsonb;h text;t uuid;before_usage jsonb;begin
  update public.player_price_results set input_hash='replay-b' where player_id='report-player';
  first:=public.kickx_read_match_report('report-player','report-fixture');
  perform pg_temp.report_assert(first->>'status'='ready' and first->>'inputHash'=h,'Unchanged replay invalidated a report');
- -- Pricing-only changes do not regenerate a performance-only explanation.
+ -- A price correction must invalidate prose that describes the old outcome.
  update public.player_price_results set price_after=93000,change_percent=-7,target_price=81000 where player_id='report-player';
  first:=public.kickx_read_match_report('report-player','report-fixture');
- perform pg_temp.report_assert(first->>'status'='ready' and first->>'inputHash'=h and first#>>'{facts,priceAfter}'='93000','Pricing-only update invalidated performance text');
- perform pg_temp.report_assert(not(first->'text'?'value'),'Removed value explanation was stored again');
+ perform pg_temp.report_assert(first->>'status'='missing' and first->>'inputHash'<>h and first#>>'{facts,priceAfter}'='93000','Stale outcome explanation remained visible after a price correction');
+ perform pg_temp.report_assert(not(first?'text'),'Removed value explanation was stored again');
  -- Real corrections hide the old text immediately, reuse the same row, and reject stale saves.
  update public.performance_results set score=60 where player_id='report-player';
  first:=public.kickx_read_match_report('report-player','report-fixture');

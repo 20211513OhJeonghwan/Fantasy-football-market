@@ -59,3 +59,8 @@ export function UserAvatar({ avatar, seed, className = "", label, style }: { ava
   const tone = choice ? "tone-yellow" : TONES[(h >>> 8) % TONES.length];
   return <span className={`user-avatar ${tone} ${className}`} style={style} {...a11y}><AvatarGlyph icon={icon} /></span>;
 }
+
+/** Permanent club identity is separate from the member's changeable profile icon. */
+export function MemberName({primaryTeam,holdsPlayer,children}:{primaryTeam?:string|null;holdsPlayer?:boolean;children:ReactNode}){
+ return <span className="member-name">{primaryTeam&&<span className="primary-name-crest" title="본진 구단 · 영구 고정"><ClubCrest id={primaryTeam} size="small"/></span>}<span>{children}</span>{holdsPlayer&&<small className="ownership-badge" title="현재 이 선수를 보유한 회원입니다">보유 인증</small>}</span>;
+}

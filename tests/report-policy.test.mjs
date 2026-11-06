@@ -13,9 +13,9 @@ const game=(id,score,season=2026)=>({fixtureId:`bsd-${id}`,score,status:'provisi
 function match(position='D') {return {fixtureId:'bsd-100',playerId:'bsd-2',teamId:'bsd-1',status:'FT',homeTeam:'bsd-1',awayTeam:'bsd-2',homeScore:0,awayScore:0,stats:{minutes_played:90,goals:0},legacy:null,source:{lineups:{lineup_status:'confirmed',lineups:{home:{team_id:1,players:Array.from({length:11},(_,i)=>({id:i+1,position:i===1?position:'D'})),substitutes:[{id:30,position}]},away:{team_id:2,players:Array.from({length:11},(_,i)=>({id:i+12,position:'D'}))}}},incidents:{incidents:[]}}};}
 const points=(r,key)=>r.breakdown.find(b=>b.metric===key)?.points;
 test('report scoring applies its positional table and no v2 team-win bonus',()=>{
- for(const [pos,goal,assist] of [['G',10,5],['D',6,4],['M',5,3],['F',4,3]]){
+ for(const [pos,goal,assist] of [['G',4,2],['D',3,1.5],['M',2.5,1.5],['F',2,1.5]]){
   const m=match(pos);m.homeScore=1;m.stats.goals=1;m.stats.goal_assist=1;m.source.incidents.incidents=[{id:1,type:'goal',minute:40,is_home:true,player_id:2}];
-  const r=calc(m);assert.equal(points(r,'minutes'),2);assert.equal(points(r,'goals'),goal);assert.equal(points(r,'assists'),assist);assert.equal(points(r,'team_win'),undefined);
+  const r=calc(m);assert.equal(points(r,'minutes'),6);assert.equal(points(r,'goals'),goal);assert.equal(points(r,'assists'),assist);assert.equal(points(r,'team_win'),undefined);
  }
 });
 test('regular-season scope rejects league-code playoffs and keeps an unknown stage unverified',()=>{
@@ -33,8 +33,8 @@ test('settled card checks do not block verified final cards; an accepted upgrade
 });
 test('report counts DF defensive groups and MF individual actions, pass success above zero attempts',()=>{
  const m=match();Object.assign(m.stats,{won_tackle:4,interception:3,total_pass:10,accurate_pass:9});
- assert.equal(points(calc(m),'defensive_actions'),2);assert.equal(points(calc(m),'pass_accuracy'),1);
- m.source.lineups.lineups.home.players[1].position='M';assert.equal(points(calc(m),'defensive_actions'),3.5);
+ assert.equal(points(calc(m),'defensive_actions'),.6);assert.equal(points(calc(m),'pass_accuracy'),.3);
+ m.source.lineups.lineups.home.players[1].position='M';assert.equal(points(calc(m),'defensive_actions'),1.05);
 });
 test('explicitly rejected reviews do not block finished matches but unresolved or accepted reviews still do',()=>{
  const m=match();const review={type:'varDecision',minute:28,decision:'review',confirmed:false,player_id:2};
@@ -54,20 +54,20 @@ test('announced added time reconciles late entries and first-half dismissals wit
  m.stats.minutes_played=70;assert.ok(calc(m).warnings.includes('MINUTES_INTERVAL_MISMATCH'));
 });
 test('report goalkeeper saves, clean-sheet threshold and actual participation',()=>{
- const m=match('G');m.stats.saves=7;m.legacy={penalty_save:1};assert.equal(points(calc(m),'saves'),2);assert.equal(points(calc(m),'penalty_saves'),5);assert.equal(points(calc(m),'clean_sheet'),4);
+ const m=match('G');m.stats.saves=7;m.legacy={penalty_save:1};assert.equal(points(calc(m),'saves'),1);assert.equal(points(calc(m),'penalty_saves'),3);assert.equal(points(calc(m),'clean_sheet'),1);
  m.stats.minutes_played=45;m.source.incidents.incidents=[{type:'substitution',minute:45,player_out_id:2,player_in_id:30}];assert.equal(points(calc(m),'clean_sheet'),0);
 });
 test('same-minute goals only block when boundary order can affect positional points',()=>{
  const m=match('D');m.stats.minutes_played=60;m.homeScore=1;
  m.source.incidents.incidents=[{type:'goal',minute:60,is_home:true,player_id:3},{type:'substitution',minute:60,player_out_id:2,player_in_id:30}];
- assert.equal(calc(m).status,'provisional');assert.equal(points(calc(m),'clean_sheet'),4);
+ assert.equal(calc(m).status,'provisional');assert.equal(points(calc(m),'clean_sheet'),1);
  m.homeScore=0;m.awayScore=1;m.source.incidents.incidents[0].is_home=false;m.source.incidents.incidents[0].player_id=12;
  assert.ok(calc(m).warnings.includes('GOAL_BOUNDARY_TIME_AMBIGUOUS'));
  m.source.lineups.lineups.home.players[1].position='F';assert.equal(calc(m).status,'provisional');
  assert.equal(points(calc(m),'clean_sheet'),undefined);assert.equal(points(calc(m),'conceded'),undefined);
 });
 test('observed added-time duration rescues real 90+ appearances without permitting corrupt counters',()=>{
- const m=match();m.stats.minutes_played=97;m.durationMinutes=97;assert.equal(calc(m).score,6);assert.equal(calc(m).status,'provisional');
+ const m=match();m.stats.minutes_played=97;m.durationMinutes=97;assert.equal(calc(m).score,7);assert.equal(calc(m).status,'provisional');
  m.stats.minutes_played=180;assert.ok(calc(m).warnings.includes('INVALID_MINUTES'));
  m.playerId='bsd-30';m.durationMinutes=100;m.stats.minutes_played=35;m.source.incidents.incidents=[{type:'substitution',minute:60,player_out_id:2,player_in_id:30}];assert.equal(calc(m).status,'provisional');
 });
@@ -80,8 +80,8 @@ test('a confirmed unused substitute does not require a match position for fixed 
  assert.equal(calc(m).status,'not-played');assert.equal(calc(m).score,null);
  m.stats.minutes_played=15;assert.equal(calc(m).status,'blocked');
 });
-test('report pricing reproduces its 104040-P example with every season appearance counted once',()=>{
- const plan=price([game(1,8),game(2,10)],baseline,p);assert.equal(plan.steps[0].priceAfter,102000);assert.equal(plan.price,104040);assert.equal(plan.steps[1].formScore,7);assert.equal(plan.steps[1].targetPrice,105127);
+test('report pricing reproduces an explicit two-percent parameter without any cumulative target lag',()=>{
+ const plan=price([game(1,8),game(2,10)],baseline,p);assert.equal(plan.steps[0].priceAfter,102000);assert.equal(plan.price,104040);assert.equal(plan.steps[1].formScore,10);assert.equal(plan.steps[1].targetPrice,104040);
  assert.deepEqual(price([game(2,10),game(1,8)],baseline,p),plan);
  const games=Array.from({length:8},(_,i)=>game(i+1,6));const changed=games.map((g,i)=>i===0?{...g,score:30}:g);
  assert.notEqual(price(games,baseline,p).steps.at(-1).targetPrice,price(changed,baseline,p).steps.at(-1).targetPrice);
@@ -93,7 +93,7 @@ test('October 15 launch includes a game ending at midnight and carries earlier f
  const plan=price(rows,baseline,{...p,valuationStartMs:launch});
  assert.equal(plan.steps.length,1);assert.equal(plan.steps[0].fixtureId,'bsd-2');
  assert.equal(plan.steps[0].priceBefore,100000);assert.equal(plan.price,102000);
- assert.equal(plan.steps[0].formScore,7);assert.equal(plan.steps[0].evidence.n,2);
+ assert.equal(plan.steps[0].formScore,10);assert.equal(plan.steps[0].evidence.n,2);
  assert.equal(price(rows.slice(0,1),baseline,{...p,valuationStartMs:launch}).price,100000);
 });
 test('raw score clipping, DNP, negative baselines and seasonal rollover obey report limits',()=>{
@@ -109,9 +109,9 @@ test('frozen positional midranks and prior fallback do not ingest current-season
 });
 test('independent PostgreSQL and TypeScript agree for cumulative seasons and integer percentage caps',async()=>{
  const db=new PGlite();try{
-  const name=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(x=>x.endsWith('_automatic_squad_market_and_community.sql'));
+  const name=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(x=>x.endsWith('_neutral_score_primary_clubs_and_polls.sql'));
   const sql=readFileSync(new URL('../supabase/migrations/'+name,import.meta.url),'utf8');
-  await db.exec(sql.match(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$function\$\s*;/i)[0]);
+  await db.exec(sql.match(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$\$;/i)[0]);
   let seed=7654;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   for(let c=0;c<40;c++){
    const rows=Array.from({length:1+Math.floor(rand()*24)},(_,i)=>game(i+1,Math.round((rand()*60-15)*2)/2));
@@ -127,11 +127,11 @@ test('verified non-participation compounds 1.5 percent without diluting seasonal
  const dnp=id=>({...game(id,null),status:'not-played',minutes:0});
  const rows=[game(1,8),dnp(2),dnp(3),{...game(4,null),status:'blocked',minutes:null}];
  const plan=price(rows,baseline,p);assert.equal(plan.steps.length,3);assert.equal(plan.steps[1].priceAfter,100470);assert.equal(plan.price,98963);
- assert.equal(plan.steps[2].evidence.n,1);assert.equal(plan.steps[2].formScore,plan.steps[0].formScore);assert.equal(plan.steps[1].evidence.reason,'NON_PARTICIPATION');
+ assert.equal(plan.steps[2].evidence.n,1);assert.equal(plan.steps[2].formScore,6);assert.equal(plan.steps[1].evidence.reason,'NON_PARTICIPATION');
  const db=new PGlite();try{
-  const name=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(x=>x.endsWith('_automatic_squad_market_and_community.sql'));
+  const name=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(x=>x.endsWith('_neutral_score_primary_clubs_and_polls.sql'));
   const sql=readFileSync(new URL('../supabase/migrations/'+name,import.meta.url),'utf8');
-  await db.exec(sql.match(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$function\$\s*;/i)[0]);
+  await db.exec(sql.match(/create or replace function public\.kickx_report_plan\([\s\S]*?end \$\$;/i)[0]);
   const pg=(await db.query('select public.kickx_report_plan($1,$2,$3) plan',[rows,baseline,p])).rows[0].plan;
   assert.equal(pg.price,plan.price);assert.deepEqual(pg.steps.map(x=>x.priceAfter),plan.steps.map(x=>x.priceAfter));
  }finally{await db.close();}
@@ -141,7 +141,7 @@ test('October launch warms seasonal form without publishing earlier prices and o
  const rows=[game(1,8),{...game(2,10),endedAt:'2026-10-01T01:00:00Z'},{...game(3,null),status:'not-played',minutes:0,endedAt:'2026-10-01T00:00:00Z'}];
  const plan=price(rows,baseline,{...p,valuationStartMs:launch});assert.equal(plan.steps.length,2);assert.equal(plan.steps[0].fixtureId,'bsd-3');
  assert.equal(plan.steps[0].priceBefore,100000);assert.equal(plan.steps[0].priceAfter,98500);assert.equal(plan.steps[1].evidence.n,2);
- assert.equal(plan.steps[1].targetPrice,105127);assert.equal(plan.steps[1].priceAfter,100470);
+ assert.equal(plan.steps[1].targetPrice,100470);assert.equal(plan.steps[1].priceAfter,100470);
 });
 test('unavailable club member can be DNP but a missing player without membership evidence is blocked',()=>{
  const m=match();m.playerId='bsd-77';m.stats.minutes_played=0;
@@ -159,7 +159,7 @@ test('corrected lineup evidence cannot keep an obsolete DNP eligible for decay',
  m.source.lineups.unavailable_players={home:[]};m.stats._roster_evidence.kind='observed-squad';assert.equal(calc(m).status,'not-played');
 });
 
-test('ten-percent cap applies to new games while the cutover reproduces old issued prices',()=>{
+test('approved repricing uses the ten-percent cap for old games too',()=>{
  assert.equal(policy.REPORT_PARAMETERS.maxUp,.1);assert.equal(policy.REPORT_PARAMETERS.maxDown,.1);
  const rows=[game(1,100),game(2,100),game(3,-100)];
  const old=price(rows.slice(0,1),baseline,p);
@@ -167,9 +167,34 @@ test('ten-percent cap applies to new games while the cutover reproduces old issu
  assert.equal(old.price,102000);assert.equal(current.price,110000);
  const params={...policy.REPORT_PARAMETERS,capChangeAtMs:Date.parse('2026-09-02T12:00:00Z'),previousMaxUp:.02,previousMaxDown:.02};
  const plan=price(rows,baseline,params);
- assert.equal(plan.steps[0].priceAfter,old.price);
- assert.equal(plan.steps[1].priceAfter,112200);
+ assert.equal(plan.steps[0].priceAfter,110000);
+ assert.equal(plan.steps[1].priceAfter,121000);
  for(const step of plan.steps.slice(1))assert.ok(step.priceAfter>=Math.ceil(step.priceBefore*.9)&&step.priceAfter<=Math.floor(step.priceBefore*1.1));
  const downward=price([game(1,-100)],baseline,policy.REPORT_PARAMETERS);assert.equal(downward.price,90000);
  assert.throws(()=>price(rows,baseline,{...params,previousMaxUp:undefined}),/INVALID_REPORT_PARAMETERS/);
+});
+
+test('low assessments cannot rise and high assessments cannot fall, irrespective of baseline or prior form',()=>{
+ for(const prior of [0,1,4,6,8,10])for(const score of [0,1,4,5.9,6,6.1,8,10])for(const minutes of [1,15,59,60,90]){
+  const rows=[game(1,prior),{...game(2,score),minutes}];
+  const step=price(rows,{...baseline,seedScore:prior},policy.REPORT_PARAMETERS).steps.at(-1);
+  if(score<6)assert.ok(step.priceAfter<=step.priceBefore);
+  if(score>6)assert.ok(step.priceAfter>=step.priceBefore);
+  if(score===6)assert.equal(step.priceAfter,step.priceBefore);
+ }
+ assert.equal(price([{...game(1,8),minutes:30}],baseline,policy.REPORT_PARAMETERS).price,102500);
+ assert.equal(price([game(1,8)],baseline,policy.REPORT_PARAMETERS).price,105000);
+});
+test('a normal appearance starts neutral; verified mistakes still reduce it, never missing counters',()=>{
+ const m=match('F');assert.equal(calc(m).score,6);
+ m.source.incidents.incidents=[{type:'card',minute:20,card_type:'yellow',player_id:2}];m.stats.yellow_card=1;
+ assert.equal(calc(m).score,5.3);
+ m.stats.goals=8;m.homeScore=8;m.source.incidents.incidents=Array.from({length:8},(_,i)=>({type:'goal',minute:i+5,is_home:true,player_id:2}));delete m.stats.yellow_card;
+ const result=calc(m);assert.equal(result.score,10);assert.equal(result.breakdown.reduce((n,b)=>n+b.points,0),10);
+});
+
+test('stored scoring metadata is accepted without treating its revision as a numeric coefficient',()=>{
+ const parameters={...policy.REPORT_PARAMETERS,scoringRevision:policy.SCORING_REVISION};
+ assert.equal(price([game(1,8)],baseline,parameters).price,105000);
+ assert.throws(()=>price([],baseline,{...parameters,scoringRevision:'unknown'}),/INVALID_REPORT_PARAMETERS/);
 });

@@ -12,7 +12,7 @@ const server=spawn(process.execPath,['node_modules/next/dist/bin/next','start','
 let browser;
 const report={widths:[320,390,768,1024,1440],checks:[],errors:[]};
 async function setup(width){
- const state={...emptyPlatformData(),teams:[{id:'club-one',name:'응원 구단',leagueId:'bsd-1'},{id:'club-two',name:'다른 구단',leagueId:'bsd-1'}],leagues:[{id:'bsd-1',name:'Premier League'}],session:{userId:'current-member',role:'member',profile:{nickname:'스쿼드 테스트',team:'club-one',teams:['club-one']}},member:{financialReady:true,points:1300000,totalAssets:1300000,playerAssets:0,holdings:[],ownedPlayers:[],transactions:[],watchlist:[],assetHistory:[],squad:null}};
+ const state={...emptyPlatformData(),teams:[{id:'club-one',name:'응원 구단',leagueId:'bsd-1'},{id:'club-two',name:'다른 구단',leagueId:'bsd-1'}],leagues:[{id:'bsd-1',name:'Premier League'}],session:{userId:'current-member',role:'member',profile:{nickname:'스쿼드 테스트',team:'club-one',teams:['club-one'],primaryTeam:'club-one',createdAt:new Date().toISOString()}},member:{financialReady:true,points:1300000,totalAssets:1300000,playerAssets:0,holdings:[],ownedPlayers:[],transactions:[],watchlist:[],assetHistory:[],squad:null}};
  state.players=['GK','DF','MF','FW'].flatMap((position,i)=>Array.from({length:i===0?2:i===1?5:4},(_,n)=>({id:`${position}-${n+1}`,name:`${position} 테스트 선수 ${n+1}`,short:null,team:'club-one',position,price:50000,change:0,performance:6,volume:0,goals:0,assists:0,minutes:90,history:[],records:[],analysis:null,status:null})));
  const c=await browser.newContext({viewport:{width,height:960},timezoneId:'Asia/Seoul'});await c.route(/^https:\/\//,r=>r.abort());
  const quotes=new Map(),queries=[],posts=[];let quotesIssued=0,sequence=0;

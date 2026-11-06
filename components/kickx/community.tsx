@@ -1,7 +1,8 @@
 "use client";
+import {PollEditor,pollDraftError,type PollDraft} from "./community-poll";
 import { Select } from "./select";
 import { useTeamOptions } from "./options";
-import { supportedTeams, supportsTeam } from "@/lib/kickx/support";
+import { supportedTeams, canPostToClub } from "@/lib/kickx/support";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
@@ -25,7 +26,7 @@ export function CommunityHub({ kind }: { kind: "club" | "player" }) {
   const clubOptions=useTeamOptions('전체 구단','all','');
   if(kind==='player')return <><PageHeading eyebrow="PLAYER COMMUNITY" title="선수 커뮤니티" description="선수 상세페이지의 커뮤니티 탭에서 이야기를 나눠보세요."/><Link className="button primary" href="/market">선수 시장 <ArrowRight size={16}/></Link></>;
   return <>
-    <PageHeading eyebrow="COMMUNITY" title="구단 커뮤니티" description="응원 구단의 경기와 이야기를 나누세요." action={(!target || supportsTeam(data.session?.profile,target)) ? <Link className="button primary" href={`/community/write?scope=club${target?`&target=${target}`:''}`}><Pencil size={16}/>글쓰기</Link> : <span className="fine-print">글쓰기는 응원 구단에서 가능합니다.</span>}/>
+    <PageHeading eyebrow="COMMUNITY" title="구단 커뮤니티" description="응원 구단의 경기와 이야기를 나누세요." action={canPostToClub(data.session?.profile,target||undefined) ? <Link className="button primary" href={`/community/write?scope=club${target?`&target=${target}`:''}`}><Pencil size={16}/>글쓰기</Link> : !data.session?.profile?.primaryTeam?<Link className="button secondary" href={data.session?"/mypage#my-profile":"/login"}>{data.session?"본진 구단 선택":"로그인"}</Link>:<span className="fine-print">게시글은 본진 구단에서 작성할 수 있습니다.</span>}/>
     <section className="supported-board-clubs" aria-label="나의 응원 구단">
       <strong>나의 응원 구단</strong>
       <nav aria-label="응원 구단 게시글"><button className={!target?'active':''} onClick={()=>setTarget('')}>전체 구단</button>{teams.map(id=><button key={id} className={target===id?'active':''} onClick={()=>setTarget(id)}><ClubCrest id={id} size="small"/>{getTeam(id)?.name||'구단 정보 없음'}</button>)}</nav>
@@ -36,7 +37,7 @@ export function CommunityHub({ kind }: { kind: "club" | "player" }) {
 }
 export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
   const params=useParams();
-  const {getTeam,getLeague,status}=usePlatform();
+  const {data,getTeam,getLeague,status}=usePlatform();
   const target=String(scope==='club'?params.teamId:params.playerId);
   const detail=useCatalogPlayer(scope==='player'?target:null);
   const team=scope==='club'?getTeam(target):undefined,player=scope==='player'?detail.player:undefined;
@@ -51,7 +52,7 @@ export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
         <h1>{name?`${name} ${scope==='club'?'게시판':'커뮤니티'}`:status==='ready'?'게시판을 찾을 수 없습니다':'게시판'}</h1>
         <p>{team?.english??player?.originalName??player?.english}</p>
       </div>
-      {found&&<Link className="button primary" href={`/community/write?scope=${scope}&target=${target}`}><Pencil size={16}/>글쓰기</Link>}
+      {found&&(scope==='player'||canPostToClub(data.session?.profile,target))&&<Link className="button primary" href={`/community/write?scope=${scope}&target=${target}`}><Pencil size={16}/>글쓰기</Link>}
     </header>
     {found?<CommunityFeed scope={scope} target={target} targetName={name} title="게시글" compose={scope==='player'}/>:<DataEmpty entity="게시판" status={scope==='player'?detail.status:status} retry={scope==='player'?detail.reload:undefined}/>}
   </>;
@@ -72,14 +73,15 @@ export function WritePost() {
 }
 function PostEditor() {
   const sp = useSearchParams();
-  const { data, status, mock, notify, getTeam, reload } = usePlatform();
+  const { data, status, mock, notify, getTeam, getPlayer, reload } = usePlatform();
   const detail=usePost(sp.get("edit"));
   const existing=detail.data.post?.authorId===data.session?.userId?detail.data.post:undefined;
   const requestId=useRef("");
   const revision=useRef<number|null>(null);
+  const [poll,setPoll]=useState<PollDraft|null>(null);
   const [savedId,setSavedId]=useState<string|null>(null);
   const myTeams = supportedTeams(data.session?.profile);
-  const myTeam = myTeams[0] ?? null;
+  const myTeam = data.session?.profile?.primaryTeam ?? null;
   const initialScope: DraftState["scope"] = existing?.scope ?? (sp.get("scope") === "player" ? "player" : "club");
   const [draft, setDraft] = useState<DraftState | null>(null);
   const value: DraftState = draft ?? {
@@ -99,15 +101,15 @@ function PostEditor() {
   const targets = value.scope === "club" ? data.teams : selectedPlayer.player ? [selectedPlayer.player] : [];
   const attachments = usePostTradeAttachments(value.scope,value.target,true);
   const transactions = [...new Map([...attachments.items,...(existing?.transaction ? [existing.transaction] : [])].filter(t=>value.scope==='club'||t.playerId===value.target).map(t=>[t.id,t])).values()];
-  const clubTargets = useTeamOptions(null).filter((o) => myTeams.includes(o.value));
+  const clubTargets = useTeamOptions(null).filter((o) => o.value===myTeam);
   const errors = validatePost(value, {
-    myTeam, myTeams,
+    myTeam, myTeams, primaryTeam:data.session?.profile?.primaryTeam??null,
     targets: targets.map((t) => t.id),
     transactions: transactions.map(t => t.id),
   });
   const errorFields = FIELD_ORDER.filter((f) => errors[f]);
   const visible = (field: PostField) => (attempted || touched[field]) && errors[field];
-  const dirty = draft !== null && phase === "edit";
+  const dirty = (draft !== null || poll !== null) && phase === "edit";
   const isEdit = sp.has("edit");
   useEffect(() => {
     if (!dirty) return;
@@ -115,7 +117,7 @@ function PostEditor() {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
-  const reset = () => { setDraft(null); setTouched({}); setAttempted(false); setServerNote(""); requestId.current=""; revision.current=null; };
+  const reset = () => { setDraft(null); setTouched({}); setAttempted(false); setServerNote("");setPoll(null); requestId.current=""; revision.current=null; };
   const update = (patch: Partial<DraftState>) => { revision.current ??= existing?.revision??0;requestId.current="";setDraft({ ...value, ...patch }); setServerNote(""); };
   const blur = (field: PostField) => () => setTouched((t) => ({ ...t, [field]: true }));
   const fieldProps = (field: PostField) => ({
@@ -133,11 +135,12 @@ function PostEditor() {
       requestAnimationFrame(() => summaryRef.current?.focus());
       return;
     }
+    const pollError=pollDraftError(poll);if(pollError){setServerNote(pollError);return;}
     if (lock.current) return;
     lock.current = true;setPhase("saving");requestId.current ||= crypto.randomUUID();
     try{
       if(mock){setPhase("done");notify("게시글 등록 예시입니다. 실제로 저장되지 않습니다.");}
-      else{const result=await apiRequest<{id:string}>("/api/kickx/community","POST",{...value,action:isEdit?"editPost":"createPost",postId:existing?.id,revision:revision.current??existing?.revision,requestId:requestId.current});setSavedId(result.id);setPhase("done");reload();notify("게시글을 저장했습니다.");}
+      else{const result=await apiRequest<{id:string}>("/api/kickx/community","POST",{...value,poll:!isEdit?poll:undefined,action:isEdit?"editPost":"createPost",postId:existing?.id,revision:revision.current??existing?.revision,requestId:requestId.current});setSavedId(result.id);setPhase("done");reload();notify("게시글을 저장했습니다.");}
     }catch(e){setServerNote(e instanceof Error?e.message:"저장하지 못했습니다.");setPhase("edit");}finally{lock.current=false;}
   }
   const hub = value.scope==='player' && value.target ? `/players/${value.target}` : HUB.club;
@@ -181,8 +184,8 @@ function PostEditor() {
               <label htmlFor="post-target">대상 구단 <span className="req" aria-hidden="true">*</span></label>
               <Select id="post-target" invalid={!!visible("target")} describedBy="post-target-hint" onBlur={blur("target")}
                 disabled={isEdit || phase !== "edit" || !myTeam} value={value.target} onChange={target => update({ target, transaction: "" })} placeholder="구단 선택" options={clubTargets}/>
-              <small id="post-target-hint">응원 구단 라운지에만 작성할 수 있습니다.</small>
-            </> : <div id="post-target" className="post-fixed-target" tabIndex={-1}><strong>{targetName ? `${targetName} 커뮤니티` : "선수 상세페이지에서 글쓰기를 시작해 주세요."}</strong><small>이 선수에 대한 게시글을 작성합니다.</small>{!value.target && <Link className="text-link" href="/market">선수 시장으로 이동 →</Link>}</div>}
+              <small id="post-target-hint">본진 구단에만 게시글을 작성할 수 있습니다. {!myTeam&&<Link className="text-link" href="/mypage#my-profile">본진 구단 설정 →</Link>}</small>
+            </> : <div id="post-target" className={`post-fixed-target${value.target ? "" : " missing"}`} tabIndex={-1}>{(() => { const target = getPlayer(value.target); return target ? <PlayerPortrait player={target} size="sm" /> : <span className="post-fixed-icon" aria-hidden="true"><MessageCircle size={18} /></span>; })()}<span className="post-fixed-text"><small>게시 대상</small><strong>{targetName ? `${targetName} 커뮤니티` : "선수 상세페이지에서 글쓰기를 시작해 주세요."}</strong>{value.target ? <small>이 선수에 대한 게시글을 작성합니다.</small> : <Link className="text-link" href="/market">선수 시장으로 이동 →</Link>}</span>{value.target && <span className="post-fixed-lock"><Lock size={12} />고정</span>}</div>}
             {fieldError("target")}
           </div>
         </div>
@@ -210,16 +213,18 @@ function PostEditor() {
           {fieldError("transaction")}
           {attached && (
             <div className="attached-trade compact">
-              <span className="attached-label"><Paperclip size={14} />첨부 미리보기 <button type="button" className="text-link attachment-remove" aria-label="거래 첨부 취소" disabled={phase !== "edit"} onClick={() => update({ transaction: "" })}><X size={14}/>첨부 취소</button></span>
+              <span className="attached-label"><Paperclip size={14} />첨부 미리보기</span>
               <div className="attached-row">
                 <span className={`trade-type ${attached.type}`}>{attached.type === "buy" ? "매입" : "매각"}</span>
                 <strong>{attached.playerName}</strong>
                 <span className="num">{money(attached.price)} P</span>
                 <span className="muted">{dateText(attached.date)}</span>
+                <button type="button" className="attachment-remove" aria-label="거래 첨부 취소" disabled={phase !== "edit"} onClick={() => update({ transaction: "" })}><X size={14}/>첨부 취소</button>
               </div>
             </div>
           )}
         </div>
+        {!isEdit?<PollEditor value={poll} onChange={value=>{requestId.current="";setPoll(value);}} disabled={phase!=="edit"}/>:existing?.poll?<p className="fine-print">이 게시글의 투표는 질문·선택지를 변경할 수 없습니다.</p>:null}
         {serverNote && (
           <div className="data-notice" role="alert">
             <Lock size={15} />

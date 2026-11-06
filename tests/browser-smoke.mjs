@@ -108,7 +108,7 @@ try {
   const empty=loadTs("../lib/kickx/data.ts").emptyPlatformData();
   const state={...empty,
     players:[{id:"test-player",name:"CI-only player",english:null,short:null,team:null,position:"FW",country:null,age:null,price:0,change:0,performance:0,volume:0,goals:0,assists:0,minutes:0,history:[],records:[],analysis:null,updatedAt:null,status:null}],
-    session:{userId:"test-account",role:"member",profile:{nickname:"테스트 사용자",team:null}},
+    session:{userId:"test-account",role:"member",profile:{nickname:"테스트 사용자",team:null,createdAt:new Date().toISOString()}},
     member:{financialReady:false,points:null,totalAssets:null,playerAssets:null,profit:null,returnRate:null,weeklyRank:null,holdings:[],transactions:[],watchlist:[],assetHistory:[],squad:null},
   };
   // Public page requests must start before a deliberately blocked dashboard.
@@ -445,7 +445,7 @@ try {
   assert.ok(await mockPage.getByRole('button',{name:'9번 FW 자리 CI-only player',exact:true}).isVisible());
   await mockPage.getByRole('button',{name:'2번 DF 자리 빈 자리',exact:true}).click();
   await mockPage.getByRole('textbox',{name:'스쿼드 선수 검색',exact:true}).waitFor();
-  assert.ok((await mockPage.locator('.slot-note').innerText()).includes('DF'));
+  assert.ok((await mockPage.locator('.squad-selected-player').innerText()).includes('DF'));
   report.checks.push('Bought holdings automatically occupy the pitch; vacancies open the position market without placement/save controls');
   let savedPost=null;const savedPosts=[];const savedComments=[];const communityActions=[];let quickAttempts=0,quickRequest=null;
   await mock.route(/\/api\/kickx\/community(?:\?|$)/,async route=>{
@@ -481,7 +481,7 @@ try {
   assert.ok(['createPost','comment','like','report'].every(action=>communityActions.includes(action)));
   report.checks.push('Post creation, direct detail, comment, desired-state like and report use real endpoint contracts');
   // Separate feeds require a title and retain the fixed player target.
-  state.session.profile.team='test-team';state.session.profile.teams=['test-team'];
+  state.session.profile.team='test-team';state.session.profile.teams=['test-team'];state.session.profile.primaryTeam='test-team';
   savedPosts.push({...savedPost,id:'44444444-4444-4444-4444-444444444444',scope:'club',target:'test-team',targetName:'테스트 구단',title:'구단 전용 제목',body:'구단에서만 보여야 하는 이야기입니다.',likes:0,liked:false,commentCount:0});
   await visit(mockPage,base+'/community',{});
   assert.equal(await mockPage.locator('.community-switch').count(),0);assert.equal(await mockPage.locator('.popular-list').count(),0);assert.equal(await mockPage.locator('.explorer').count(),0);assert.equal(await mockPage.locator('.feed-composer').count(),0);
@@ -500,9 +500,9 @@ try {
   await mockPage.getByRole('button',{name:'게시하기',exact:true}).click();await mockPage.getByRole('link',{name:'실패해도 유지되는 선수 이야기입니다.',exact:true}).waitFor();
   assert.equal(quickAttempts,2);assert.equal(savedPost.scope,'player');assert.equal(savedPost.target,'test-player');assert.equal(await mockPage.getByLabel('빠른 글 내용',{exact:true}).count(),0);
   await visit(mockPage,base+'/community/clubs',{});assert.equal(await mockPage.locator('.community-board-table tr[data-scope=player]').count(),0);await mockPage.getByRole('link',{name:'구단 전용 제목',exact:true}).waitFor();
-  state.session.profile.team=null;state.session.profile.teams=[];
+  state.session.profile.team=null;state.session.profile.teams=[];state.session.profile.primaryTeam=null;state.session.profile.createdAt=new Date().toISOString();
   await visit(mockPage,base+'/community/clubs/test-team',{});assert.equal(await mockPage.locator('.feed-composer').count(),0);
-  state.session.profile.team='test-team';state.session.profile.teams=['test-team'];
+  state.session.profile.team='test-team';state.session.profile.teams=['test-team'];state.session.profile.primaryTeam='test-team';
   for(const width of [1440,390]){
     await mockPage.setViewportSize({width,height:900});
     for(const path of ['/community','/community/players','/community/clubs','/community/players/test-player','/community/clubs/test-team']){
@@ -544,7 +544,7 @@ try {
   const leagueIds=['bsd-1','bsd-3','bsd-4','bsd-5','bsd-6'];
   state.leagues=leagueIds.map((id,i)=>({id,name:`선택 리그 ${i+1}`}));state.leagues.push({id:'bsd-7',name:'챔피언스리그'});
   state.teams.push(...leagueIds.map((leagueId,i)=>({id:`selected-club-${i}`,name:`선택 구단 ${i+1}`,english:`Club ${i+1}`,leagueId})),{id:'bsd-4401',name:'테스트 홈 구단',english:'Home',leagueId:'bsd-1'},{id:'bsd-4402',name:'테스트 원정 구단',english:'Away',leagueId:null});
-  state.session.profile.team=null;state.session.profile.teams=[];
+  state.session.profile.team=null;state.session.profile.teams=[];state.session.profile.primaryTeam=null;state.session.profile.createdAt=new Date().toISOString();
   await visit(mockPage,base+'/mypage',{});
   for(let i=0;i<5;i++){await mockPage.getByRole('combobox',{name:`선택 리그 ${i+1} 응원 구단`,exact:true}).click();await mockPage.getByRole('option',{name:`선택 구단 ${i+1}`,exact:true}).click();}
   await mockPage.getByRole('button',{name:'변경사항 저장',exact:true}).click();await mockPage.getByText('프로필을 저장했습니다.',{exact:true}).waitFor();
@@ -593,10 +593,10 @@ try {
   report.checks.push('Five support selectors save independently by league; monthly schedule defaults to the last seven KST days with accessible day/all toggles; today/latest navigation and all-competition club schedules remain intact');
   state.policy={...state.policy,version:'report-v3',clubCompetitionsEnabled:false};
   await visit(mockPage,base+'/rules',{});
-  assert.equal(await mockPage.getByRole('heading',{name:'시즌 누적 가격',exact:true}).isVisible(),true);
+  assert.equal(await mockPage.getByRole('heading',{name:'경기별 가치 변동',exact:true}).isVisible(),true);
   assert.equal(await mockPage.getByRole('heading',{name:'초기 가격',exact:true}).isVisible(),true);
   assert.ok((await mockPage.locator('body').innerText()).includes('최대 11명까지 보유하며'));
-  report.checks.push('Report rules explain cumulative seasons, positional baselines and 11-player holding quotas');
+  report.checks.push('Report rules explain neutral match-based returns, positional baselines and 11-player holding quotas');
   await mock.close();
   const marketContext=await browser.newContext();
   await marketContext.route(/^https:\/\//,route=>route.abort());

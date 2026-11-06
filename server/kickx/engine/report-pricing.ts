@@ -1,8 +1,8 @@
-import { REPORT_PARAMETERS, RULE_VERSION } from './report-policy';
+import { REPORT_PARAMETERS, RULE_VERSION, SCORING_REVISION } from './report-policy';
 import type { PricingMatch } from './pricing';
 
 export type ReportParameters = { [K in keyof typeof REPORT_PARAMETERS]: number } & {
- valuationStartMs?:number; capChangeAtMs?:number; previousMaxUp?:number; previousMaxDown?:number;
+ scoringRevision?:string; valuationStartMs?:number; capChangeAtMs?:number; previousMaxUp?:number; previousMaxDown?:number;
 };
 export type ReportBaseline = {
  source:string;season:number;gameCount:number;meanScore:number|null;seedScore:number;
@@ -12,10 +12,10 @@ export type ReportBaseline = {
 const clamp=(n:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,n));
 const rounded=(n:number,p=6)=>Math.round(n*10**p)/10**p;
 export function validateReportParameters(p:ReportParameters) {
- if(Object.values(p).some(x=>!Number.isFinite(x)) || p.lambda<=0 || p.kappa<=0 || p.beta<=0 || p.s<=0 || p.deviationLimit<=0 ||
+ if(Object.entries(p).some(([key,x])=>key!=='scoringRevision'&&!Number.isFinite(x)) || (p.scoringRevision!=null&&p.scoringRevision!==SCORING_REVISION) || p.lambda<=0 || p.kappa<=0 || p.beta<=0 || p.s<=0 || p.deviationLimit<=0 ||
   !Number.isSafeInteger(p.minPrice)||!Number.isSafeInteger(p.maxPrice)||!Number.isSafeInteger(p.initialMin)||!Number.isSafeInteger(p.initialMax)||
   p.minPrice<=0 || p.minPrice>p.initialMin || p.initialMin>p.initialMax || p.initialMax>p.maxPrice || p.maxPrice>1_000_000_000 ||
-  p.maxUp<0 || p.maxUp>=1 || p.maxDown<0 || p.maxDown>=1 || (p.nonParticipationRate??.015)<0 || (p.nonParticipationRate??.015)>=1 || (p.valuationStartMs!=null&&(!Number.isSafeInteger(p.valuationStartMs)||p.valuationStartMs<0)) || p.lowerQuantile<0 || p.upperQuantile>1 || p.lowerQuantile>=p.upperQuantile)
+  p.maxUp<0 || p.maxUp>=1 || p.maxDown<0 || p.maxDown>=1 || p.neutralScore!==6 || p.pointRate<=0 || p.pointRate>.1 || (p.nonParticipationRate??.015)<0 || (p.nonParticipationRate??.015)>=1 || (p.valuationStartMs!=null&&(!Number.isSafeInteger(p.valuationStartMs)||p.valuationStartMs<0)) || p.lowerQuantile<0 || p.upperQuantile>1 || p.lowerQuantile>=p.upperQuantile)
   throw new Error('INVALID_REPORT_PARAMETERS');
  if (p.capChangeAtMs != null && (!Number.isSafeInteger(p.capChangeAtMs) || p.capChangeAtMs < 0 ||
   p.previousMaxUp == null || p.previousMaxDown == null || p.previousMaxUp < 0 || p.previousMaxUp >= 1 || p.previousMaxDown < 0 || p.previousMaxDown >= 1))
@@ -59,15 +59,17 @@ export function calculateReportPricing(matches:PricingMatch[],baseline:ReportBas
   const cumulative=(p.kappa*baseline.seedScore+sum)/(p.kappa+n);
   const deviation=(cumulative-baseline.seedScore)/Math.max(Math.abs(baseline.seedScore),p.s);
   if(Date.parse(at(m))<(p.valuationStartMs??0))continue;
-  const target=dnp?clamp(price*(1-(p.nonParticipationRate??.015)),p.minPrice,p.maxPrice):clamp(baseline.price*Math.exp(p.beta*clamp(deviation,-p.deviationLimit,p.deviationLimit)),p.minPrice,p.maxPrice);
+  // This game's assessment alone determines direction. Historical form remains informational.
+  const exposure=dnp?0:Math.min(m.minutes!/60,1);
+  const rate=dnp?-(p.nonParticipationRate??.015):clamp((m.score!-p.neutralScore)*p.pointRate*exposure,-p.maxDown,p.maxUp);
+  const target=clamp(price*(1+rate),p.minPrice,p.maxPrice);
   const before=price;
-  const historical=p.capChangeAtMs!=null && Date.parse(at(m))<p.capChangeAtMs;
-  const maxUp=historical?p.previousMaxUp!:p.maxUp,maxDown=historical?p.previousMaxDown!:p.maxDown;
+  const maxUp=p.maxUp,maxDown=p.maxDown;
   // Ceil/floor after rounding: even a 1-P price may not cross the percentage cap.
   price=clamp(Math.round(target),Math.max(p.minPrice,Math.ceil(before*(1-maxDown))),Math.min(p.maxPrice,Math.floor(before*(1+maxUp))));
   steps.push({fixtureId:m.fixtureId,playedAt:at(m),priceBefore:before,priceAfter:price,targetPrice:Math.round(target),
-   formScore:rounded(cumulative),changePercent:rounded((price-before)*100/before,4),window:[...window],
-   evidence:{season,n,reason:dnp?'NON_PARTICIPATION':'PERFORMANCE',nonParticipationRate:dnp?(p.nonParticipationRate??.015):null,rawScore:m.score,boundedScore:bounded,cumulativeSum:sum,cumulativeScore:cumulative,deviation,target,referenceHash:baseline.referenceHash}});
+   formScore:dnp?p.neutralScore:(m.score!||0),changePercent:rounded((price-before)*100/before,4),window:[m.fixtureId],
+   evidence:{season,n,reason:dnp?'NON_PARTICIPATION':'MATCH_SCORE',neutralScore:p.neutralScore,exposure,rate,nonParticipationRate:dnp?(p.nonParticipationRate??.015):null,rawScore:m.score,boundedScore:bounded,cumulativeSum:sum,cumulativeScore:cumulative,deviation,target,referenceHash:baseline.referenceHash}});
  }
  return {version:RULE_VERSION,baseline,price,steps};
 }

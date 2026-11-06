@@ -43,11 +43,11 @@ test('player history, scores, pricing and trading restrictions run together afte
   const started=[],historyGate=deferred();
   const base=loadTs('../server/kickx/catalog.ts',{'server-only':{},'@/lib/kickx/data':data,'./trading':trading,'./public-prototype':{readPrototypePublic:async()=>({})}});
   const replies={player_catalog:{data:{id:'test-player',name:'Test'},error:null},price_history:{data:[],error:null},player_analyses:{data:null,error:null},player_initial_values:{data:null,error:null}};
-  const db={from:table=>queryFor(table,started,replies,{price_history:historyGate})};
+  const db={rpc:async name=>{started.push(name);await historyGate.promise;return {data:[],error:null};},from:table=>queryFor(table,started,replies,{})};
   const {readPlayerDetail}=loadTs('../server/kickx/catalog-pages.ts',{'server-only':{},'./catalog':base,'./prototype':{checkDatabase,migrationMissing},'./trading':{attachTradeWindows:async(_db,players)=>{started.push('windows');return players;}},'@/lib/kickx/catalog-query':{}});
   const operation=readPlayerDetail(db,'test-player');
   await new Promise(resolve=>setImmediate(resolve));
-  for(const name of ['price_history','scoped_player_match_records','scoped_performance_results','player_initial_values','player_price_results','windows'])assert.ok(started.includes(name),name);
+  for(const name of ['kickx_player_value_history','scoped_player_match_records','scoped_performance_results','player_initial_values','player_price_results','windows'])assert.ok(started.includes(name),name);
   historyGate.resolve();
   const player=await operation;
   assert.equal(player.id,'test-player');assert.deepEqual(player.records,[]);assert.deepEqual(player.pricing.recent,[]);

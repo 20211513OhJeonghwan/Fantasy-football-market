@@ -16,10 +16,10 @@ test('free model is explicit and an absent key cannot issue model requests',()=>
  assert.deepEqual(model.reportModelConfig({GEMINI_API_KEY:' test '}),{key:'test',model:'gemini-3.5-flash-lite'});
  assert.equal(model.reportModelConfig({GEMINI_API_KEY:'test',GEMINI_REPORT_MODEL:'../other'}),null);
 });
-test('the prompt contains performance facts without prices, uncertainty boilerplate or identities',()=>{
+test('the prompt contains performance facts with exact outcome but without private identities',()=>{
  const prompt=JSON.parse(model.reportPrompt({...facts,raw:'private',portfolio:{balance:1000},userId:'secret'}));
- assert.equal(prompt.score,57);
- for(const field of ['playerName','opponent','raw','portfolio','userId','playedAt','priceBefore','priceAfter','targetPrice','weightedForm','usedAppearances','direction','provisional','unverifiedItems'])assert.equal(prompt[field],undefined);
+ assert.equal(prompt.score,57);assert.equal(prompt.priceBefore,100000);assert.equal(prompt.priceAfter,92000);assert.equal(prompt.neutralScore,6);
+ for(const field of ['playerName','opponent','raw','portfolio','userId','playedAt','targetPrice','weightedForm','usedAppearances','direction','provisional','unverifiedItems'])assert.equal(prompt[field],undefined);
  assert.equal(prompt.contributions[1].item,'득점');
 });
 test('model output cannot replace exact numbers, inject HTML, return excess text, or skip a section',()=>{

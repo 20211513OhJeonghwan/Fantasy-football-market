@@ -421,7 +421,7 @@ export function mockPublicData(now = Date.now()): PublicData {
     updatedAt: new Date(now - 2 * 3_600_000).toISOString(),
   };
 }
-export const mockSession: Session = { userId: "demo-user", role: "admin", profile: { nickname: "데모 매니저", team: "ars" } };
+export const mockSession: Session = { userId: "demo-user", role: "admin", profile: { nickname: "데모 매니저", team: "ars",teams:["ars"],primaryTeam:"ars",createdAt:new Date().toISOString() } };
 export function mockMemberData(now = Date.now()): MemberData {
   return member(players(now), now);
 }

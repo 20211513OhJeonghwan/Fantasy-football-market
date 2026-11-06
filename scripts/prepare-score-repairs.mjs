@@ -2,6 +2,8 @@
 // Generated SQL publishes only previously blocked records with unchanged sources.
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import * as performanceModule from '../server/kickx/engine/report-performance.ts';
+import * as policyModule from '../server/kickx/engine/report-policy.ts';
+const {RULE_VERSION,SCORING_REVISION}=policyModule.default??policyModule;
 const {calculatePerformance}=performanceModule.default??performanceModule;
 const [input,output]=process.argv.slice(2);
 if(!input||!output)throw Error('Usage: node --import tsx scripts/prepare-score-repairs.mjs evidence.json output-directory');
@@ -10,7 +12,7 @@ for(const fixture of cases)for(const player of fixture.players){
  const result=calculatePerformance({...fixture,...player,regularSeasonOnly:true});
  if(result.status==='blocked'){const reason=result.warnings.at(-1);remaining[reason]=(remaining[reason]??0)+1;continue;}
  const job=jobs.get(player.playerId)??{playerId:player.playerId,results:[],proofs:[]};
- job.results.push({...result,ruleVersion:'report-v3',scoringRevision:'regular-season-20261030'});
+ job.results.push({...result,ruleVersion:RULE_VERSION,scoringRevision:SCORING_REVISION});
  job.proofs.push({fixtureId:fixture.fixtureId,statsAt:player.statsAt,fixtureAt:fixture.fixtureAt,eventsAt:fixture.eventsAt,inputHash:player.inputHash});
  jobs.set(player.playerId,job);
 }

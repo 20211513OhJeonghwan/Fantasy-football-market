@@ -6,6 +6,7 @@ insert into public.leagues(id,name) values('bsd-1','Test League') on conflict do
 insert into public.teams(id,name,league_id) values('bsd-1','Home','bsd-1'),('bsd-2','Away','bsd-1');
 insert into public.players(id,name,position,provider) values('bsd-10','Player','FW','bsd');
 insert into public.profiles(id,nickname,team_id) values('00000000-0000-0000-0000-000000000001','Author','bsd-1'),('00000000-0000-0000-0000-000000000002','Moderator','bsd-2');
+update public.profiles set primary_team_id=team_id,primary_confirmed_at=now();
 insert into public.user_roles values('00000000-0000-0000-0000-000000000002','admin');
 create function pg_temp.expect_error(command text,expected text) returns void language plpgsql as $$begin
  begin execute command;exception when others then if sqlerrm=expected or sqlstate=expected then return;else raise;end if;end;raise exception 'Expected % from %',expected,command;
@@ -36,7 +37,7 @@ do $$declare input jsonb;begin
  input:=jsonb_build_object('postId',current_setting('kickx.test.post'),'revision',2);
  perform pg_temp.expect_error(format('select public.kickx_community_write(%L,%L::jsonb)','deletePost',input),'NOT_AUTHOR');
  input:=jsonb_build_object('postId',current_setting('kickx.test.post'),'requestId',gen_random_uuid(),'body','Fan-only comment');
- perform pg_temp.expect_error(format('select public.kickx_community_write(%L,%L::jsonb)','comment',input),'FAN_REQUIRED');
+ perform pg_temp.expect_error(format('select public.kickx_community_write(%L,%L::jsonb)','comment',input),'PARTICIPATION_REQUIRED');
  input:=jsonb_build_object('postId',current_setting('kickx.test.post'),'commentId',current_setting('kickx.test.comment'),'reason','Review this comment');
  perform public.kickx_community_write('report',input);perform public.kickx_community_write('report',input);
 end $$;
