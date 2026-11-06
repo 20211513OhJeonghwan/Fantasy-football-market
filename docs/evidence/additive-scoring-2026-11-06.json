@@ -1,5 +1,5 @@
 {
-  "status": "awaiting_database_migration_confirmation",
+  "status": "applied_and_production_verified",
   "checks": {
     "unit": 281,
     "sqlScripts": 36,
@@ -9,18 +9,27 @@
   },
   "storageBeforeBytes": 356428947,
   "storageAfter": {
-    "checkedAt": "2026-11-06T08:47:31.606828+00:00",
-    "integrity": {
+    "checkedAt": "2026-11-06T12:08:54.541775+00:00",
+    "tableBytes": {
+      "price_history": 2613248,
+      "operation_audit": 32006144,
+      "performance_results": 29122560,
+      "player_price_results": 2187264,
+      "calculation_revisions": 26066944,
+      "player_market_snapshots": 548864
+    },
+    "databaseBytes": 289156243,
+    "catalogRlsInvoker": true,
+    "replayIdempotence": {
+      "unchanged": true
+    },
+    "financialIntegrity": {
       "trades": "bae91eaba4f020d6a7db528558ff6992",
       "wallets": "368a3c66d6093b83368387c37abaa96b",
       "holdings": "451d7b6b78cbd7c479982d2901fcd3a6"
     },
-    "auditBytes": 31449088,
-    "databaseBytes": 291736723,
-    "revisionBytes": 26353664,
-    "scoringRevision": "neutral-six-20261106",
-    "performanceBytes": 26214400,
-    "repeatedAttempts": 65401
+    "privateReplayExposed": false,
+    "snapshotGuardInstalled": true
   },
   "audit": {
     "scope": "identical automatic calculation.withheld only; same player, actor, reason and KST date",
@@ -38,7 +47,7 @@
     "gamePriceCeiling": null,
     "nonParticipationRate": 0.015
   },
-  "pricingApplied": false,
+  "pricingApplied": true,
   "display": {
     "order": [
       "rising",
@@ -53,18 +62,157 @@
       "falling top five"
     ]
   },
-  "pendingMigration": "20261106103458_additive_point_pricing_release.sql",
   "deployment": {
-    "personalMain": false,
-    "teamMain": false,
-    "blocker": "Supabase apply_migration execution confirmations repeatedly expired; no new schema installed"
+    "personalMain": true,
+    "teamMain": true,
+    "applicationCommits": {
+      "hyun1290/kick-x-test": "a079bc165189e6ff857eac73b59b018b1e821c03",
+      "Patrick-KR1/Fantasy-football-market": "c209edcc440538825b4881465c27a2e989c4bdc0"
+    },
+    "vercelProduction": "success on both applications",
+    "urls": [
+      "https://kick-x-test.vercel.app/",
+      "https://fantasy-football-market.vercel.app/"
+    ],
+    "headersVerified": {
+      "rising": 643,
+      "falling": 775,
+      "notPlayed": 1306
+    },
+    "screenshot": "docs/evidence/kickx-production-20261106.png"
   },
-  "liveCheck": {
+  "migrationInstalled": "20261106103458_additive_point_pricing_release.sql",
+  "installedMigrations": [
+    "20261106103458",
+    "20261106115352"
+  ],
+  "storageBeforeRepricing": {
+    "checkedAt": "2026-11-06T08:47:31.606828+00:00",
+    "integrity": {
+      "trades": "bae91eaba4f020d6a7db528558ff6992",
+      "wallets": "368a3c66d6093b83368387c37abaa96b",
+      "holdings": "451d7b6b78cbd7c479982d2901fcd3a6"
+    },
+    "auditBytes": 31449088,
+    "databaseBytes": 291736723,
+    "revisionBytes": 26353664,
+    "scoringRevision": "neutral-six-20261106",
+    "performanceBytes": 26214400,
+    "repeatedAttempts": 65401
+  },
+  "revaluation": {
+    "scores": 14034,
+    "players": 3011,
+    "priceSteps": 8312,
+    "benchmarkCounts": {
+      "DF": 2871,
+      "FW": 2180,
+      "GK": 594,
+      "MF": 3554
+    },
+    "providerRequests": 0,
+    "positionBenchmarks": {
+      "DF": 7.867468,
+      "FW": 5.095757,
+      "GK": 9.426347,
+      "MF": 8.407006
+    },
+    "financialIntegrityUnchanged": true
+  },
+  "productionValidation": {
+    "policy": {
+      "s": 1,
+      "beta": 0.3,
+      "kappa": 4,
+      "maxUp": 0.1,
+      "lambda": 5,
+      "maxDown": 0.1,
+      "maxPrice": 9007199254740991,
+      "minPrice": 10000,
+      "priceUnit": 100000,
+      "initialMax": 150000,
+      "initialMin": 50000,
+      "pricingModel": "position-points",
+      "lowerQuantile": 0.05,
+      "upperQuantile": 0.95,
+      "deviationLimit": 1,
+      "benchmarkCounts": {
+        "DF": 2871,
+        "FW": 2180,
+        "GK": 594,
+        "MF": 3554
+      },
+      "scoringRevision": "report-additive-20261106",
+      "priceSensitivity": 0.1,
+      "valuationStartMs": 1791990000000,
+      "benchmarkCutoffMs": 1791990000000,
+      "positionBenchmarks": {
+        "DF": 7.867468,
+        "FW": 5.095757,
+        "GK": 9.426347,
+        "MF": 8.407006
+      },
+      "nonParticipationRate": 0.015
+    },
+    "maxScore": 36.25,
+    "checkedAt": "2026-11-06T12:03:13.857265+00:00",
+    "dnpEvents": 3477,
+    "scoreRows": 14034,
+    "migrations": [
+      "20261106103458",
+      "20261106115352"
+    ],
+    "priceEvents": 8312,
+    "databaseBytes": 344886419,
+    "marketSummary": {
+      "rising": 643,
+      "volume": 446,
+      "falling": 775,
+      "notPlayed": 1306,
+      "calculatedAt": "2026-11-06T12:00:26.394691+00:00",
+      "readyPlayers": 2799,
+      "totalPlayers": 2934,
+      "pricedPlayers": 2799
+    },
+    "sampleReports": 8,
+    "maxActualChange": 10,
+    "postLaunchPlayed": 4835,
+    "scoreCeilingRows": 0,
+    "formulaMismatches": 0,
+    "minimumViolations": 0,
+    "rateCapViolations": 0,
+    "financialIntegrity": {
+      "trades": "bae91eaba4f020d6a7db528558ff6992",
+      "wallets": "368a3c66d6093b83368387c37abaa96b",
+      "holdings": "451d7b6b78cbd7c479982d2901fcd3a6"
+    },
+    "preLaunchChartRows": 0,
+    "sampleSourceChecks": 80,
+    "scoreSumMismatches": 0,
+    "invalidPriceStatuses": 0,
+    "postLaunchAtMostFive": 1715,
+    "preLaunchPriceEvents": 0,
+    "sampleUncachedSources": 0,
+    "sampleReportMismatches": 0,
+    "snapshotPriceMismatches": 0,
+    "latestDnpScoreMismatches": 0,
+    "priceDirectionMismatches": 0,
+    "dnpClassificationMismatches": 0
+  },
+  "liveCheckBeforeRelease": {
     "checkedAt": "2026-11-06T10:40:32.940121+00:00",
     "databaseBytes": 291843219,
     "replayInstalled": false,
     "scoringRevision": "neutral-six-20261106",
     "pricingModel": null,
     "dnpReasonInstalled": false
+  },
+  "logCompactionInstalled": true,
+  "securityAdvisors": {
+    "changedFromPreReleaseBaseline": false,
+    "rls_enabled_no_policy": 34,
+    "anon_security_definer_function_executable": 7,
+    "authenticated_security_definer_function_executable": 19,
+    "auth_leaked_password_protection": 1
   }
 }

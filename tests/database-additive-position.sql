@@ -1,6 +1,6 @@
 begin;
 insert into public.leagues(id,name)values('bsd-1','Premier League')on conflict(id)do nothing;
-update public.kickx_policy set version='report-v3',report_reference='{"status":"ready","season":2025}',report_parameters='{"lambda":5,"kappa":4,"beta":0.3,"s":1,"deviationLimit":1,"initialMin":50000,"initialMax":150000,"minPrice":10000,"maxPrice":1000000,"maxUp":0.1,"maxDown":0.1,"nonParticipationRate":0.015,"lowerQuantile":0.05,"upperQuantile":0.95,"valuationStartMs":1791990000000,"neutralScore":6,"pointRate":0.025,"scoringRevision":"neutral-six-20261106"}';
+update public.kickx_policy set version='report-v3',report_reference='{"status":"ready","season":2025,"hash":"frozen","groups":{"FW":{"mean":6,"lower":-10,"upper":30,"baselines":[6]}}}',report_parameters='{"lambda":5,"kappa":4,"beta":0.3,"s":1,"deviationLimit":1,"initialMin":50000,"initialMax":150000,"minPrice":10000,"maxPrice":1000000,"maxUp":0.1,"maxDown":0.1,"nonParticipationRate":0.015,"lowerQuantile":0.05,"upperQuantile":0.95,"valuationStartMs":1791990000000,"neutralScore":6,"pointRate":0.025,"scoringRevision":"neutral-six-20261106"}';
 insert into public.teams(id,name,league_id)values('add-home','Add home','bsd-1'),('add-away','Add away','bsd-1');
 insert into public.players(id,name,position,team_id,provider)select 'add-'||p,p,p,'add-home','bsd'from unnest(array['GK','DF','MF','FW'])p;
 insert into public.player_initial_values(player_id,rule_version,detail,input_hash)select id,'report-v3','{"season":2025,"price":100000,"seedScore":6,"lower":-10,"upper":30,"referenceHash":"frozen","fixtures":[]}',id from public.players where id like 'add-%';
@@ -26,6 +26,10 @@ do $$declare answer jsonb;integrity jsonb:=public.kickx_valuation_integrity();be
  if(select count(*)from public.price_history where player_id='add-FW')<>4 then raise exception 'Launch/three game prices missing';end if;
  if exists(select 1 from public.player_price_results v join public.performance_results r using(player_id,fixture_id)where v.player_id like 'add-%'and r.score>20 and v.price_after<=v.price_before)then raise exception 'Strong game did not rise';end if;
  if exists(select 1 from public.kickx_calculation_sources('add-FW')where not cached)then raise exception 'Replay fingerprint differs from incremental ingestion';end if;
+ -- The first ordinary automatic publication after replay must keep the latest DNP blank.
+ perform public.kickx_publish_calculation_delta(null,'add-FW',public.kickx_calculation_token('add-FW'),'[]');
+ if(select performance from public.player_market_snapshots where id='add-FW')is not null then raise exception 'Incremental publisher resurrected an old played-match score after DNP';end if;
+ if(select last_price_reason from public.player_market_snapshots where id='add-FW')is distinct from 'not-played'then raise exception 'Incremental publisher lost DNP classification';end if;
  if public.kickx_match_report_context('add-FW','add-after-0')->>'referenceScore'<>'9.000000'then raise exception 'Report lacks actual reference';end if;
  if public.kickx_valuation_integrity()is distinct from integrity then raise exception 'Financial integrity changed';end if;
  if kickx_private.apply_additive_assessments(integrity)->>'unchanged'<>'true'then raise exception 'Replay duplicated';end if;
