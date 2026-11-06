@@ -26,14 +26,12 @@
 .squad-notice b { font-size: 13px; }
 .squad-notice.danger { background: var(--down-bg); color: var(--down); box-shadow: inset 3px 0 0 var(--down); }
 .squad-market .slot-hint b { color: var(--ink); }
-/* Pitch slot actions: empty slots read as "buy", the selected owned slot as "sell". */
+/* Pitch slots select a position or player; executable trade controls stay in the market panel. */
 .automatic-squad .pitch-player:not(.filled) .pitch-name.open { padding: 2px 8px; border: 1px dashed rgba(255, 255, 255, 0.8); border-radius: 4px; background: rgba(255, 255, 255, 0.14); color: #fff; }
 .automatic-squad button.pitch-player:not(.filled):hover .pitch-name.open, .automatic-squad .pitch-player.selected:not(.filled) .pitch-name.open { background: var(--yellow); border-color: var(--ink); color: var(--ink); text-shadow: none; }
 .automatic-squad .pitch-player.selected:not(.filled) .jersey.jersey-empty path { fill: rgba(255, 226, 58, 0.35); stroke: var(--yellow); stroke-width: 2; stroke-dasharray: 3 3; }
 .automatic-squad .pitch-player.selected:not(.filled)::after { border-color: var(--yellow); }
 .feed-composer-form > fieldset > label:not(.sr-only) { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 13px; font-weight: 800; }
-.pitch-action { padding: 1px 8px; border-radius: 4px; font-size: 11px; font-weight: 900; }
-.pitch-action.sell { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
 .squad-market-list { list-style: none; margin: 12px 0 0; padding: 0; }
 .squad-market-list > li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 11px 0; border-bottom: var(--border); }
 .squad-market-list > li.owned { margin: 0 -8px; padding: 11px 8px; background: #fbfbf6; }
@@ -100,7 +98,6 @@
   .squad-selected-player > .button { grid-column: 1 / -1; width: 100%; }
   .squad-market-positions button { min-height: 32px; padding: 5px 9px; }
   .automatic-squad .pitch-player:not(.filled) .pitch-name.open { padding: 1px 5px; font-size: 10px; }
-  .pitch-action { font-size: 9.5px; padding: 0 5px; }
   .player-community-entry { min-height: 220px; }
   .player-community-entry h2 { font-size: 19px; }
 }

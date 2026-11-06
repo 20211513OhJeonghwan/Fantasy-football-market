@@ -94,7 +94,6 @@ export function Pitch({
                   <Jersey kit={kit(getTeam(p.team))} />
                   <span className="pitch-name">{p.short || p.name}</span>
                   {!compact && <span className="pitch-value num">{money(p.price)}</span>}
-                  {onSelect && selected === i && <span className="pitch-action sell" aria-hidden="true">매각</span>}
                 </>
               ) : (
                 <>
