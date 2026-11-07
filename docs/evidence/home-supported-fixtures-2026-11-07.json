@@ -1,0 +1,26 @@
+{
+  "dateKST": "2026-11-07",
+  "behavior": "Signed-in home featured fixtures show one relevant regular-league match per primary/subteam, max five, duplicate meetings removed. Guests retain public matches. Empty supported schedules never fall back to unrelated clubs.",
+  "source": "Per-club bounded reads independent of the global 20-match preview",
+  "cache": "Public per-club cache and visible-page refresh at 60 seconds; no external BSD request or database writes",
+  "validation": {
+    "build": "passed",
+    "lint": "passed",
+    "unitPassed": 287,
+    "unitFailed": 0,
+    "browser": {
+      "widths": [
+        390,
+        1440
+      ],
+      "checks": [
+        "390px: primary plus subteam outside global preview; no unrelated fallback; setup empty state; guest public fixtures; no guest personalized request",
+        "1440px: primary plus subteam outside global preview; no unrelated fallback; setup empty state; guest public fixtures; no guest personalized request"
+      ],
+      "errors": []
+    }
+  },
+  "limits": [
+    "Member screen behavior verified with controlled local API responses; no production account settings or trades changed."
+  ]
+}

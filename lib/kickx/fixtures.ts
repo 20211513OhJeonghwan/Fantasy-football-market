@@ -1,4 +1,4 @@
-import type { Fixture } from "./types";
+import type { Fixture, Profile } from "./types";
 const live = new Set(["1H","HT","2H","ET","BT","P","LIVE"]);
 const finished = new Set(["FT","AET","PEN"]);
 const scheduled = new Set(["NS","TBD"]);
@@ -22,6 +22,26 @@ export function selectFeaturedFixtures(fixtures: Fixture[], limit = 3) {
     if (diff) return diff;
     return fixtureGroup(a.status) === "finished" ? Date.parse(b.startsAt) - Date.parse(a.startsAt) : Date.parse(a.startsAt) - Date.parse(b.startsAt);
   }).slice(0, limit);
+}
+
+/** Include the permanent club even when a legacy profile's teams array omits it. */
+export function featuredTeamIds(profile: Pick<Profile, "primaryTeam" | "team" | "teams"> | null | undefined) {
+  return [...new Set([profile?.primaryTeam, ...(profile?.teams ?? (profile?.team ? [profile.team] : []))].filter((id): id is string => !!id))].slice(0, 5);
+}
+
+/** One relevant match per supported club; a meeting between two supported clubs appears once. */
+export function selectSupportedFixtures(fixtures: Fixture[], teams: string[], now = Date.now()) {
+  const eligible = fixtures.filter(f => {
+    const group = fixtureGroup(f.status), starts = Date.parse(f.startsAt);
+    return Number.isFinite(starts) && group !== "other" && (group !== "scheduled" || starts >= now);
+  });
+  const ordered = selectFeaturedFixtures(eligible, eligible.length);
+  const selected = new Map<string, Fixture>();
+  for (const team of new Set(teams)) {
+    const fixture = ordered.find(f => f.home === team || f.away === team);
+    if (fixture) selected.set(fixture.id, fixture);
+  }
+  return selectFeaturedFixtures([...selected.values()], selected.size);
 }
 
 /** Within each date, leagues stay together and each league is chronological. */

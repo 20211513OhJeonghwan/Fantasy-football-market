@@ -7,10 +7,10 @@ import { ArrowRight, BookOpen, Search, Shield, TrendingUp, X } from "lucide-reac
 import { Pagination } from './pagination';
 import { dateText, money, score } from "@/lib/kickx/data";
 import { fixedSquadSlots, SQUAD_FORMATION } from "@/lib/kickx/squad";
-import { fixtureGroup, fixtureStatus, selectFeaturedFixtures } from "@/lib/kickx/fixtures";
-import type { Player } from "@/lib/kickx/types";
+import { fixtureGroup, fixtureStatus, selectFeaturedFixtures, featuredTeamIds, selectSupportedFixtures } from "@/lib/kickx/fixtures";
+import type { Fixture, Player } from "@/lib/kickx/types";
 import { clubIdentity } from "@/lib/kickx/club-identity";
-import { usePlatform } from "./provider";
+import { usePlatform, useResource } from "./provider";
 import { useCatalogPage } from "./catalog";
 import { Change, DataEmpty, Modal, PlayerIdentity, PlayerPortrait, PositionBadge, Sparkline, TeamBadge, WatchButton } from "./ui";
 import { Pitch } from "./squad";
@@ -84,9 +84,17 @@ function SquadPanel() {
     </section>
   );
 }
+const emptyHomeFixtures = () => ({ items: [] as Fixture[] });
 function FixturesPanel() {
-  const { data, getTeam } = usePlatform();
-  const featured = selectFeaturedFixtures(data.fixtures);
+  const { data, getTeam, status, mock } = usePlatform();
+  const personalized = !!data.session;
+  const teams = featuredTeamIds(data.session?.profile);
+  const remote = useResource(personalized && teams.length && !mock ? `/api/kickx/home-fixtures?teams=${encodeURIComponent([...teams].sort().join(","))}` : null, emptyHomeFixtures, 60000);
+  const featured = status !== "ready" ? [] : personalized
+    ? mock ? selectSupportedFixtures(data.fixtures, teams) : remote.status === "ready" ? remote.data.items : []
+    : selectFeaturedFixtures(data.fixtures);
+  const loading = status === "loading" || personalized && teams.length > 0 && !mock && remote.status === "loading";
+  const failed = personalized && teams.length > 0 && !mock && remote.status === "error";
   return (
     <section className="dash-panel dash-fixtures" aria-labelledby="dash-fixtures">
       <PanelHead title="주요 경기" href="/fixtures" label="전체 일정" />
@@ -106,7 +114,11 @@ function FixturesPanel() {
           })}
         </ul>
       ) : (
-        <div className="dash-placeholder"><Shield size={22} /><span>경기 일정이 준비되면 표시됩니다.</span></div>
+        <div className="dash-placeholder"><Shield size={22} />
+          <span>{loading ? "응원 구단 경기를 불러오고 있습니다." : failed ? "응원 구단 경기를 불러오지 못했습니다." : personalized ? teams.length ? "본진·서브팀의 경기 일정이 아직 없습니다." : "본진과 서브팀을 설정하면 해당 구단의 경기가 표시됩니다." : "경기 일정이 준비되면 표시됩니다."}</span>
+          {failed && <button type="button" className="text-link" onClick={remote.reload}>다시 시도</button>}
+          {personalized && !teams.length && <Link className="text-link" href="/mypage">응원 구단 설정</Link>}
+        </div>
       )}
     </section>
   );

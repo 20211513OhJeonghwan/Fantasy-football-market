@@ -50,13 +50,14 @@ test('creating a configured catalog repository never starts session refresh, and
 test('public list and detail routes use anonymous reads while private filters still require authentication',async()=>{
  const selected=[];let publicClients=0;
  const http=loadTs('../server/kickx/http.ts',{'server-only':{},'@/lib/kickx/validation':validation,'./config':config,'./supabase':{}});
- const {catalogPage,catalogDetail}=loadTs('../server/kickx/catalog-http.ts',{
+ const {catalogPage,catalogDetail,homeFixtures}=loadTs('../server/kickx/catalog-http.ts',{
   'server-only':{},'@/lib/kickx/catalog-query':loadTs('../lib/kickx/catalog-query.ts'),'@/lib/kickx/fixtures':loadTs('../lib/kickx/fixtures.ts'),
+  '@/lib/kickx/support':loadTs('../lib/kickx/support.ts'),
   './repository':{getKickxRepository:()=>({configured:true})},'./supabase':{createPublicClient:()=>{publicClients++;return 'public';}},
   './http':{...http,authenticatedClient:async()=>{selected.push('authenticated');return {client:'member'};}},
   './prototype':{prototypeAvailable:async()=>true},'./read-timing':{timedRead:operation=>operation()},
   './catalog-pages':{readPlayerPage:async db=>{selected.push(db);return {items:[]};},readFixturePage:async db=>{selected.push(db);return {items:[]};},readPlayerDetail:async db=>{selected.push(db);return null;}},
-  './public-cache':{readCachedPlayerPage:async()=>{publicClients++;selected.push('public');return {items:[]};},readCachedFixturePage:async()=>{publicClients++;selected.push('public');return {items:[]};},readCachedPlayerDetail:async()=>{publicClients++;selected.push('public');return null;}},
+  './public-cache':{readCachedPlayerPage:async()=>{publicClients++;selected.push('public');return {items:[]};},readCachedFixturePage:async()=>{publicClients++;selected.push('public');return {items:[]};},readCachedPlayerDetail:async()=>{publicClients++;selected.push('public');return null;},readCachedHomeClubFixture:async team=>{selected.push('club:'+team);return null;}},
  });
  for(const [kind,query] of [['players',''],['fixtures',''],['players','scope=watch'],['players','scope=owned']]){
   assert.equal((await catalogPage(new Request('https://kickx.invalid/api/kickx/'+kind+'?'+query),kind)).status,200);
@@ -64,6 +65,11 @@ test('public list and detail routes use anonymous reads while private filters st
  assert.equal((await catalogDetail('bsd-330')).status,200);
  assert.equal(publicClients,3);
  assert.deepEqual(selected,['public','public','authenticated','member','authenticated','member','public']);
+ assert.equal((await homeFixtures(new Request('https://kickx.invalid/api/kickx/home-fixtures?teams=sub,main,main'))).status,200);
+ assert.deepEqual(selected.slice(-2),['club:main','club:sub']);
+ const calls=selected.length;
+ assert.equal((await homeFixtures(new Request('https://kickx.invalid/api/kickx/home-fixtures?teams=unsafe)'))).status,400);
+ assert.equal(selected.length,calls);
 });
 
 test('OAuth callback trusts the one-time server exchange, never a cookie identity or a redundant user request',async()=>{
