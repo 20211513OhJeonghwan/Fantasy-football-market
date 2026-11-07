@@ -41,3 +41,12 @@ export function parseCatalogQuery(params: URLSearchParams, kind: "players" | "fi
   };
 }
 export function literalLike(value: string) { return value.replace(/[\\%_]/g, "\\$&"); }
+
+export function parseFeaturedTeams(params: URLSearchParams) {
+  const raw = params.get("teams") || "";
+  if (!raw) return [];
+  const teams = raw.split(",");
+  if (teams.length > 5 || teams.some(team => !/^[a-zA-Z0-9_-]{1,100}$/.test(team)))
+    throw new CatalogInputError("응원 구단은 최대 5개까지 조회할 수 있습니다.");
+  return [...new Set(teams)].sort();
+}
