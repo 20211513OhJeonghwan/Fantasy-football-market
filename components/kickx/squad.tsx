@@ -171,11 +171,6 @@ export function Pitch({
                   {!compact && (
                     <span className="pitch-value num">{money(p.price)}</span>
                   )}
-                  {onSelect && selected === i && (
-                    <span className="pitch-action sell" aria-hidden="true">
-                      매각
-                    </span>
-                  )}
                 </>
               ) : (
                 <>
