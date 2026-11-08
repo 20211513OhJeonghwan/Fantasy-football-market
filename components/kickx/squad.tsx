@@ -521,8 +521,8 @@ export function SquadScreen() {
         const p = getPlayer(h.playerId), frozen = h.bench!;
         return <li key={h.playerId}>
           {p && <PlayerPortrait player={p} size="sm"/>}
-          <div className="bench-player"><strong>{p ? <Link href={`/players/${p.id}`}>{p.name}</Link> : h.playerName}</strong><span>{benchReason(frozen.reason)} · 가격 동결</span><small>자동 매각 기한 <time dateTime={frozen.expiresAt}>{dateText(frozen.expiresAt)}</time></small></div>
-          <strong className="bench-price num">{money(frozen.price)}<small> P</small></strong>
+          <div className="roster-bench-player"><strong>{p ? <Link href={`/players/${p.id}`}>{p.name}</Link> : h.playerName}</strong><span>{benchReason(frozen.reason)} · 가격 동결</span><small>자동 매각 기한 <time dateTime={frozen.expiresAt}>{dateText(frozen.expiresAt)}</time></small></div>
+          <strong className="roster-bench-price num">{money(frozen.price)}<small> P</small></strong>
           <TradeButton player={p} side="sell" className="button secondary small"/>
         </li>;
       })}</ul>

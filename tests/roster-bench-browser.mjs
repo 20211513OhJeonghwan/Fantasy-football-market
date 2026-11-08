@@ -50,6 +50,7 @@ try {
     assert.match(await p.locator('.squad-count').innerText(), /1\s*\/\s*11/);
     assert.equal(await p.locator('.pitch').getByText(players[0].name, { exact: true }).count(), 0);
     assert(await bench.getByRole('button', { name: '매각', exact: true }).isEnabled());
+    assert((await bench.locator('.roster-bench-player > span').first().boundingBox()).width >= 120, `Bench reason is too narrow at ${width}`);
     assert(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Squad overflow at ${width}`);
     await p.screenshot({ path: `${out}/bench-${width}.png`, fullPage: true });
     await bench.getByRole('button', { name: '매각', exact: true }).click();
