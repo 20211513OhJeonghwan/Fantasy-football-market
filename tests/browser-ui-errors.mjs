@@ -105,11 +105,11 @@ try{
   const {c,p,state}=await setup();await goto(p,'/rules');
   let text=await p.locator('.rules-page').innerText();
   assert(text.includes('2026. 10. 15.'));assert(!text.includes('10월 1일'));
-  assert(text.includes('초기 가격 범위 50,000~150,000P'));assert(text.includes('전체 가격 범위 10,000~1,000,000P'));
+  assert(text.includes('초기 가격 범위 50,000~150,000P'));assert(text.includes('최소 가격 10,000P'));assert(text.includes('고정된 최고 가격은 없습니다'));assert(!text.includes('전체 가격 범위'));
   assert(text.includes('직전 가격에서 1.5% 하락'));
   state.policy.reportParameters={initialMin:60000,initialMax:160000,minPrice:12000,maxPrice:900000,valuationStartMs:Date.parse('2026-10-19T15:00:00Z')};
   await goto(p,'/rules');text=await p.locator('.rules-page').innerText();
-  assert(text.includes('2026. 10. 20.'));assert(text.includes('초기 가격 범위 60,000~160,000P'));assert(text.includes('전체 가격 범위 12,000~900,000P'));
+  assert(text.includes('2026. 10. 20.'));assert(text.includes('초기 가격 범위 60,000~160,000P'));assert(text.includes('최소 가격 12,000P'));assert(text.includes('고정된 최고 가격은 없습니다'));assert(!text.includes('전체 가격 범위'));
   await p.screenshot({path:out+'/rules.png',fullPage:true});await c.close();
  });
  await check('Manual page jump preserves focus when pagination remounts',async()=>{
