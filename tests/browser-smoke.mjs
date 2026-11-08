@@ -595,7 +595,7 @@ try {
   await visit(mockPage,base+'/rules',{});
   assert.equal(await mockPage.getByRole('heading',{name:'경기별 가치 변동',exact:true}).isVisible(),true);
   assert.equal(await mockPage.getByRole('heading',{name:'초기 가격',exact:true}).isVisible(),true);
-  assert.ok((await mockPage.locator('body').innerText()).includes('최대 11명까지 보유하며'));
+  assert.ok((await mockPage.locator('body').innerText()).includes('주전은 최대 11명이며'));
   report.checks.push('Report rules explain neutral match-based returns, positional baselines and 11-player holding quotas');
   await mock.close();
   const marketContext=await browser.newContext();

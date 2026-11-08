@@ -56,6 +56,8 @@ jobs:
         run: |
           npm install --prefix /tmp/kickx-browser --no-package-lock @playwright/test@1.56.1
           node /tmp/kickx-browser/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Roster bench desktop and mobile checks
+        run: node tests/roster-bench-browser.mjs
       - name: Desktop and mobile smoke tests
         run: node tests/browser-smoke.mjs
       - name: Community, notification and profile regression tests
@@ -66,7 +68,6 @@ jobs:
           node tests/browser-ui-errors.mjs
           node tests/squad-market-community-browser.mjs
           node tests/primary-polls-browser.mjs
-          node tests/roster-bench-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
