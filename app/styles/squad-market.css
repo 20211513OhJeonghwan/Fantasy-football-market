@@ -45,6 +45,19 @@
 .squad-market-list .button { max-width: 105px; white-space: normal; text-align: center; font-size: 12px; padding: 7px 10px; }
 .squad-market .pagination { flex-wrap: wrap; }
 .squad-legacy { margin-top: 20px; }
+.squad-bench { margin-top: 20px; }
+.squad-bench h2 { font-size: 18px; }
+.squad-bench > p { color: var(--text-3); font-size: 13px; line-height: 1.7; }
+.squad-bench > ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); list-style: none; margin: 14px 0 0; padding: 0; gap: 12px; }
+.squad-bench li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 14px; border: var(--border); border-radius: 8px; }
+.bench-player { display: grid; min-width: 0; gap: 4px; }
+.bench-player strong { font-size: 14px; overflow-wrap: anywhere; }
+.bench-player > span, .bench-player small { color: var(--text-3); font-size: 12px; line-height: 1.6; }
+.bench-price { font-size: 16px; white-space: nowrap; }
+.bench-price small { font-size: 11px; font-weight: 500; }
+.squad-bench li > .button { grid-column: 2 / -1; justify-self: end; }
+.holding-state:has(> small) { display: grid; gap: 5px; justify-items: start; }
+.holding-state > small { font-size: 10px; color: var(--text-3); line-height: 1.5; white-space: normal; }
 .squad-legacy h2 { font-size: 18px; }
 .squad-legacy p { color: var(--text-3); font-size: 13px; line-height: 1.6; }
 .squad-legacy ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -84,6 +97,9 @@
 .player-lounge-cta { display: flex; justify-content: space-between; width: 100%; min-height: 48px; margin-bottom: 16px; }
 @media (max-width: 1100px) { .automatic-squad { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {
+  .squad-bench > ul { grid-template-columns: minmax(0, 1fr); }
+  .squad-bench li { padding: 12px; gap: 8px; }
+  .squad-bench li > .button { width: 100%; }
   .automatic-squad .pitch { aspect-ratio: auto; height: clamp(300px, 75vw, 440px); }
   .squad-market { padding: 14px; }
   .automatic-squad .squad-toolbar { padding: 12px; }

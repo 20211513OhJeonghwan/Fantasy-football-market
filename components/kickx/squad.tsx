@@ -3,13 +3,14 @@ import { MatchNotificationToggle } from "./notifications";
 import { useId, useState, type CSSProperties } from "react";
 import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
 import { Plus, Search, X } from "lucide-react";
-import { money, score } from "@/lib/kickx/data";
+import { dateText, money, score } from "@/lib/kickx/data";
 import {
   ownedSquadSlots,
   squadCapacity,
   POSITION_LIMITS,
   SQUAD_FORMATION,
 } from "@/lib/kickx/squad";
+import { benchReason } from "@/lib/kickx/bench";
 import type { Player, Position } from "@/lib/kickx/types";
 import { usePlatform } from "./provider";
 import { useCatalogPage } from "./catalog";
@@ -266,8 +267,9 @@ export function SquadScreen() {
     lineup.every((p) => p.price != null)
       ? lineup.reduce((sum, p) => sum + p.price!, 0)
       : null;
+  const bench = member?.holdings.filter((h) => h.bench) ?? [];
   const excess =
-    member?.holdings.filter((h) => !slots.includes(h.playerId)) ?? [];
+    member?.holdings.filter((h) => !h.bench && !slots.includes(h.playerId)) ?? [];
   function selectSlot(i: number) {
     setSelected(selected === i ? null : i);
     setPosition(null);
@@ -468,9 +470,7 @@ export function SquadScreen() {
             <>
               <ul className="squad-market-list">
                 {players.map((p) => {
-                  const owned = member?.holdings.some(
-                    (h) => h.playerId === p.id,
-                  );
+                  const holding = member?.holdings.find((h) => h.playerId === p.id), owned = !!holding;
                   return (
                     <li key={p.id} className={owned ? "owned" : ""}>
                       <Link
@@ -482,13 +482,13 @@ export function SquadScreen() {
                       <div className="squad-market-name">
                         <Link href={`/players/${p.id}`}>
                           <strong>{p.name}</strong>
-                          {owned && <span className="tag ink">보유</span>}
+                          {owned && <span className="tag ink">{holding.bench ? "동결 벤치" : "보유"}</span>}
                         </Link>
                         <span>
                           {getTeam(p.team)?.name ?? "—"} · {p.position ?? "—"}
                         </span>
                         <b className="num">
-                          {money(p.price)} P <Change value={p.change} />
+                          {money(holding?.bench?.price ?? p.price)} P {!holding?.bench && <Change value={p.change} />}
                         </b>
                       </div>
                       <TradeButton
@@ -514,6 +514,19 @@ export function SquadScreen() {
           )}
         </section>
       </div>
+    {!!bench.length && <section className="panel squad-bench" aria-label="변경 선수 벤치">
+      <div className="section-title"><h2>변경 선수 벤치 <span className="muted num">{bench.length}명</span></h2></div>
+      <p>소속 구단·포지션이 변경된 보유 선수입니다. 변경 당시 가격으로 동결되며, 주전 11명 정원에 포함되지 않습니다. 14일 안에 매각하지 않으면 수수료 2%를 적용해 자동 매각됩니다.</p>
+      <ul>{bench.map(h => {
+        const p = getPlayer(h.playerId), frozen = h.bench!;
+        return <li key={h.playerId}>
+          {p && <PlayerPortrait player={p} size="sm"/>}
+          <div className="bench-player"><strong>{p ? <Link href={`/players/${p.id}`}>{p.name}</Link> : h.playerName}</strong><span>{benchReason(frozen.reason)} · 가격 동결</span><small>자동 매각 기한 <time dateTime={frozen.expiresAt}>{dateText(frozen.expiresAt)}</time></small></div>
+          <strong className="bench-price num">{money(frozen.price)}<small> P</small></strong>
+          <TradeButton player={p} side="sell" className="button secondary small"/>
+        </li>;
+      })}</ul>
+    </section>}
       {!!excess.length && (
         <section
           className="panel squad-legacy"

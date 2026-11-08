@@ -98,6 +98,8 @@ export type Holding = {
   value: number | null;
   profit: number | null;
   returnRate: number | null;
+  /** Only this previously acquired holding is frozen; public market prices stay current. */
+  bench?: { price: number; startedAt: string; expiresAt: string; reason: 'transfer' | 'position' | 'transfer_position' } | null;
 };
 export type Post = {
   id: string;

@@ -27,7 +27,8 @@ import {
 import { dateText, money, percent, unavailableAction } from "@/lib/kickx/data";
 import { tradeService } from "@/lib/kickx/trade";
 import { POSITION_LIMITS, purchaseBlock, squadCapacity } from "@/lib/kickx/squad";
-import type { DataStatus, Player, Position, SeriesPoint, TradeQuote } from "@/lib/kickx/types";
+import { benchExpired, benchReason, benchSalePlayer } from "@/lib/kickx/bench";
+import type { DataStatus, Holding, Player, Position, SeriesPoint, TradeQuote } from "@/lib/kickx/types";
 import { usePlatform } from "./provider";
 import { clubIdentity, leagueIdentity, luminance, type CrestShape } from "@/lib/kickx/club-identity";
 
@@ -606,7 +607,7 @@ export function Modal({
   );
 }
 type TradeState = "loading" | "review" | "submitting" | "done" | "failed";
-function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | "sell"; onClose: () => void }) {
+function TradeDialog({ player, side, bench, onClose }: { player: Player; side: "buy" | "sell"; bench?: Holding['bench']; onClose: () => void }) {
   const { data, mock, getTeam, getPlayer, notify, reload } = usePlatform();
   const capacity = squadCapacity(data.member?.holdings ?? [], getPlayer);
   const buyBlocked = side === "buy" && data.member ? purchaseBlock(player, data.member.holdings, getPlayer) : null;
@@ -634,6 +635,7 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
   const quotedAt = quote?.quotedAt ? Date.parse(quote.quotedAt) : null;
   const remaining = expiresAt == null ? null : Math.max(0, Math.floor((expiresAt - now) / 1000));
   const expired = state === "review" && expiresAt != null && expiresAt <= now;
+  const benchOverdue = side === "sell" && benchExpired(bench, now);
   // Errors that a fresh quote can resolve (expired quote, changed price).
   const renewable = !positionBlocked && state === "failed" && (!quote || /견적|가격이 변경/.test(error));
   useEffect(() => {
@@ -642,7 +644,7 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
     return () => clearInterval(timer);
   }, [state, expiresAt]);
   async function confirm() {
-    if (lock.current || !quote || !service.available || insufficient || expired || positionBlocked) return;
+    if (lock.current || !quote || !service.available || insufficient || expired || positionBlocked || benchOverdue) return;
     lock.current = true;
     setState("submitting");
     setError("");
@@ -658,7 +660,7 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
     }
   }
   const rows: [string, ReactNode, string?][] = [
-    ["현재 가치", <>{money(quote?.price)}<span className="unit">P</span></>],
+    [bench ? "동결 가격" : "현재 가치", <>{money(quote?.price)}<span className="unit">P</span></>],
     ["수량", <>{quote?.quantity ?? "—"}<span className="unit">명</span></>],
     [side === "sell" ? "판매 수수료" : "수수료", quote?.fee == null ? "—" : <>{side === "sell" && quote.fee > 0 ? "−" : ""}{money(quote?.fee)}<span className="unit">P</span></>, "minor"],
     [side === "buy" ? "결제 금액" : "예상 정산액", quote?.settlement == null ? "—" : <>{money(quote?.settlement)}<span className="unit">P</span></>, "total"],
@@ -685,7 +687,8 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
             </div>
             <Change value={player.change} />
           </div>
-          {data.member && <section className="trade-capacity" aria-label="현재 포지션별 보유 현황">
+          {bench && <p className="trade-notice" role="note"><b>{benchReason(bench.reason)} · 동결 벤치</b><span>변경 당시 {money(bench.price)}P로 매각합니다. 자동 매각 기한은 {dateText(bench.expiresAt)}이며, 수수료 2%가 적용됩니다. 주전 정원에는 포함되지 않습니다.</span></p>}
+          {data.member && !bench && <section className="trade-capacity" aria-label="현재 포지션별 보유 현황">
             <div><strong>현재 보유 현황</strong><span className={`num trade-capacity-total ${capacity.total >= 11 ? "full" : ""}`}>{capacity.total} / 11명</span></div>
             <ul>{(["GK", "DF", "MF", "FW"] as const).map(pos => {
               const full = capacity.counts[pos] >= POSITION_LIMITS[pos], target = player.position === pos;
@@ -719,12 +722,13 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
           )}
           {expired && (
             <div className="trade-state warn" role="alert">
-              <span>견적이 만료되었습니다. 현재 가격으로 새 견적을 받아 주세요.</span>
+              <span>견적이 만료되었습니다. {bench ? "동결 가격으로" : "현재 가격으로"} 새 견적을 받아 주세요.</span>
               <button className="button secondary small" onClick={() => setAttempt((a) => a + 1)}>새 견적 받기</button>
             </div>
           )}
           {insufficient && <p className="trade-state error" role="alert">보유 포인트가 부족합니다. 거래 후 잔액이 0P보다 작을 수 없습니다.</p>}
           {positionBlocked && <p className="trade-state error" role="alert">{buyBlocked || "포지션 정보를 확인한 뒤 매입할 수 있습니다."}</p>}
+          {benchOverdue && <p className="trade-state warn" role="alert">14일 보관 기한이 지나 자동 매각 처리 중입니다. 처리 후 거래 내역에서 확인할 수 있습니다.</p>}
           {state === "failed" && !positionBlocked && (
             <div className="trade-state error" role="alert">
               <span>{error || "거래를 처리하지 못했습니다."}</span>
@@ -733,14 +737,14 @@ function TradeDialog({ player, side, onClose }: { player: Player; side: "buy" | 
           )}
           <p className="fine-print">
             {service.available
-              ? `${mock ? "예시 모드 · 수수료와 정산액은 예시 값입니다. " : ""}확정 시점의 가격으로 체결되며, 가격이 바뀌면 다시 확인을 요청합니다.`
+              ? `${mock ? "예시 모드 · 수수료와 정산액은 예시 값입니다. " : ""}${bench ? "동결 가격은 시세와 무관하게 유지됩니다. 14일 기한 이후에는 자동 매각됩니다." : "확정 시점의 가격으로 체결되며, 가격이 바뀌면 다시 확인을 요청합니다."}`
               : "거래 서비스 준비 중입니다. 현재는 주문을 접수할 수 없습니다."}
           </p>
           <div className="modal-actions">
             <button className="button secondary" onClick={onClose} disabled={state === "submitting"}>취소</button>
             <button
               className={`button ${side === "buy" ? "primary" : "accent"}`}
-              disabled={!quote || !service.available || insufficient || expired || positionBlocked || !(state === "review" || (state === "failed" && !renewable))}
+              disabled={!quote || !service.available || insufficient || expired || positionBlocked || benchOverdue || !(state === "review" || (state === "failed" && !renewable))}
               title={service.available ? undefined : unavailableAction}
               aria-busy={state === "submitting"}
               onClick={() => void confirm()}
@@ -765,23 +769,29 @@ export function TradeButton({
   label?: string;
 }) {
   // Keep the reviewed side/player stable when a successful receipt updates holdings.
-  const [open, setOpen] = useState<{player:Player;side:"buy"|"sell"}|null>(null);
+  const [open, setOpen] = useState<{player:Player;side:"buy"|"sell";bench?:Holding['bench']}|null>(null);
   const {data}=usePlatform();
+  const holding = data.member?.holdings.find(h => h.playerId === player?.id);
+  const bench = side === "sell" ? holding?.bench : null;
+  const effectivePlayer = player && side === "sell" ? benchSalePlayer(player, holding) : player;
+  const overdue = benchExpired(bench);
   const unknownPosition = side === "buy" && !!player && !player.position;
-  const locked=player?.tradeWindow?.locked;
+  const locked=effectivePlayer?.tradeWindow?.locked;
   const duplicate=side==="buy" && data.member?.holdings.some(h=>h.playerId===player?.id);
   return (
     <>
-      <button type="button" className={className} disabled={locked || duplicate || unknownPosition || !player || !!player.status || player.price == null} title={locked ? "경기 시작 90분 전부터 종료 확인 후 10분까지 거래할 수 없습니다." : unknownPosition ? "포지션 정보가 없어 매입할 수 없습니다." : player?.status || undefined} onClick={() => player && setOpen({player,side})}>
-        {locked ? "경기 거래 제한" : duplicate ? "보유 중" : unknownPosition ? "포지션 확인 중" : player?.status || label || (side === "buy" ? "매입" : "매각")}
+      <button type="button" className={className} disabled={overdue || locked || duplicate || unknownPosition || !effectivePlayer || !!effectivePlayer.status || effectivePlayer.price == null} title={overdue ? "14일 보관 기한이 지나 자동 매각 처리 중입니다." : locked ? "경기 시작 90분 전부터 종료 확인 후 10분까지 거래할 수 없습니다." : unknownPosition ? "포지션 정보가 없어 매입할 수 없습니다." : effectivePlayer?.status || undefined} onClick={() => effectivePlayer && setOpen({player:effectivePlayer,side,bench})}>
+        {overdue ? "자동 매각 처리 중" : locked ? "경기 거래 제한" : duplicate ? "보유 중" : unknownPosition ? "포지션 확인 중" : effectivePlayer?.status || label || (side === "buy" ? "매입" : "매각")}
       </button>
-      {open && <TradeDialog player={open.player} side={open.side} onClose={() => setOpen(null)} />}
+      {open && <TradeDialog player={open.player} side={open.side} bench={open.bench} onClose={() => setOpen(null)} />}
     </>
   );
 }
 /** Visible reason for a blocked trade, so touch users see what the disabled button's tooltip says. */
 export function TradeNotice({ player }: { player: Player }) {
   const { data } = usePlatform();
+  const bench = data.member?.holdings.find(h => h.playerId === player.id)?.bench;
+  if (bench) return <p className="trade-notice" role="note"><b>변경 선수 · 동결 벤치</b><span>{benchReason(bench.reason)}로 기존 보유분은 {money(bench.price)}P로 동결됩니다. {dateText(bench.expiresAt)}까지 직접 매각할 수 있으며, 이후 수수료 2%를 적용해 자동 매각됩니다.</span></p>;
   const lock = player.tradeWindow;
   if (lock?.locked) return (
     <p className="trade-notice lock" role="note">

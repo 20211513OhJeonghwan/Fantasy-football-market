@@ -8,9 +8,9 @@ export const POSITION_LIMITS: Record<Position, number> = { GK: 1, DF: 4, MF: 3, 
 export const SQUAD_LIMIT = 11;
 
 /** Holdings, rather than a separately saved lineup, determine purchase capacity. */
-export function squadCapacity(holdings: Pick<Holding, 'playerId'>[], getPlayer: (id: string) => Pick<Player, 'position'> | undefined) {
+export function squadCapacity(holdings: Pick<Holding, 'playerId' | 'bench'>[], getPlayer: (id: string) => Pick<Player, 'position'> | undefined) {
   const counts: Record<Position, number> = { GK: 0, DF: 0, MF: 0, FW: 0 };
-  const ids = [...new Set(holdings.map(h => h.playerId))];
+  const ids = [...new Set(holdings.filter(h => !h.bench).map(h => h.playerId))];
   let unknown = 0;
   for (const id of ids) {
     const position = getPlayer(id)?.position;
@@ -20,7 +20,7 @@ export function squadCapacity(holdings: Pick<Holding, 'playerId'>[], getPlayer: 
   return { counts, total: ids.length, unknown, excess: ids.length > SQUAD_LIMIT || Object.entries(counts).some(([p, n]) => n > POSITION_LIMITS[p as Position]) };
 }
 
-export function purchaseBlock(player: Pick<Player, 'id' | 'position'>, holdings: Pick<Holding, 'playerId'>[], getPlayer: (id: string) => Pick<Player, 'position'> | undefined) {
+export function purchaseBlock(player: Pick<Player, 'id' | 'position'>, holdings: Pick<Holding, 'playerId' | 'bench'>[], getPlayer: (id: string) => Pick<Player, 'position'> | undefined) {
   const capacity = squadCapacity(holdings, getPlayer);
   if (holdings.some(h => h.playerId === player.id)) return '이미 보유한 선수입니다.';
   if (!player.position) return '포지션 정보를 확인한 뒤 매입할 수 있습니다.';
@@ -32,14 +32,15 @@ export function purchaseBlock(player: Pick<Player, 'id' | 'position'>, holdings:
 }
 
 /** Match the database's automatic placement, retaining valid occupied slots. Legacy excess assets stay owned. */
-export function ownedSquadSlots(holdings: Pick<Holding, 'playerId'>[], slots: (string | null)[], formationId: string,
+export function ownedSquadSlots(holdings: Pick<Holding, 'playerId' | 'bench'>[], slots: (string | null)[], formationId: string,
   getPlayer: (id: string) => Player | undefined): (string | null)[] {
-  const owned = new Set(holdings.map(h => h.playerId));
+  const active = holdings.filter(h => !h.bench);
+  const owned = new Set(active.map(h => h.playerId));
   const result = fixedSquadSlots(slots, formationId, id => owned.has(id) ? getPlayer(id) : undefined);
   const used = new Set(result.filter(Boolean));
   return result.map((id, i) => {
     if (id) return id;
-    const next = holdings.find(h => !used.has(h.playerId) && getPlayer(h.playerId)?.position === SQUAD_FORMATION.positions[i]);
+    const next = active.find(h => !used.has(h.playerId) && getPlayer(h.playerId)?.position === SQUAD_FORMATION.positions[i]);
     if (!next) return null;
     used.add(next.playerId);
     return next.playerId;

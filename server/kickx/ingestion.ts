@@ -1,4 +1,5 @@
 import "server-only";
+import { tradeExecutionStatus } from "@/lib/kickx/bench";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdminData, IngestionState } from "@/lib/kickx/types";
 import { emptyAdminData } from "@/lib/kickx/data";
@@ -31,7 +32,7 @@ export async function readOperations(): Promise<AdminData> {
  // Preserve community/trade visibility during the one-time new migration rollout.
  const restrictedCount=restricted.error?null:restricted.count;
  return {...empty,prototypeReady:true,summary:{players:null,completedJobs:null,failedJobs:null,pendingReports:pending.count,members:members.count,restrictedMembers:restrictedCount,trades:tradeCount.count},
- trades:(trades.data??[]).map(t=>({id:t.id,userId:t.user_id,playerId:t.player_id,playerName:t.player_name,type:t.side,quantity:1,price:t.price,fee:t.fee,net:t.net,date:t.created_at,status:"체결"})),
+ trades:(trades.data??[]).map(t=>({id:t.id,userId:t.user_id,playerId:t.player_id,playerName:t.player_name,type:t.side,quantity:1,price:t.price,fee:t.fee,net:t.net,date:t.created_at,status:tradeExecutionStatus(t.execution_reason)})),
  reports:(reports.data??[]).map(r=>({id:r.id,postId:r.post_id,commentId:r.comment_id,title:r.community_posts?.title??"삭제된 글",content:r.comment_id?r.community_comments?.body:r.community_posts?.body,reason:r.reason,status:({open:"접수",hidden:"숨김",dismissed:"기각",restored:"복원"} as Record<string,string>)[r.status],date:r.created_at})),
  audit:(audit.data??[]).map(a=>({id:a.id,description:`${a.action} · ${a.target??""} · ${JSON.stringify(a.detail)}`,date:a.created_at}))};
 }
