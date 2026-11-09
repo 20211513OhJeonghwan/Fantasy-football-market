@@ -24,6 +24,12 @@ export function positionLimits(id?: string | null): Record<Position, number> {
 export const POSITION_LIMITS = positionLimits(SQUAD_FORMATION.id);
 export const SQUAD_LIMIT = 11;
 
+/** Teammate's compact pitch label: keep one-word registered names, otherwise show the final name part. */
+export function compactPlayerName(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return parts[parts.length - 1] ?? '';
+}
+
 /** Holdings, rather than a separately saved lineup, determine purchase capacity. */
 export function squadCapacity(holdings: Pick<Holding, 'playerId' | 'bench'>[], getPlayer: (id: string) => Pick<Player, 'position'> | undefined, formationId?: string | null) {
   const counts: Record<Position, number> = { GK: 0, DF: 0, MF: 0, FW: 0 };

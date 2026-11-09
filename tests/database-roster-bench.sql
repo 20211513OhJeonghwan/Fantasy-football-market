@@ -62,12 +62,13 @@ do $$declare m jsonb;q jsonb;begin
  m:=public.kickx_member_data();
  if (m->>'playerAssets')::bigint<>220000 then raise exception 'Portfolio did not retain frozen values: %',m->>'playerAssets';end if;
  if (select x->>'value' from jsonb_array_elements(m->'holdings') x where x->>'playerId'='bench-move')<>'70000' then raise exception 'Frozen value missing';end if;
- if (select x#>>'{bench,expiresAt}' from jsonb_array_elements(m->'holdings') x where x->>'playerId'='bench-move') is null then raise exception 'Bench deadline missing';end if;
+ if (select (x#>>'{bench,expiresAt}')::timestamptz-(x#>>'{bench,startedAt}')::timestamptz from jsonb_array_elements(m->'holdings') x where x->>'playerId'='bench-move') is distinct from interval '168 hours' then raise exception 'Bench deadline must be seven days';end if;
  perform pg_temp.bench_error(format('select public.kickx_trade(%L,gen_random_uuid())',current_setting('bench.oldquote')),'PRICE_CHANGED');
  perform pg_temp.bench_error($q$select public.kickx_quote('bench-move','buy')$q$,'ALREADY_OWNED');
  perform pg_temp.bench_buy('bench-replacement');
  if (select slots[1] from public.squads where user_id=auth.uid())<>'bench-replacement' then raise exception 'Bench did not free GK capacity';end if;
  perform pg_temp.bench_error($q$select kickx_private.expire_roster_bench()$q$,'42501');
+ perform pg_temp.bench_error($q$select kickx_private.bench_retention()$q$,'42501');
  perform pg_temp.bench_error($q$select kickx_private.bench_quote('00000000-0000-0000-0000-000000000095','bench-move')$q$,'42501');
 end $$;
 reset role;
@@ -113,7 +114,14 @@ end $$;
 -- Exact manual cutoff, normal period preserved for a player changed later.
 update public.players set position='MF' where id='bench-expire';
 update public.players set position='MF' where id='bench-future';
-update public.holdings set bench_started_at=clock_timestamp()-interval '336 hours 1 second'
+update public.holdings set bench_started_at=clock_timestamp()-interval '167 hours' where player_id='bench-expire';
+do $$declare q jsonb;begin
+ q:=kickx_private.bench_quote('00000000-0000-0000-0000-000000000094','bench-expire');
+ if (q->>'benchExpiresAt')::timestamptz<=clock_timestamp() then raise exception 'Seven-day quote expired early';end if;
+ perform pg_temp.bench_error(format('select kickx_private.settle_bench(%L,%L,gen_random_uuid(),true)','00000000-0000-0000-0000-000000000094',q->>'id'),'BENCH_NOT_EXPIRED');
+ if kickx_private.expire_roster_bench()<>0 then raise exception 'Sale before the seven-day cutoff';end if;
+end $$;
+update public.holdings set bench_started_at=clock_timestamp()-interval '168 hours 1 second'
  where player_id in('bench-move','bench-expire');
 select set_config('bench.balance',(select balance::text from public.wallets where user_id='00000000-0000-0000-0000-000000000094'),true);
 select set_config('bench.count',(select count(*)::text from public.trades),true);

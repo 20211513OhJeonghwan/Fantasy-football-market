@@ -14,7 +14,7 @@ try {
   for (let i = 0; i < 40; i++) { try { if ((await fetch(base)).ok) break; } catch {} if (i === 39) throw Error('App did not start'); await new Promise(r => setTimeout(r, 500)); }
   browser = await chromium.launch({ executablePath: process.env.KICKX_BROWSER_EXECUTABLE || undefined }); await mkdir(out, { recursive: true });
   for (const width of report.widths) {
-    const frozen = { price: 70000, startedAt: new Date(Date.now() - 2 * 86400000).toISOString(), expiresAt: new Date(Date.now() + 12 * 86400000).toISOString(), reason: 'transfer_position' };
+    const frozen = { price: 70000, startedAt: new Date(Date.now() - 2 * 86400000).toISOString(), expiresAt: new Date(Date.now() + 5 * 86400000).toISOString(), reason: 'transfer_position' };
     const players = [
       { id: 'bench-player', name: '이적한 테스트 선수', position: 'DF', price: 120000, status: '거래 중지', tradeWindow: { locked: true }, team: 'new-club' },
       { id: 'active-player', name: '주전 테스트 선수', position: 'GK', price: 50000, team: 'new-club' },

@@ -1,6 +1,6 @@
 import type { Holding, Player } from './types';
 
-export const BENCH_DAYS = 14;
+export const BENCH_DAYS = 7;
 export function tradeExecutionStatus(reason?: string | null) {
   return reason === 'bench_expired' ? '벤치 자동 매각' : reason === 'bench_manual' ? '벤치 매각' : '체결';
 }

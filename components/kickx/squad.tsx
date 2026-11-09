@@ -6,7 +6,7 @@ import { Plus, Search, X } from "lucide-react";
 import { money, score } from "@/lib/kickx/data";
 import { apiRequest } from "@/lib/kickx/client";
 import { benchReason } from "@/lib/kickx/bench";
-import { ownedSquadSlots, squadCapacity, formationRule, SQUAD_FORMATION } from "@/lib/kickx/squad";
+import { ownedSquadSlots, squadCapacity, formationRule, compactPlayerName, SQUAD_FORMATION } from "@/lib/kickx/squad";
 import { FormationChangeDialog } from "./formation-change";
 import { BenchDeadline } from "./bench-deadline";
 import type { Player, Position } from "@/lib/kickx/types";
@@ -100,10 +100,11 @@ export function Pitch({
             {row.slots.map((i) => {
               const pos = positions[i];
               const p = rule ? getPlayer(slots[i]) : undefined;
+              const displayName = p ? compact ? compactPlayerName(p.name) : p.short || p.name : '';
               const body = p ? (
                 <>
                   <Jersey kit={kit(getTeam(p.team))} />
-                  <span className="pitch-name" title={p.name} style={{ letterSpacing: "-0.7px", fontSize: (p.short || p.name).length > 6 ? "10px" : "11px", maxWidth: compact ? "min(60px, 100%)" : "min(88px, 100%)", whiteSpace: "nowrap" }}>{p.short || p.name}</span>
+                  <span className="pitch-name" title={p.name} style={{ letterSpacing: "-0.7px", fontSize: displayName.length > 5 ? "10px" : "11px", maxWidth: compact ? "min(60px, 100%)" : "min(88px, 100%)", whiteSpace: "nowrap" }}>{displayName}</span>
                   {!compact && <span className="pitch-value num">{money(p.price)}</span>}
                 </>
               ) : (
@@ -229,7 +230,7 @@ export function SquadScreen() {
     </div>
     {!!bench.length && <section className="panel squad-bench" aria-label="동결 벤치">
       <div className="section-title"><h2>동결 벤치 <span className="muted num">{bench.length}명</span></h2></div>
-      <p>이적·포지션·포메이션 변경으로 벤치에 이동한 선수입니다. 이동 당시 가격으로 동결되며 주전 정원에 포함되지 않습니다. 재배치는 불가능하고, 14일 안에 매각하지 않으면 수수료 2%를 적용해 자동 매각됩니다.</p>
+      <p>이적·포지션·포메이션 변경으로 벤치에 이동한 선수입니다. 이동 당시 가격으로 동결되며 주전 정원에 포함되지 않습니다. 재배치는 불가능하고, 7일 안에 매각하지 않으면 수수료 2%를 적용해 자동 매각됩니다.</p>
       <ul>{bench.map(h => {
         const p = getPlayer(h.playerId), frozen = h.bench!;
         return <li key={h.playerId}>

@@ -46,10 +46,20 @@ test('new formation rows preserve active players and exclude frozen players even
 });
 test('bench countdown is client-derived, timezone independent, and switches to processing at the exact deadline', () => {
   const end='2026-11-23T09:00:00Z',at=Date.parse(end);
-  assert.equal(bench.benchTimeRemaining(end,at-14*86400000),'자동 매각까지 14일 0분');
+  assert.equal(bench.benchTimeRemaining(end,at-7*86400000),'자동 매각까지 7일 0분');
   assert.equal(bench.benchTimeRemaining(end,at-2*86400000-3*3600000-5*60000),'자동 매각까지 2일 3시간 5분');
   assert.equal(bench.benchTimeRemaining(end,at-500),'자동 매각까지 1분 미만');
   assert.equal(bench.benchTimeRemaining(end,at),'자동 매각 처리 중');
   assert.equal(bench.benchTimeRemaining('bad',at),'자동 매각 기한 확인 중');
   assert.equal(bench.benchReason('formation'),'포메이션 변경');
+});
+
+test('compact pitch keeps single-word registered names and uses the last part of spaced names', () => {
+  assert.equal(squad.compactPlayerName('엘링 홀란드'),'홀란드');
+  assert.equal(squad.compactPlayerName('해리 케인'),'케인');
+  assert.equal(squad.compactPlayerName('하피냐'),'하피냐');
+  assert.equal(squad.compactPlayerName('  손흥민  '),'손흥민');
+  assert.equal(squad.compactPlayerName('주드   벨링엄'),'벨링엄');
+  assert.equal(squad.compactPlayerName(''),'');
+  assert.equal(bench.BENCH_DAYS,7);
 });

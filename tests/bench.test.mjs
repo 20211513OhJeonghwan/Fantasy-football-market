@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { loadTs } from './load-ts.mjs';
 const { benchExpired, benchSalePlayer, tradeExecutionStatus } = loadTs('../lib/kickx/bench.ts');
 const { squadCapacity, purchaseBlock, ownedSquadSlots } = loadTs('../lib/kickx/squad.ts');
-const bench = { price: 70000, startedAt: '2026-11-01T12:00:00Z', expiresAt: '2026-11-15T12:00:00Z', reason: 'position' };
+const bench = { price: 70000, startedAt: '2026-11-01T12:00:00Z', expiresAt: '2026-11-08T12:00:00Z', reason: 'position' };
 
 test('frozen holding releases the active position but keeps duplicate ownership blocked', () => {
   const players = [{ id: 'moved', position: 'FW' }, { id: 'replacement', position: 'FW' }];

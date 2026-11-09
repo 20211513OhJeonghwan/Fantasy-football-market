@@ -6,7 +6,7 @@ const messages: Record<string,string>={PRIMARY_TEAM_IMMUTABLE:"메인 응원 구
 export function migrationMissing(error: {code?:string;message?:string}|null) {return !!error && (["42P01","42883","PGRST202","PGRST205"].includes(error.code??""));}
 export function checkDatabase(error:{code?:string;message?:string}|null) {
  if(!error)return;
- if(error.message==='BENCH_EXPIRED')throw new HttpError(409,'14일 보관 기한이 지나 자동 매각 처리 중입니다. 거래 내역에서 확인해 주세요.');
+ if(error.message==='BENCH_EXPIRED')throw new HttpError(409,'7일 보관 기한이 지나 자동 매각 처리 중입니다. 거래 내역에서 확인해 주세요.');
  if(error.message==='ROSTER_PRICE_UNAVAILABLE')throw new HttpError(409,'변경 전 마지막 가격을 확인하지 못했습니다. 선수 데이터 갱신을 확인해 주세요.');
  const squadMessages:Record<string,string>={INVALID_FORMATION:"지원하는 포메이션을 선택해 주세요.",INVALID_BENCH_SELECTION:"초과 포지션별 필요한 인원만 벤치 이동 선수로 선택해 주세요. 보유 현황이 바뀌었다면 창을 다시 열어 주세요.",FORMATION_CHANGE_REQUIRED:"포메이션 변경 창에서 초과 선수 선택을 먼저 완료해 주세요.",SQUAD_INCOMPLETE:"벤치 선수를 제외한 모든 주전 선수를 배치해 주세요.",SQUAD_FULL:"스쿼드 11명을 모두 보유 중입니다. 선수를 매각한 뒤 매입해 주세요.",LEGACY_SQUAD_EXCESS:"기존 보유 선수가 정원을 초과했습니다. 초과 포지션 선수를 먼저 매각해 주세요.",AUTO_SQUAD_MANAGED:"스쿼드는 매입·매각에 따라 자동으로 반영됩니다.",TRADE_PLAYER_MISMATCH:"이 선수의 거래 내역만 첨부할 수 있습니다.",TITLE_REQUIRED:"제목을 2–80자로 입력해 주세요."};
  if(error.message&&squadMessages[error.message])throw new HttpError(409,squadMessages[error.message]);

@@ -15,11 +15,12 @@ try {
   browser=await chromium.launch({ executablePath: process.env.KICKX_BROWSER_EXECUTABLE || undefined });await mkdir(out,{recursive:true});
   for(const width of [320,390,1440]) {
     const players=FORMATIONS[0].positions.map((position,i)=>({id:`p${i}`,name:`주전선수 ${i}`,short:`선수${i}`,position,price:50000+i*1000,team:'club',performance:8,change:1,history:[],records:[],analysis:null}));
+    players[0].name='마누엘 노이어';players[0].short='마누엘 노이어';
     players.push({id:'extra-mf',name:'영입대상 미드필더',position:'MF',price:50000,team:'club',history:[],records:[],performance:9});
     players.push({id:'old-bench',name:'기존 동결 선수',position:'DF',price:120000,team:'club',history:[],records:[],performance:9});
     const state={...emptyPlatformData(),players,formations:FORMATIONS,teams:[{id:'club',name:'테스트 구단',leagueId:'bsd-1'}],leagues:[{id:'bsd-1',name:'Premier League'}],session:{userId:'member',role:'member',profile:{nickname:'포메이션 시험',team:'club',teams:['club'],primaryTeam:'club'}},member:{financialReady:true,points:700000,totalAssets:1300000,playerAssets:600000,holdings:players.slice(0,11).map(p=>({id:p.id,playerId:p.id,playerName:p.name,cost:50000,value:p.price,quantity:1})),ownedPlayers:players,transactions:[],watchlist:[],assetHistory:[],squad:{formationId:'4-3-3',slots:players.slice(0,11).map(p=>p.id),revision:1,value:550000,performance:8}}};
     const oldStart=new Date(Date.now()-86400000).toISOString();
-    state.member.holdings.push({id:'old-bench',playerId:'old-bench',playerName:'기존 동결 선수',cost:50000,value:70000,bench:{price:70000,reason:'transfer',startedAt:oldStart,expiresAt:new Date(Date.now()+13*86400000).toISOString()}});
+    state.member.holdings.push({id:'old-bench',playerId:'old-bench',playerName:'기존 동결 선수',cost:50000,value:70000,bench:{price:70000,reason:'transfer',startedAt:oldStart,expiresAt:new Date(Date.now()+6*86400000).toISOString()}});
     let changes=0,moves=0,quotes=0;
     const context=await browser.newContext({viewport:{width,height:960},timezoneId:'Asia/Seoul'});
     await context.route(/^https:\/\//,r=>r.abort());
@@ -35,7 +36,7 @@ try {
       if(path==='/api/kickx/squad/formation'){
         changes++;const body=req.postDataJSON();assert.equal(body.revision,state.member.squad.revision);
         assert.deepEqual(body.benchPlayerIds,['p4','p10']);assert.equal(body.formationId,'3-5-2');
-        const startedAt=new Date().toISOString(),expiresAt=new Date(Date.now()+14*86400000).toISOString();
+        const startedAt=new Date().toISOString(),expiresAt=new Date(Date.now()+7*86400000).toISOString();
         for(const h of state.member.holdings)if(body.benchPlayerIds.includes(h.playerId))h.bench={price:players.find(p=>p.id===h.playerId).price,reason:'formation',startedAt,expiresAt};
         state.member.squad={...state.member.squad,formationId:body.formationId,revision:2,slots:ownedSquadSlots(state.member.holdings,[],body.formationId,id=>players.find(p=>p.id===id))};
         return route.fulfill({json:{formation_id:body.formationId,revision:2,slots:state.member.squad.slots}});
@@ -63,6 +64,8 @@ try {
     await dialog.locator('label').filter({hasText:'주전선수 4'}).getByRole('checkbox').check();assert(await confirm.isDisabled());
     await dialog.locator('label').filter({hasText:'주전선수 10'}).getByRole('checkbox').check();assert(await confirm.isEnabled());
     assert.match(await dialog.innerText(),/재배치할 수 없습니다/);
+    assert.match(await dialog.innerText(),/7일 안에 직접 매각/);
+    assert.doesNotMatch(await dialog.innerText(),/14일/);
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     if(width===390)await page.screenshot({path:`${out}/modal-390.png`,fullPage:true});
     await confirm.click();await page.waitForFunction(()=>document.querySelector('.squad-formation > strong')?.textContent==='3-5-2');
@@ -80,6 +83,13 @@ try {
     await dialog.getByRole('button',{name:'닫기',exact:true}).click();
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Squad overflow at ${width}`);
     await page.screenshot({path:`${out}/squad-${width}.png`,fullPage:true});
+    await page.goto(base+'/',{waitUntil:'networkidle'});
+    await page.locator('.dash-squad .pitch-name[title="마누엘 노이어"]').waitFor();
+    assert.equal(await page.locator('.dash-squad .pitch-name[title="마누엘 노이어"]').innerText(),'노이어');
+    assert.equal(await page.locator('.dash-squad .pitch-player.filled').count(),9);
+    assert.match(await page.locator('.dash-squad').innerText(),/3-5-2/);
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+    await page.screenshot({path:`${out}/home-compact-${width}.png`,fullPage:true});
     report.flows.push({width,changes,moves,quotes,bench:3});
     if(width!==390){
       state.member.holdings=[];

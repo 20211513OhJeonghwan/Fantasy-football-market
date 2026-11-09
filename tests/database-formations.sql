@@ -115,7 +115,7 @@ do $$declare f text;rev integer;begin
 end $$;
 reset role;
 do $$declare sold integer;begin
- update public.holdings set bench_started_at=clock_timestamp()-interval '336 hours'
+ update public.holdings set bench_started_at=clock_timestamp()-interval '168 hours'
   where user_id='00000000-0000-0000-0000-000000000096' and bench_reason='formation';
  sold:=kickx_private.expire_roster_bench();if sold<>2 then raise exception 'Formation benches did not auto sell: %',sold;end if;
  if kickx_private.expire_roster_bench()<>0 then raise exception 'Repeated automatic sale';end if;

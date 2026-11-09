@@ -54,7 +54,7 @@ export function FormationChangeDialog({ onClose }: { onClose: () => void }) {
           </label>;
         })}
       </fieldset>)}
-      {!!plan.benchCount && <p className="formation-warning"><b>벤치로 이동하면 재배치할 수 없습니다.</b>선택된 선수만 적용 시점 가격으로 동결됩니다. 14일 안에 직접 매각하지 않으면 2% 수수료를 적용해 자동 매각됩니다. 기존 벤치의 가격과 기한은 유지됩니다.</p>}
+      {!!plan.benchCount && <p className="formation-warning"><b>벤치로 이동하면 재배치할 수 없습니다.</b>선택된 선수만 적용 시점 가격으로 동결됩니다. 7일 안에 직접 매각하지 않으면 2% 수수료를 적용해 자동 매각됩니다. 기존 벤치의 가격과 기한은 유지됩니다.</p>}
       {formationRule(target).rows.length > 4 && <p className="fine-print">중간의 공격형 미드필더 줄도 MF 정원으로 계산합니다.</p>}
       {outdated && <p className="form-error" role="alert">보유 선수나 배치가 변경되었습니다. 이 창을 닫고 최신 스쿼드에서 다시 변경해 주세요.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
