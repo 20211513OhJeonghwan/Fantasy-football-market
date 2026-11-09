@@ -5,7 +5,7 @@ import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
 import { Plus, Search, X } from "lucide-react";
 import { money, score } from "@/lib/kickx/data";
 import { apiRequest } from "@/lib/kickx/client";
-import { benchReason } from "@/lib/kickx/bench";
+import { benchExpired, benchReason } from "@/lib/kickx/bench";
 import { ownedSquadSlots, squadCapacity, formationRule, compactPlayerName, SQUAD_FORMATION } from "@/lib/kickx/squad";
 import { FormationChangeDialog } from "./formation-change";
 import { BenchDeadline } from "./bench-deadline";
@@ -78,12 +78,15 @@ export function Pitch({
   compact = false,
   selected,
   onSelect,
+  targets,
 }: {
   slots: (string | null)[];
   formation: string | null;
   compact?: boolean;
   selected?: number | null;
   onSelect?: (i: number) => void;
+  /** Placement mode: slots the selected starter may move to (same position). */
+  targets?: number[];
 }) {
   const { getPlayer, getTeam } = usePlatform();
   const rule = formation ? formationRule(formation) : undefined;
@@ -91,7 +94,7 @@ export function Pitch({
   const rows = [...(rule ?? SQUAD_FORMATION).rows].reverse();
   return (
     <div
-      className={`pitch ${compact ? "compact" : ""} ${rule ? "" : "is-empty"}`} data-lines={rows.length}
+      className={`pitch ${compact ? "compact" : ""} ${rule ? "" : "is-empty"} ${targets ? "placing" : ""}`} data-lines={rows.length}
     >
       <PitchMarkings />
       <div className="pitch-rows" style={{ gridTemplateRows: `repeat(${rows.length}, 1fr)` }}>
@@ -116,7 +119,7 @@ export function Pitch({
               return onSelect && rule ? (
                 <button
                   type="button"
-                  className={`pitch-player ${p ? "filled" : ""} ${selected === i ? "selected" : ""}`}
+                  className={`pitch-player ${p ? "filled" : ""} ${selected === i ? "selected" : ""} ${targets?.includes(i) ? "target" : ""}`}
                   onClick={() => onSelect(i)}
                   key={i}
                   aria-label={`${i + 1}번 ${pos} 자리 ${p?.name || "빈 자리"}`}
@@ -193,8 +196,8 @@ export function SquadScreen() {
           <div className="squad-count"><span>보유 선수</span><strong className="num">{member ? capacity.total : "—"}<small> / 11</small></strong><span className="meter yellow" aria-hidden="true"><i style={{ width: `${Math.min(100, filled / 11 * 100)}%` }}/></span></div>
           <div className="squad-formation"><span>포메이션</span> <strong>{formation.name}</strong><div className="squad-edit-actions"><button type="button" className="button secondary small" disabled={!member || member.financialReady === false || placing} onClick={() => { setSelected(null); setShowFormation(true); }}>포메이션 변경</button><button type="button" className={`button ${placement ? 'primary' : 'secondary'} small`} aria-pressed={placement} disabled={!member || member.financialReady === false || placing} onClick={() => { setPlacement(!placement); setSelected(null); }}>{placement ? '배치 완료' : '선수 배치'}</button></div></div>
         </div>
-        {placement && <p className="placement-hint" role="status">{placing ? '배치를 저장하고 있습니다.' : '이동할 주전 선수를 누른 뒤 같은 포지션의 자리를 선택하세요. 벤치 선수는 다시 배치할 수 없습니다.'}</p>}
-        <Pitch slots={slots} formation={formation.id} selected={selected} onSelect={placing ? undefined : selectSlot}/>
+        {placement && <p className="placement-hint" role="status"><b className="placement-step">{placing ? '저장 중' : selected != null && slots[selected] ? '2단계' : '1단계'}</b>{placing ? '배치를 저장하고 있습니다.' : selected != null && slots[selected] ? `${getPlayer(slots[selected])?.name ?? '선택한 선수'}의 새 자리를 고르세요. 점선으로 표시된 같은 포지션 자리로만 옮길 수 있습니다.` : '옮길 주전 선수를 누르세요. 벤치 선수는 다시 배치할 수 없습니다.'}</p>}
+        <Pitch slots={slots} formation={formation.id} selected={selected} onSelect={placing ? undefined : selectSlot} targets={placement && selected != null && slots[selected] ? formation.positions.map((pos, i) => pos === formation.positions[selected] && i !== selected ? i : -1).filter(i => i >= 0) : undefined}/>
         <div className="squad-footer">
           <div><span>스쿼드 가치</span><strong className="num">{money(value)}<span className="unit">P</span></strong></div>
           <div><span>평균 Performance</span><strong className="num">{score(filled ? member?.squad?.performance : null)}</strong></div>
@@ -221,7 +224,7 @@ export function SquadScreen() {
         {listStatus !== "ready" ? <DataEmpty entity="선수" status={listStatus} retry={mock ? reload : remote.reload} rows={3}/> : <>
           <ul className="squad-market-list">{players.map(p => {
             const holding = member?.holdings.find(h => h.playerId === p.id), owned = !!holding;
-            return <li key={p.id} className={owned ? "owned" : ""}><Link href={`/players/${p.id}`} aria-label={`${p.name} 상세`}><PlayerPortrait player={p} size="sm"/></Link><div className="squad-market-name"><Link href={`/players/${p.id}`}><strong>{p.name}</strong>{owned && <span className="tag ink">{holding.bench ? "벤치" : "보유"}</span>}</Link><span>{getTeam(p.team)?.name ?? "—"} · {p.position ?? "—"}</span><b className="num">{money(holding?.bench?.price ?? p.price)} P {!holding?.bench && <Change value={p.change}/>}</b></div><TradeButton player={p} side={owned ? "sell" : "buy"} className={`button ${owned ? "secondary" : "primary"} small`}/></li>;
+            return <li key={p.id} className={owned ? "owned" : ""}><Link href={`/players/${p.id}`} aria-label={`${p.name} 상세`}><PlayerPortrait player={p} size="sm"/></Link><div className="squad-market-name"><Link href={`/players/${p.id}`}><strong>{p.name}</strong>{owned && <span className="tag ink">{holding.bench ? "벤치" : "보유"}</span>}</Link><span>{getTeam(p.team)?.name ?? "—"} · {p.position ?? "—"}</span><b className="num">{holding?.bench && <small className="bench-price-label">매각 기준가</small>}{money(holding?.bench?.price ?? p.price)} P {!holding?.bench && <Change value={p.change}/>}</b></div><TradeButton player={p} side={owned ? "sell" : "buy"} className={`button ${owned ? "secondary" : "primary"} small`}/></li>;
           })}</ul>
           {!players.length && <p className="feed-empty">검색 조건에 맞는 선수가 없습니다.</p>}
           <Pagination page={mock ? page : remote.data.page} total={total} size={MARKET_SIZE} onPage={setPage} label="스쿼드 선수"/>
@@ -230,14 +233,15 @@ export function SquadScreen() {
     </div>
     {!!bench.length && <section className="panel squad-bench" aria-label="벤치">
       <div className="section-title"><h2>벤치 <span className="muted num">{bench.length}명</span></h2></div>
-      <p>이적·포지션·포메이션 변경으로 벤치에 이동한 선수입니다. 매각 기준가는 이동 당시 가격으로 유지되며 주전 정원에 포함되지 않습니다. 재배치는 불가능하고, 7일 안에 매각하지 않으면 수수료 2%를 적용해 자동 매각됩니다.</p>
+      <p className="squad-bench-rule">매각 기준가는 이동 당시 가격으로 유지됩니다. 벤치 선수는 다시 배치할 수 없으며, 7일 안에 매각하지 않으면 수수료 2%를 적용해 자동 매각됩니다.</p>
+      {/* Read order: who, why, price, deadline, action. */}
       <ul>{bench.map(h => {
-        const p = getPlayer(h.playerId), frozen = h.bench!;
-        return <li key={h.playerId}>
-          {p && <PlayerPortrait player={p} size="sm"/>}
-          <div className="roster-bench-player"><strong>{p ? <Link href={`/players/${p.id}`}>{p.name}</Link> : h.playerName}</strong><span>{benchReason(frozen.reason)} · 재배치 불가</span><BenchDeadline expiresAt={frozen.expiresAt}/></div>
-          <strong className="roster-bench-price num">{money(frozen.price)}<small> P</small></strong>
-          <TradeButton player={p} side="sell" className="button secondary small"/>
+        const p = getPlayer(h.playerId), saved = h.bench!, overdue = benchExpired(saved);
+        return <li key={h.playerId} className={overdue ? "overdue" : ""}>
+          <div className="roster-bench-id">{p ? <PlayerPortrait player={p} size="sm"/> : <span className="tx-portrait-empty" aria-hidden="true"/>}<div className="roster-bench-player"><strong>{p ? <Link href={`/players/${p.id}`}>{p.name}</Link> : h.playerName}</strong><span><PositionBadge position={p?.position ?? null}/>{benchReason(saved.reason)}</span></div></div>
+          <div className="roster-bench-price"><small>매각 기준가</small><strong className="num">{money(saved.price)}<small> P</small></strong></div>
+          <BenchDeadline expiresAt={saved.expiresAt}/>
+          <div className="roster-bench-action">{overdue ? <span className="status-pill">자동 매각 처리 중</span> : <TradeButton player={p} side="sell" className="button secondary small"/>}</div>
         </li>;
       })}</ul>
     </section>}

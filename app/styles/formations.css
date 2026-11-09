@@ -1,7 +1,13 @@
 /* Functional layout for formation selection; design continuation is documented for Claude. */
 .squad-formation { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .squad-edit-actions { display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; }
-.placement-hint { margin:0; padding:12px 16px; font-size:12px; line-height:1.7; background:var(--yellow-wash); border-bottom:var(--border); }
+.placement-hint { display:flex; align-items:center; gap:10px; margin:0; padding:10px 16px; font-size:12.5px; line-height:1.6; background:var(--yellow-wash); border-bottom:var(--border); }
+.placement-step { flex-shrink:0; padding:2px 8px; border-radius:999px; background:var(--ink); color:var(--yellow); font-size:11px; }
+/* Placement: the picked starter stays yellow, same-position slots get a dashed target, the rest fade back. */
+.pitch.placing .pitch-player:not(.selected):not(.target) { opacity:.42; }
+.pitch.placing .pitch-player.target::after { content:""; position:absolute; inset:-4px; border:2px dashed #fff; border-radius:var(--radius-2); animation:kx-pulse 1.4s ease-in-out infinite; }
+@keyframes kx-pulse { 50% { border-color:var(--yellow); } }
+@media (prefers-reduced-motion: reduce) { .pitch.placing .pitch-player.target::after { animation:none; } }
 .pitch-rows { grid-template-columns:minmax(0,1fr); }
 .pitch-row { min-width:0; width:100%; }
 .pitch-row > .pitch-player { min-width:0; max-width:calc(100% / var(--row-count, 4)); flex:0 1 92px; }
@@ -10,17 +16,41 @@
 .pitch.compact[data-lines="5"] .jersey { width:20px; height:19px; }
 .formation-dialog { display:grid; gap:18px; min-width:0; }
 .formation-dialog select { width:100%; min-height:44px; border:var(--border); padding:8px 12px; border-radius:6px; background:var(--surface); color:var(--text); }
-.formation-comparison { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:20px; padding:16px; background:var(--surface-2); border-radius:8px; }
-.formation-comparison b { font-size:20px; margin-left:6px; }
+/* Before → after header: names large, each with a dot diagram of its lines. */
+.formation-comparison { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:stretch; gap:12px; }
+.formation-side { display:grid; justify-items:center; align-content:start; gap:8px; padding:14px 12px; border:1px solid var(--line); border-radius:12px; background:var(--surface-2); min-width:0; }
+.formation-side > span, .formation-side > label { font-size:12px; font-weight:800; color:var(--text-3); }
+.formation-side > b { font-size:24px; font-weight:900; letter-spacing:-0.02em; line-height:44px; }
+.formation-side.next { background:var(--surface); border-color:var(--line-2); }
+.formation-side.next.changed { border-color:var(--ink); background:var(--yellow-wash); }
+.formation-side select { min-height:44px; font-size:16px; font-weight:900; text-align:center; }
+.formation-arrow { align-self:center; font-size:22px; font-weight:900; color:var(--text-3); }
+.formation-shape { display:grid; gap:7px; width:100%; max-width:150px; padding:10px 8px; border-radius:8px; background:#2e8b4f; }
+.formation-shape > span { display:flex; justify-content:space-evenly; }
+.formation-shape i { width:9px; height:9px; border-radius:50%; background:#fff; box-shadow:0 0 0 1.5px rgba(0,0,0,.18); }
+.formation-side.next .formation-shape i { background:var(--yellow); }
 .formation-limits { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:0; margin:0; list-style:none; }
-.formation-limits li { display:grid; gap:6px; justify-items:center; padding:12px 4px; border:var(--border); border-radius:6px; }
+.formation-limits li { display:grid; gap:6px; justify-items:center; padding:12px 4px; border:var(--border); border-radius:8px; }
+.formation-limits li.need { border-color:var(--ink); background:var(--yellow-wash); }
+.formation-limits li.need small { color:var(--ink); font-weight:800; }
+.formation-limits li.done { border-color:var(--up); background:var(--up-bg); }
+.formation-limits li.done small { color:var(--up); font-weight:800; }
+.formation-progress { display:grid; gap:6px; font-size:13px; font-weight:700; }
+.formation-progress b { font-weight:900; }
+.formation-progress > i { display:block; height:6px; border-radius:999px; background:var(--surface-3); overflow:hidden; }
+.formation-progress > i > span { display:block; height:100%; background:var(--ink); transition:width var(--t-base) var(--ease); }
 .formation-limits small { font-size:11px; color:var(--text-3); text-align:center; }
 .formation-choices { min-width:0; padding:12px; border:var(--border); border-radius:8px; }
-.formation-choices legend { padding:0 6px; font-size:14px; font-weight:800; }
-.formation-choices legend b { margin-left:8px; }
-.formation-choices label { display:grid; grid-template-columns:auto auto minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px 8px; border:1px solid transparent; border-radius:6px; cursor:pointer; }
+.formation-choices legend { display:flex; align-items:center; gap:6px; padding:0 6px; font-size:14px; font-weight:800; }
+.formation-choices legend b { margin-left:4px; padding:1px 8px; border-radius:999px; background:var(--surface-3); font-size:12px; }
+.formation-choices legend b.done { background:var(--ink); color:var(--yellow); }
+.formation-choices label { display:grid; grid-template-columns:auto auto minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px 10px; border:1px solid transparent; border-radius:8px; cursor:pointer; }
+.formation-choices label + label { margin-top:2px; }
+.formation-choices label:hover:not(.locked):not(.full) { background:var(--surface-2); }
 .formation-choices label.checked { border-color:var(--ink); background:var(--yellow-wash); }
-.formation-choices label:has(input:disabled):not(.checked) { opacity:.65; cursor:default; }
+.formation-choices label.checked small { color:var(--ink); font-weight:800; }
+.formation-choices label.locked small { color:var(--down); font-weight:700; }
+.formation-choices label:has(input:disabled):not(.checked) { opacity:.6; cursor:default; }
 .formation-choices input[type="checkbox"] { width:18px; min-width:18px; height:18px; min-height:18px; margin:0; padding:0; border-radius:3px; accent-color:var(--ink); }
 .formation-choices input[type="checkbox"]:focus { box-shadow:none; }
 .formation-choices input[type="checkbox"]:focus-visible { outline:2px solid var(--ink); outline-offset:3px; box-shadow:0 0 0 3px var(--yellow); }
@@ -29,11 +59,19 @@
 .formation-choices small { font-size:11px; color:var(--text-3); }
 .formation-choices b.num { font-size:13px; white-space:nowrap; }
 .formation-warning,.formation-safe { margin:0; padding:14px; border-radius:6px; font-size:13px; line-height:1.8; }
-.formation-warning { background:var(--down-bg); border-left:3px solid var(--down); }
-.formation-warning b { display:block; margin-bottom:4px; }
+.formation-warning { background:var(--surface-2); border-left:3px solid var(--ink); }
+.formation-warning b { display:block; margin-bottom:2px; }
+.formation-warning p { margin:0; color:var(--text-2); }
+/* Long lists scroll inside the modal while the confirm row stays reachable. */
+.formation-actions { position:sticky; bottom:0; z-index:2; margin:0 calc(var(--s-6) * -1) calc(var(--s-6) * -1); padding:12px var(--s-6); background:var(--surface); border-top:1px solid var(--line); }
 .formation-safe { background:var(--surface-2); }
 .bench-deadline { display:grid; gap:3px; font-size:12px; line-height:1.6; }
-.bench-deadline > strong { color:var(--down); font-size:12px; font-variant-numeric:tabular-nums; }
+.bench-deadline > strong { color:var(--ink); font-size:12.5px; font-weight:900; font-variant-numeric:tabular-nums; }
+.bench-deadline.soon > strong { color:#a15c00; }
+.bench-deadline.critical > strong, .bench-deadline.expired > strong { color:var(--down); }
+.squad-bench .bench-deadline { padding:6px 10px; border-radius:8px; background:var(--surface-2); }
+.squad-bench .bench-deadline.soon { background:#fff4dc; }
+.squad-bench .bench-deadline.critical, .squad-bench .bench-deadline.expired { background:var(--down-bg); }
 .bench-deadline time { color:var(--text-3); font-size:11px; }
 .holding-state > .bench-deadline { white-space:normal; }
 .holding-state:has(> .bench-deadline) { display:grid; gap:5px; justify-items:start; }
@@ -41,8 +79,13 @@
   .squad-edit-actions { width:100%; margin:2px 0 0; }
   .squad-edit-actions > button { flex:1; min-width:0; }
   .automatic-squad .pitch[data-lines="5"] { aspect-ratio:auto; min-height:410px; height:clamp(410px,100vw,500px); }
-  .formation-comparison { gap:12px; padding:12px; font-size:12px; }
-  .formation-comparison b { font-size:17px; }
+  .formation-comparison { gap:6px; }
+  .formation-side { padding:10px 6px; }
+  .formation-side > b { font-size:19px; line-height:40px; }
+  .formation-side select { min-height:40px; font-size:14px; padding:6px 4px; }
+  .formation-shape { gap:5px; padding:8px 4px; }
+  .formation-shape i { width:7px; height:7px; }
+  .formation-arrow { font-size:16px; }
   .formation-limits { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .formation-choices { padding:8px; }
   .formation-choices label { grid-template-columns:auto auto minmax(0,1fr); gap:7px; padding:10px 3px; }

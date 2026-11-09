@@ -32,33 +32,49 @@ export function FormationChangeDialog({ onClose }: { onClose: () => void }) {
     } catch (e) { setError(e instanceof Error ? e.message : '포메이션을 변경하지 못했습니다.'); }
     finally { lock.current=false; setSaving(false); }
   }
+  const totalRequired = plan.benchCount, totalSelected = selected.length;
   return <Modal title="포메이션 변경" eyebrow="SQUAD FORMATION" size="lg" onClose={() => { if (!saving) onClose(); }}>
     <div className="formation-dialog">
-      <label className="modal-field">새 포메이션
-        <select aria-label="새 포메이션" value={target} disabled={saving} onChange={e => { setTarget(e.target.value); setSelected([]); setError(''); }}>
-          {[3,4,5].map(back => <optgroup key={back} label={`백${back}`}>{FORMATIONS.filter(f => f.id.startsWith(`${back}-`)).map(f => <option key={f.id} value={f.id}>{f.name}{f.id === current ? ' (현재)' : ''}</option>)}</optgroup>)}
-        </select>
-      </label>
-      <div className="formation-comparison"><span>현재 <b>{current}</b></span><span aria-hidden="true">→</span><span>변경 <b>{target}</b></span></div>
-      <ul className="formation-limits">{POSITIONS.map(pos => <li key={pos}><PositionBadge position={pos}/><strong>{plan.counts[pos]} / {plan.limits[pos]}</strong><small>{plan.required[pos] ? `${plan.required[pos]}명 벤치 선택 필요` : '유지 가능'}</small></li>)}</ul>
+      {/* 1. Before → after first, each with a small shape of its lines. */}
+      <div className="formation-comparison">
+        <div className="formation-side"><span>현재</span><b>{current}</b><FormationShape id={current} /></div>
+        <span className="formation-arrow" aria-hidden="true">→</span>
+        <div className={`formation-side next${target !== current ? ' changed' : ''}`}>
+          <label htmlFor="formation-target">변경</label>
+          <select id="formation-target" aria-label="새 포메이션" value={target} disabled={saving} onChange={e => { setTarget(e.target.value); setSelected([]); setError(''); }}>
+            {[3,4,5].map(back => <optgroup key={back} label={`백${back}`}>{FORMATIONS.filter(f => f.id.startsWith(`${back}-`)).map(f => <option key={f.id} value={f.id}>{f.name}{f.id === current ? ' (현재)' : ''}</option>)}</optgroup>)}
+          </select>
+          <FormationShape id={target} />
+        </div>
+      </div>
+      {/* 2. Position quotas, then how far the required bench selection has got. */}
+      <ul className="formation-limits">{POSITIONS.map(pos => <li key={pos} className={plan.required[pos] ? (count(pos) === plan.required[pos] ? 'done' : 'need') : ''}><PositionBadge position={pos}/><strong className="num">{plan.counts[pos]} / {plan.limits[pos]}</strong><small>{plan.required[pos] ? `${count(pos)} / ${plan.required[pos]}명 선택` : '유지'}</small></li>)}</ul>
       {plan.unknown > 0 && <p className="form-error" role="alert">일부 보유 선수의 포지션을 확인하지 못했습니다. 새로고침 후 다시 시도해 주세요.</p>}
       {target !== current && !plan.benchCount && <p className="formation-safe">정원을 초과하는 선수가 없습니다. 모든 주전 선수를 유지한 채 배치를 조정합니다.</p>}
+      {!!totalRequired && <div className="formation-progress" role="status"><span>벤치로 이동할 선수 <b className="num">{totalSelected} / {totalRequired}명</b> 선택</span><i aria-hidden="true"><span style={{ width: `${Math.min(100, totalSelected / totalRequired * 100)}%` }} /></i></div>}
       {POSITIONS.filter(pos => plan.required[pos] > 0).map(pos => <fieldset className="formation-choices" key={pos} disabled={saving}>
-        <legend>{pos} 벤치 이동 선수 선택 <b>{count(pos)} / {plan.required[pos]}명</b></legend>
-        {(member?.holdings ?? []).some(h => !h.bench && getPlayer(h.playerId)?.position === pos && getPlayer(h.playerId)?.tradeWindow?.locked) && <p className="fine-print">경기 거래 제한 중인 선수는 선택할 수 없습니다. 해당 선수의 제한이 끝난 뒤 다시 선택해 주세요.</p>}
+        <legend><PositionBadge position={pos}/> 벤치 이동 선수 선택 <b className={`num${count(pos) === plan.required[pos] ? ' done' : ''}`}>{count(pos)} / {plan.required[pos]}명</b></legend>
         {(member?.holdings ?? []).filter(h => !h.bench && getPlayer(h.playerId)?.position === pos).map(h => {
-          const player = getPlayer(h.playerId)!, checked = selected.includes(h.playerId), locked = !!player.tradeWindow?.locked;
-          return <label key={h.playerId} className={checked ? 'checked' : ''}>
-            <input type="checkbox" checked={checked} disabled={locked || !checked && count(pos) >= plan.required[pos]} onChange={() => toggle(h.playerId,pos)}/>
-            <PlayerPortrait player={player} size="sm"/><span><strong>{player.name}</strong><small>{locked ? '경기 거래 제한 중' : '선택 시 벤치로 이동'}</small></span><b className="num">{money(player.price)} P</b>
+          const player = getPlayer(h.playerId)!, checked = selected.includes(h.playerId), locked = !!player.tradeWindow?.locked, full = !checked && count(pos) >= plan.required[pos];
+          // State is spelled out in text so it never depends on colour alone.
+          const state = locked ? '경기 거래 제한 · 선택 불가' : checked ? '선택됨 · 벤치로 이동' : full ? '선택 완료 · 다른 선수를 해제하면 선택 가능' : '선택 시 벤치로 이동';
+          return <label key={h.playerId} className={`${checked ? 'checked' : ''}${locked ? ' locked' : ''}${full && !locked ? ' full' : ''}`}>
+            <input type="checkbox" checked={checked} disabled={locked || full} onChange={() => toggle(h.playerId,pos)}/>
+            <PlayerPortrait player={player} size="sm"/><span><strong>{player.name}</strong><small>{state}</small></span><b className="num">{money(player.price)} P</b>
           </label>;
         })}
       </fieldset>)}
-      {!!plan.benchCount && <p className="formation-warning"><b>벤치로 이동하면 재배치할 수 없습니다.</b>선택한 선수의 매각 기준가는 이동 당시 가격으로 유지됩니다. 7일 안에 직접 매각하지 않으면 2% 수수료를 적용해 자동 매각됩니다. 기존 벤치의 가격과 기한은 유지됩니다.</p>}
+      {/* 3. One shared rules note instead of a warning on every row. */}
+      {!!plan.benchCount && <div className="formation-warning"><b>벤치로 이동하면 재배치할 수 없습니다</b><p>매각 기준가는 이동 당시 가격으로 유지됩니다. 벤치 선수는 다시 배치할 수 없으며, 7일 안에 직접 매각하지 않으면 수수료 2%를 적용해 자동 매각됩니다. 기존 벤치의 가격과 기한은 바뀌지 않습니다.</p></div>}
       {formationRule(target).rows.length > 4 && <p className="fine-print">중간의 공격형 미드필더 줄도 MF 정원으로 계산합니다.</p>}
       {outdated && <p className="form-error" role="alert">보유 선수나 배치가 변경되었습니다. 이 창을 닫고 최신 스쿼드에서 다시 변경해 주세요.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="modal-actions"><button className="button secondary" disabled={saving} onClick={onClose}>취소</button><button className="button primary" disabled={!complete || outdated || plan.unknown > 0 || target === current || saving || !member || member.financialReady === false} onClick={submit}>{saving ? '변경 중…' : plan.benchCount ? `${plan.benchCount}명 벤치 이동 후 변경` : '포메이션 변경 확정'}</button></div>
+      <div className="modal-actions formation-actions"><button className="button secondary" disabled={saving} onClick={onClose}>취소</button><button className="button primary" disabled={!complete || outdated || plan.unknown > 0 || target === current || saving || !member || member.financialReady === false} onClick={submit}>{saving ? '변경 중…' : plan.benchCount ? `${plan.benchCount}명 벤치 이동 후 변경` : '포메이션 변경 확정'}</button></div>
     </div>
   </Modal>;
+}
+/** Small line diagram of a formation, front line on top. */
+function FormationShape({ id }: { id: string }) {
+  const rows = [...formationRule(id).rows].reverse();
+  return <span className="formation-shape" aria-hidden="true">{rows.map((row, i) => <span key={i}>{row.slots.map(slot => <i key={slot} />)}</span>)}</span>;
 }
