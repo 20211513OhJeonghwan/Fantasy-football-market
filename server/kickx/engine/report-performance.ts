@@ -105,13 +105,21 @@ export function calculatePerformance(input: ScoreInput): ScoreResult {
   if(count(a.period_second)!=null&&count(b.period_second)!=null&&a.period_second!==b.period_second)return Number(a.period_second)-Number(b.period_second);
   return null;
  };
- // Boundary order matters only for opponent goals that affect this position's
- // clean-sheet/conceded points. Own-team goals and FW concessions cannot change P.
- if(result.position!=="FW"&&goals.some(e=>e.is_home!==(input.teamId===input.homeTeam)&&((entry&&compareTime(e,entry)==null)||(exit&&compareTime(e,exit)==null))))return stop("GOAL_BOUNDARY_TIME_AMBIGUOUS");
  const afterEntry = (e: Json) => !entry || (compareTime(e,entry)??0)>0;
  const beforeExit = (e: Json) => !exit || (compareTime(e,exit)??0)<0;
  // Team concessions are charged only during the player's actual participation.
- const conceded = goals.filter(e => e.is_home !== (input.teamId === input.homeTeam) && afterEntry(e) && beforeExit(e)).length;
+ const opponentGoals = goals.filter(e => e.is_home !== (input.teamId === input.homeTeam));
+ const ambiguous = opponentGoals.filter(e => (entry&&compareTime(e,entry)==null)||(exit&&compareTime(e,exit)==null));
+ const conceded = opponentGoals.filter(e => !ambiguous.includes(e) && afterEntry(e) && beforeExit(e)).length;
+ if (result.position!=="FW" && ambiguous.length) {
+  const maximum=conceded+ambiguous.length;
+  // Team-wide conceded counters cannot prove which side of a substitution a
+  // goal occurred on. Publish only when every possible order gives the same
+  // points, otherwise retain the missing-timing warning.
+  const contribution=(n:number)=>(minutes>=60&&!red.length&&n===0?SCORING.cleanSheet[result.position as keyof typeof SCORING.cleanSheet]:0)-(["GK","DF"].includes(result.position!)?Math.floor(n/2):0);
+  if(contribution(conceded)!==contribution(maximum))return stop("GOAL_BOUNDARY_TIME_AMBIGUOUS");
+  result.warnings.push("GOAL_BOUNDARY_SCORE_UNCHANGED");
+ }
  const own = my.filter(e => e.type === "goal" && ownGoal(e)).length;
  const scored = my.filter(e => e.type === "goal" && !ownGoal(e)).length;
  const rawGoals = count(input.stats.goals);

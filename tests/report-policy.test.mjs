@@ -72,6 +72,17 @@ test('observed added-time duration rescues real 90+ appearances without permitti
  m.stats.minutes_played=180;assert.ok(calc(m).warnings.includes('INVALID_MINUTES'));
  m.playerId='bsd-30';m.durationMinutes=100;m.stats.minutes_played=35;m.source.incidents.incidents=[{type:'substitution',minute:60,player_out_id:2,player_in_id:30}];assert.equal(calc(m).status,'provisional');
 });
+test('uncertain goal order is accepted only when all possible orders have identical points',()=>{
+ const m=match('D');m.playerId='bsd-30';m.stats.minutes_played=5;m.awayScore=1;
+ m.source.incidents.incidents=[{type:'substitution',minute:85,player_out_id:2,player_in_id:30},{type:'goal',minute:85,is_home:false,player_id:12}];
+ let r=calc(m);assert.equal(r.status,'provisional');assert.equal(r.score,1);assert.ok(r.warnings.includes('GOAL_BOUNDARY_SCORE_UNCHANGED'));
+ m.playerId='bsd-2';m.stats.minutes_played=85;m.stats.goals_conceded=1;
+ assert.ok(calc(m).warnings.includes('GOAL_BOUNDARY_TIME_AMBIGUOUS'),'team-wide positive counter must not invent participation timing');
+ m.awayScore=3;m.source.incidents.incidents.push({type:'goal',minute:20,is_home:false,player_id:12},{type:'goal',minute:30,is_home:false,player_id:12});
+ r=calc(m);assert.equal(r.status,'provisional');assert.equal(points(r,'conceded'),-1);assert.equal(points(r,'clean_sheet'),0);
+ m.awayScore=4;m.source.incidents.incidents.push({type:'goal',minute:40,is_home:false,player_id:12});
+ assert.ok(calc(m).warnings.includes('GOAL_BOUNDARY_TIME_AMBIGUOUS'));
+});
 test('unknown counters and missing required facts stay distinguishable from DNP',()=>{
  const m=match();assert.ok(calc(m).warnings.some(x=>x.includes('UNVERIFIED')));m.playerId='bsd-30';m.stats.minutes_played=0;assert.equal(calc(m).status,'not-played');
  m.stats.minutes_played=15;m.source.lineups.lineup_status='predicted';assert.equal(calc(m).score,null);

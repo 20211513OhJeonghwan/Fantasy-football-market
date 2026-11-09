@@ -21,7 +21,9 @@
 .formation-choices label { display:grid; grid-template-columns:auto auto minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px 8px; border:1px solid transparent; border-radius:6px; cursor:pointer; }
 .formation-choices label.checked { border-color:var(--ink); background:var(--yellow-wash); }
 .formation-choices label:has(input:disabled):not(.checked) { opacity:.65; cursor:default; }
-.formation-choices input { width:18px; height:18px; accent-color:var(--ink); }
+.formation-choices input[type="checkbox"] { width:18px; min-width:18px; height:18px; min-height:18px; margin:0; padding:0; border-radius:3px; accent-color:var(--ink); }
+.formation-choices input[type="checkbox"]:focus { box-shadow:none; }
+.formation-choices input[type="checkbox"]:focus-visible { outline:2px solid var(--ink); outline-offset:3px; box-shadow:0 0 0 3px var(--yellow); }
 .formation-choices label > span { display:grid; gap:3px; min-width:0; }
 .formation-choices strong { font-size:13px; overflow-wrap:anywhere; }
 .formation-choices small { font-size:11px; color:var(--text-3); }

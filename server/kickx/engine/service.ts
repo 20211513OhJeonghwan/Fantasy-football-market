@@ -50,8 +50,10 @@ export async function calculatePlayer(db: SupabaseClient, playerId: string, acto
   const r=await db.from("football_match_stats").select("player_id,fixture_id,team_id,stats,legacy_stats,updated_at,fixtures!inner(id,starts_at,season,status,home_team_id,away_team_id,home_score,away_score,updated_at,football_event_sources(detail,lineups,incidents,updated_at))").eq("player_id",playerId).order("fixture_id").range(offset,offset+499).returns<CalculationRecord[]>();
   checkDatabase(r.error);stats.push(...(r.data??[]));if((r.data?.length??0)<500)break;if(offset>=9500)throw new HttpError(422,"선수 기록 범위가 너무 큽니다.");
  }
- const expected=stats.map(m=>({fixture:m.fixture_id,statsAt:m.updated_at,sourceAt:m.fixtures.football_event_sources?.updated_at??null,fixtureAt:m.fixtures.updated_at}));
- const ordered=stats.sort((a,b)=>a.fixtures.starts_at.localeCompare(b.fixtures.starts_at)||a.fixture_id.localeCompare(b.fixture_id));
+ // A canceled fixture is retained as source data, never as a scoring input.
+ const eligibleStats=stats.filter(m=>m.fixtures.status!=="CANC");
+ const expected=eligibleStats.map(m=>({fixture:m.fixture_id,statsAt:m.updated_at,sourceAt:m.fixtures.football_event_sources?.updated_at??null,fixtureAt:m.fixtures.updated_at}));
+ const ordered=eligibleStats.sort((a,b)=>a.fixtures.starts_at.localeCompare(b.fixtures.starts_at)||a.fixture_id.localeCompare(b.fixture_id));
  const clubCompetitions=policy.data.club_competitions_enabled===true;
  const results=ordered.map(m=>({...calculator({fixtureId:m.fixture_id,playerId,teamId:m.team_id,status:m.fixtures.status,homeTeam:m.fixtures.home_team_id,awayTeam:m.fixtures.away_team_id,homeScore:m.fixtures.home_score,awayScore:m.fixtures.away_score,stats:m.stats,legacy:m.legacy_stats,source:m.fixtures.football_event_sources??{},clubCompetitions}),ruleVersion:version,...(clubCompetitions?{scoringRevision:'club-competitions-v1'}:{})}));
  const referenceAt = previewPolicy?.referenceAt ?? policy.data.pricing_reference_at;

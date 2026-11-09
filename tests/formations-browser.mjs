@@ -63,6 +63,12 @@ try {
     const confirm=dialog.getByRole('button',{name:'2명 벤치 이동 후 변경'});assert(await confirm.isDisabled());
     await dialog.locator('label').filter({hasText:'주전선수 4'}).getByRole('checkbox').check();assert(await confirm.isDisabled());
     await dialog.locator('label').filter({hasText:'주전선수 10'}).getByRole('checkbox').check();assert(await confirm.isEnabled());
+    const checkbox=dialog.locator('input[type="checkbox"]:checked').first();
+    await checkbox.focus();
+    await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');
+    const box=await checkbox.evaluate(el=>({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,minHeight:getComputedStyle(el).minHeight,padding:getComputedStyle(el).padding,outline:getComputedStyle(el).outlineStyle}));
+    assert.equal(box.width,18);assert.equal(box.height,18);assert.equal(box.minHeight,'18px');assert.equal(box.padding,'0px');assert.equal(box.outline,'solid');
+    report.layouts.push({width,checkbox:box});
     assert.match(await dialog.innerText(),/재배치할 수 없습니다/);
     assert.match(await dialog.innerText(),/7일 안에 직접 매각/);
     assert.doesNotMatch(await dialog.innerText(),/14일/);
