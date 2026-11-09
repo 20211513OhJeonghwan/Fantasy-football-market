@@ -45,6 +45,7 @@ export function FormationChangeDialog({ onClose }: { onClose: () => void }) {
       {target !== current && !plan.benchCount && <p className="formation-safe">정원을 초과하는 선수가 없습니다. 모든 주전 선수를 유지한 채 배치를 조정합니다.</p>}
       {POSITIONS.filter(pos => plan.required[pos] > 0).map(pos => <fieldset className="formation-choices" key={pos} disabled={saving}>
         <legend>{pos} 벤치 이동 선수 선택 <b>{count(pos)} / {plan.required[pos]}명</b></legend>
+        {(member?.holdings ?? []).some(h => !h.bench && getPlayer(h.playerId)?.position === pos && getPlayer(h.playerId)?.tradeWindow?.locked) && <p className="fine-print">경기 거래 제한 중인 선수는 선택할 수 없습니다. 해당 선수의 제한이 끝난 뒤 다시 선택해 주세요.</p>}
         {(member?.holdings ?? []).filter(h => !h.bench && getPlayer(h.playerId)?.position === pos).map(h => {
           const player = getPlayer(h.playerId)!, checked = selected.includes(h.playerId), locked = !!player.tradeWindow?.locked;
           return <label key={h.playerId} className={checked ? 'checked' : ''}>
