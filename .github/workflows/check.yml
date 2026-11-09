@@ -58,6 +58,8 @@ jobs:
           node /tmp/kickx-browser/node_modules/playwright/cli.js install --with-deps chromium
       - name: Roster bench desktop and mobile checks
         run: node tests/roster-bench-browser.mjs
+      - name: Formation selection and placement desktop and mobile checks
+        run: node tests/formations-browser.mjs
       - name: Desktop and mobile smoke tests
         run: node tests/browser-smoke.mjs
       - name: Community, notification and profile regression tests

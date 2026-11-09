@@ -36,7 +36,7 @@ test('old formation converts by position without moving a midfielder into a forw
   const positions = ['GK','DF','DF','DF','MF','MF','MF','MF','MF','FW','FW'];
   const players = positions.map((position,i)=>({id:`p${i}`,position}));
   const get = id=>players.find(p=>p.id===id);
-  const slots = fixedSquadSlots(players.map(p=>p.id),'3-5-2',get);
+  const slots = fixedSquadSlots(players.map(p=>p.id),'3-5-2',get,'4-3-3');
   assert.deepEqual(slots,['p0','p1','p2','p3',null,'p4','p5','p6','p9','p10',null]);
   assert.equal(players.length,11,'conversion does not mutate owned players');
 });

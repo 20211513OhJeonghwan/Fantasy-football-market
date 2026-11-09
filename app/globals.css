@@ -12,6 +12,7 @@
 @import "./styles/account.css";
 @import "./styles/mobile.css";
 @import "./styles/squad-market.css";
+@import "./styles/formations.css";
 
 /* Primary club identity and community polls, Nov 6. */
 .member-name{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;max-width:100%;vertical-align:middle;overflow-wrap:anywhere}

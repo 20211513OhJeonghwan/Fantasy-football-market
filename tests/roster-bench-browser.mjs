@@ -12,7 +12,7 @@ let browser;
 const report = { widths: [320, 390, 1440], checks: [], errors: [] };
 try {
   for (let i = 0; i < 40; i++) { try { if ((await fetch(base)).ok) break; } catch {} if (i === 39) throw Error('App did not start'); await new Promise(r => setTimeout(r, 500)); }
-  browser = await chromium.launch(); await mkdir(out, { recursive: true });
+  browser = await chromium.launch({ executablePath: process.env.KICKX_BROWSER_EXECUTABLE || undefined }); await mkdir(out, { recursive: true });
   for (const width of report.widths) {
     const frozen = { price: 70000, startedAt: new Date(Date.now() - 2 * 86400000).toISOString(), expiresAt: new Date(Date.now() + 12 * 86400000).toISOString(), reason: 'transfer_position' };
     const players = [

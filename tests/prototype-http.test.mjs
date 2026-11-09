@@ -18,13 +18,22 @@ test('trade quote and settlement ignore client price, quantity, user and policy 
  assert.equal((await trade.POST(req({...body,quoteId:'bad',requestId:id}))).status,400);assert.equal(calls.length,4);
 });
 test('all new writes reject foreign origins and missing authentication before database mutation',async()=>{
- for(const [path,method] of [['trades/quote','POST'],['trades','POST'],['squad','PUT'],['community','POST'],['admin/prototype','POST']]){
+ for(const [path,method] of [['trades/quote','POST'],['trades','POST'],['squad','PUT'],['squad/formation','POST'],['community','POST'],['admin/prototype','POST']]){
   let calls=0,denied=true;
   const authenticatedClient=async()=>{if(denied)throw new http.HttpError(401,'로그인 필요');return {user:{id:'verified'},client:{rpc:async()=>{calls++;return {data:{},error:null};}}};};
-  const route=loadTs(`../app/api/kickx/${path}/route.ts`,{'@/server/kickx/http':{...http,authenticatedClient},'@/server/kickx/prototype':prototype,'@/lib/kickx/bench':benchRules,'@/server/kickx/config':{},'@/server/kickx/supabase':{},'@/lib/kickx/validation':validation,'@/lib/kickx/community':community,'@/server/kickx/admin-db':{requireAdmin:async()=>{throw new http.HttpError(401,'로그인 필요');},createAdminDatabase:()=>{calls++;}},'@/server/kickx/engine/service':{calculatePlayer:()=>{calls++;}}});
+  const route=loadTs(`../app/api/kickx/${path}/route.ts`,{'@/server/kickx/http':{...http,authenticatedClient},'@/server/kickx/prototype':prototype,'@/lib/kickx/squad':squadRules,'@/lib/kickx/bench':benchRules,'@/server/kickx/config':{},'@/server/kickx/supabase':{},'@/lib/kickx/validation':validation,'@/lib/kickx/community':community,'@/server/kickx/admin-db':{requireAdmin:async()=>{throw new http.HttpError(401,'로그인 필요');},createAdminDatabase:()=>{calls++;}},'@/server/kickx/engine/service':{calculatePlayer:()=>{calls++;}}});
   assert.equal((await route[method](req({}))).status,401);denied=false;
   assert.equal((await route[method](req({},'https://foreign.invalid'))).status,403);assert.equal(calls,0);
  }
+});
+test('formation requests accept only the catalog and never forward forged prices or user IDs',async()=>{
+ const calls=[],client={rpc:async(name,args)=>{calls.push({name,args});return {data:{formation_id:args.p_formation},error:null};}};
+ const route=loadTs('../app/api/kickx/squad/formation/route.ts',{'@/server/kickx/http':{...http,authenticatedClient:async()=>({client})},'@/server/kickx/prototype':prototype,'@/lib/kickx/squad':squadRules});
+ const valid={formationId:'3-5-2',benchPlayerIds:['defender','forward'],revision:4,price:1,userId:'forged'};
+ assert.equal((await route.POST(req(valid))).status,200);
+ assert.deepEqual(calls[0],{name:'kickx_change_formation',args:{p_formation:'3-5-2',p_bench:['defender','forward'],p_revision:4}});
+ for(const bad of [{...valid,formationId:'4-6-0'},{...valid,formationId:'3-6-1'},{...valid,formationId:'3-3-3-1'},{...valid,benchPlayerIds:['defender','defender']},{...valid,revision:null},{...valid,revision:'4'}])assert.equal((await route.POST(req(bad))).status,400);
+ assert.equal(calls.length,1);
 });
 test('database error mapping exposes known conflicts but redacts unknown private details',()=>{
  assert.throws(()=>prototype.checkDatabase({message:'ALREADY_OWNED'}),e=>e.status===409);

@@ -86,3 +86,32 @@
 }
 .lounge-head { overflow: hidden; }
 .lounge-head::before { border-radius: 0; }
+
+/* ---------- Club identity (2026-11-08): the club's own colours, crest and stripe carry its boards ---------- */
+.lounge-head.themed { color: var(--club-ink); background:
+    linear-gradient(115deg, transparent 0 62%, color-mix(in srgb, var(--club-2) 22%, transparent) 62% 66%, transparent 66% 70%, color-mix(in srgb, var(--club-2) 14%, transparent) 70% 72%, transparent 72%),
+    linear-gradient(135deg, var(--club), color-mix(in srgb, var(--club) 72%, #000)); box-shadow: 0 10px 30px -18px color-mix(in srgb, var(--club) 80%, #000); }
+.lounge-head.themed::before { width: 6px; background: var(--club-2); }
+.lounge-head.themed .lounge-head-kicker, .lounge-head.themed .lounge-head-text p { color: color-mix(in srgb, var(--club-ink) 72%, transparent); }
+.lounge-head.themed .lounge-head-text h1, .lounge-head.themed .lounge-head-text h2 { color: var(--club-ink); }
+.lounge-head.themed .lounge-head-text h2 { margin-top: 2px; font-size: 26px; font-weight: 900; letter-spacing: -0.04em; }
+.lounge-head.themed .lounge-head-mark { background: #fff; border-radius: 16px; box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.45); }
+.lounge-head.themed .button.primary { background: var(--club-ink); color: var(--club); border-color: var(--club-ink); }
+.lounge-head.themed .button.secondary { background: #fff; color: var(--ink); border-color: #fff; }
+.lounge-head-watermark { position: absolute; right: 18%; top: 50%; transform: translateY(-50%) rotate(-10deg); opacity: 0.13; pointer-events: none; }
+.lounge-head-watermark .crest { --size: 170px; }
+.lounge-head.themed > :not(.lounge-head-watermark) { position: relative; z-index: 1; }
+.club-banner { margin-bottom: 14px; }
+.supported-board-clubs nav button.club-chip { border-color: color-mix(in srgb, var(--club) 40%, var(--line-2)); }
+.supported-board-clubs nav button.club-chip:hover { border-color: var(--club); }
+.supported-board-clubs nav button.club-chip.active { background: var(--club); border-color: var(--club); color: var(--club-ink); box-shadow: inset 0 -3px 0 var(--club-2); }
+@media (max-width: 640px) {
+  .lounge-head-watermark { right: -20px; }
+  .lounge-head-watermark .crest { --size: 120px; }
+  .lounge-head.themed .lounge-head-text h2 { font-size: 20px; }
+  .club-banner { grid-template-columns: auto minmax(0, 1fr); }
+  .club-banner > .button { grid-column: 1 / -1; justify-self: start; }
+}
+.club-scoped .community-board { border-top: 4px solid var(--club); }
+.club-scoped .numbered-pagination button.active { background: var(--club); border-color: var(--club); color: var(--club-ink); }
+.club-scoped .post-browser-title h2::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 3px; background: var(--club); box-shadow: 3px 3px 0 var(--club-2); vertical-align: 1px; }

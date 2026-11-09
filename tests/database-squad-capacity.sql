@@ -1,4 +1,4 @@
--- Quotas apply to holdings; quote and settlement both enforce them. No manual placement.
+-- Quotas apply to holdings; quote and settlement both enforce them. Placement must retain every active holding.
 begin;
 update public.kickx_policy set version='prototype-v1',club_competitions_enabled=false;
 insert into auth.users(id) values('00000000-0000-0000-0000-000000000091');
@@ -36,7 +36,7 @@ do $$declare pos text;cap integer;i integer;q jsonb;pending jsonb;receipt jsonb;
  if (select count(*) from public.holdings)<>11 then raise exception 'Holdings quotas failed';end if;
  if (select slots from public.squads)<>array['capacity-GK-1','capacity-DF-1','capacity-DF-2','capacity-DF-3','capacity-DF-4','capacity-MF-1','capacity-MF-2','capacity-MF-3','capacity-FW-1','capacity-FW-2','capacity-FW-3'] then raise exception 'Purchase not automatically placed';end if;
  perform pg_temp.capacity_error($q$select public.kickx_quote('capacity-GK-1','buy')$q$,'ALREADY_OWNED');
- perform pg_temp.capacity_error(format('select public.kickx_save_squad(''4-3-3'',array_fill(null::text,array[11]),%s)',(select revision from public.squads)),'AUTO_SQUAD_MANAGED');
+ perform pg_temp.capacity_error(format('select public.kickx_save_squad(''4-3-3'',array_fill(null::text,array[11]),%s)',(select revision from public.squads)),'SQUAD_INCOMPLETE');
  q:=public.kickx_quote('capacity-GK-1','sell');perform public.kickx_trade((q->>'id')::uuid,gen_random_uuid());
  if (select slots[1] from public.squads) is not null then raise exception 'Sale did not clear saved slot';end if;
  q:=public.kickx_quote('capacity-GK-2','buy');perform public.kickx_trade((q->>'id')::uuid,gen_random_uuid());

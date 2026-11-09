@@ -31,7 +31,7 @@ try{
   const panel=p.locator('.dash-fixtures');await panel.getByText('본진 구단',{exact:true}).waitFor();await panel.getByText('서브 구단',{exact:true}).waitFor();
   assert.deepEqual(requests,['main,sub']);assert.equal(await panel.getByText('무관한 구단',{exact:true}).count(),0);assert.equal(await panel.locator('li').count(),2);
   await p.screenshot({path:`${out}/supported-${width}.png`,fullPage:true});
-  items=[];await p.reload({waitUntil:'domcontentloaded'});await panel.getByText('본진·서브팀의 경기 일정이 아직 없습니다.',{exact:true}).waitFor();assert.equal(await panel.getByText('무관한 구단',{exact:true}).count(),0);
+  items=[];await p.reload({waitUntil:'domcontentloaded'});await panel.getByText('메인 응원 구단·서브팀의 경기 일정이 아직 없습니다.',{exact:true}).waitFor();assert.equal(await panel.getByText('무관한 구단',{exact:true}).count(),0);
   state.session.profile={nickname:'경기 테스트',teams:[],primaryTeam:null,team:null};const before=requests.length;await p.reload({waitUntil:'domcontentloaded'});await panel.getByRole('link',{name:'응원 구단 설정',exact:true}).waitFor();assert.equal(requests.length,before);
   state.session=null;await p.reload({waitUntil:'domcontentloaded'});await panel.getByText('무관한 구단',{exact:true}).waitFor();assert.equal(requests.length,before);
   assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));

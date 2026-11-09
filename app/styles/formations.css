@@ -1,0 +1,49 @@
+/* Functional layout for formation selection; design continuation is documented for Claude. */
+.squad-formation { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.squad-edit-actions { display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; }
+.placement-hint { margin:0; padding:12px 16px; font-size:12px; line-height:1.7; background:var(--yellow-wash); border-bottom:var(--border); }
+.pitch-rows { grid-template-columns:minmax(0,1fr); }
+.pitch-row { min-width:0; width:100%; }
+.pitch-row > .pitch-player { min-width:0; max-width:calc(100% / var(--row-count, 4)); flex:0 1 92px; }
+.pitch-player { grid-template-columns:minmax(0,1fr); }
+.automatic-squad .pitch[data-lines="5"] { width:100%; max-width:100%; aspect-ratio:680 / 560; min-height:440px; }
+.pitch.compact[data-lines="5"] .jersey { width:20px; height:19px; }
+.formation-dialog { display:grid; gap:18px; min-width:0; }
+.formation-dialog select { width:100%; min-height:44px; border:var(--border); padding:8px 12px; border-radius:6px; background:var(--surface); color:var(--text); }
+.formation-comparison { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:20px; padding:16px; background:var(--surface-2); border-radius:8px; }
+.formation-comparison b { font-size:20px; margin-left:6px; }
+.formation-limits { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; padding:0; margin:0; list-style:none; }
+.formation-limits li { display:grid; gap:6px; justify-items:center; padding:12px 4px; border:var(--border); border-radius:6px; }
+.formation-limits small { font-size:11px; color:var(--text-3); text-align:center; }
+.formation-choices { min-width:0; padding:12px; border:var(--border); border-radius:8px; }
+.formation-choices legend { padding:0 6px; font-size:14px; font-weight:800; }
+.formation-choices legend b { margin-left:8px; }
+.formation-choices label { display:grid; grid-template-columns:auto auto minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px 8px; border:1px solid transparent; border-radius:6px; cursor:pointer; }
+.formation-choices label.checked { border-color:var(--ink); background:var(--yellow-wash); }
+.formation-choices label:has(input:disabled):not(.checked) { opacity:.65; cursor:default; }
+.formation-choices input { width:18px; height:18px; accent-color:var(--ink); }
+.formation-choices label > span { display:grid; gap:3px; min-width:0; }
+.formation-choices strong { font-size:13px; overflow-wrap:anywhere; }
+.formation-choices small { font-size:11px; color:var(--text-3); }
+.formation-choices b.num { font-size:13px; white-space:nowrap; }
+.formation-warning,.formation-safe { margin:0; padding:14px; border-radius:6px; font-size:13px; line-height:1.8; }
+.formation-warning { background:var(--down-bg); border-left:3px solid var(--down); }
+.formation-warning b { display:block; margin-bottom:4px; }
+.formation-safe { background:var(--surface-2); }
+.bench-deadline { display:grid; gap:3px; font-size:12px; line-height:1.6; }
+.bench-deadline > strong { color:var(--down); font-size:12px; font-variant-numeric:tabular-nums; }
+.bench-deadline time { color:var(--text-3); font-size:11px; }
+.holding-state > .bench-deadline { white-space:normal; }
+.holding-state:has(> .bench-deadline) { display:grid; gap:5px; justify-items:start; }
+@media(max-width:640px) {
+  .squad-edit-actions { width:100%; margin:2px 0 0; }
+  .squad-edit-actions > button { flex:1; min-width:0; }
+  .automatic-squad .pitch[data-lines="5"] { aspect-ratio:auto; min-height:410px; height:clamp(410px,100vw,500px); }
+  .formation-comparison { gap:12px; padding:12px; font-size:12px; }
+  .formation-comparison b { font-size:17px; }
+  .formation-limits { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .formation-choices { padding:8px; }
+  .formation-choices label { grid-template-columns:auto auto minmax(0,1fr); gap:7px; padding:10px 3px; }
+  .formation-choices b.num { grid-column:3; }
+  .formation-dialog .modal-actions > button { min-width:0; white-space:normal; }
+}

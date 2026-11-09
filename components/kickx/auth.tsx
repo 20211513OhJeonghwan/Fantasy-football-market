@@ -3,14 +3,15 @@ import { AVATAR_LABELS, UserAvatar } from "./avatar";
 import { Select } from "./select";
 import { useTeamOptions } from "./options";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, LoaderCircle, LogOut, Mail, Save, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, LoaderCircle, LogOut, Mail, Save, ShieldCheck, Shuffle } from "lucide-react";
 import { usePlatform } from "./provider";
 import { Logo } from "./shell";
 import { PlaybookArt } from "./playbook-art";
 import { Change, DataNotice, LeagueMark, MemberNotice, MockBadge, PageHeading, SectionTitle, TeamBadge } from "./ui";
 import { apiRequest } from "@/lib/kickx/client";
+import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
 import { dateText, money } from "@/lib/kickx/data";
 import { AVATAR_ICONS, parseProfile, PROFILE_LIMITS, safeReturnPath } from "@/lib/kickx/validation";
 import type { Profile } from "@/lib/kickx/types";
@@ -121,9 +122,9 @@ function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
     if (!canSave || lock.current) return;
     setError("");
     try {
-      if(onboarding&&!primary)throw new Error('본진 구단을 선택해 주세요.');
+      if(onboarding&&!primary)throw new Error('메인 응원 구단을 선택해 주세요.');
       const confirmPrimary=!!primary&&!profile?.primaryTeam;
-      if(confirmPrimary&&!window.confirm(`${data.teams.find(t=>t.id===primary)?.name??'선택한 구단'}을 본진으로 영구 고정합니다.\n가입 후에는 변경하거나 해제할 수 없으며, 닉네임 앞에 공식 엠블럼이 계속 표시됩니다.\n이 구단으로 확정할까요?`))return;
+      if(confirmPrimary&&!window.confirm(`${data.teams.find(t=>t.id===primary)?.name??'선택한 구단'}을 메인 응원 구단으로 영구 고정합니다.\n가입 후에는 변경하거나 해제할 수 없으며, 닉네임 앞에 공식 엠블럼이 계속 표시됩니다.\n이 구단으로 확정할까요?`))return;
       const values = parseProfile({ nickname, teams, avatar,primaryTeam:primary||null,confirmPrimary });
       lock.current = true; setBusy(true);
       const savedProfile = mock ? values : (await apiRequest<{ profile: Profile }>("/api/kickx/profile", "POST", values)).profile;
@@ -141,13 +142,13 @@ function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
         <input id="profile-nickname" aria-labelledby="profile-nickname-label" value={nickname} onChange={(event) => setDraftName(event.target.value)} placeholder="사용할 닉네임을 입력하세요" autoComplete="nickname" required minLength={PROFILE_LIMITS.min} maxLength={PROFILE_LIMITS.max} disabled={busy} aria-describedby="nickname-help" aria-invalid={!!error} />
         <small id="nickname-help">2–20자 · 문자, 숫자, 공백, 밑줄, 하이픈</small>
       </label>
-      <fieldset className="supported-club-fields primary-club-fields" disabled={busy}><legend>본진 구단 · 영구 고정</legend>
-        {profile?.primaryTeam ? <div className="profile-primary-locked"><TeamBadge id={primary}/><strong>{data.teams.find(t=>t.id===primary)?.name}</strong><span>변경 불가</span></div> : <Select id="profile-primary" label="본진 구단" value={primary} onChange={id=>{setDraftPrimary(id);const league=data.teams.find(t=>t.id===id)?.leagueId;setDraftTeams([id,...teams.filter(t=>data.teams.find(x=>x.id===t)?.leagueId!==league)]);}} options={teamOptions.filter(o=>!!o.value)} placeholder="평생 응원할 본진 구단을 선택하세요"/>}
-        <p className="primary-warning">본진은 한 번 확정하면 영구적으로 변경·해제할 수 없습니다. 공식 엠블럼이 닉네임 앞에 표시되며, 이 구단에서 게시글을 작성할 수 있습니다.</p>
+      <fieldset className="supported-club-fields primary-club-fields" disabled={busy}><legend>메인 응원 구단</legend>
+        {profile?.primaryTeam ? <div className="profile-primary-locked"><TeamBadge id={primary}/><strong>{data.teams.find(t=>t.id===primary)?.name}</strong><span>변경 불가</span></div> : <Select id="profile-primary" label="메인 응원 구단" value={primary} onChange={id=>{setDraftPrimary(id);const league=data.teams.find(t=>t.id===id)?.leagueId;setDraftTeams([id,...teams.filter(t=>data.teams.find(x=>x.id===t)?.leagueId!==league)]);}} options={teamOptions.filter(o=>!!o.value)} placeholder="평생 함께할 메인 응원 구단을 선택하세요"/>}
+        <p className="primary-warning">메인 응원 구단은 한 번 확정하면 영구적으로 변경·해제할 수 없습니다. 공식 엠블럼이 닉네임 앞에 표시되며, 이 구단에서 게시글을 작성할 수 있습니다.</p>
       </fieldset>
       <fieldset className="supported-club-fields" disabled={busy}><legend>응원 구단 <small>{teams.length} / 5</small></legend>
-        <p id="team-help">본진을 포함해 리그별 1개씩 최대 5개입니다. 서브팀은 댓글·투표에 참여할 수 있습니다. 가입 후 1시간 동안 변경할 수 있고, 이후에는 2월·9월 1~7일에 리그별 한 번씩 변경할 수 있습니다. 구단 해제도 변경에 포함됩니다.</p>
-        {leagues.map(league=>{const picked=teams.find(id=>data.teams.find(t=>t.id===id)?.leagueId===league.id)??'';return <div className={`supported-club-field${picked?' picked':''}`} key={league.id}><label htmlFor={`profile-team-${league.id}`}><LeagueMark league={league} size="sm"/><span>{league.name}</span><small>{league.id===primaryLeague?'본진 · 변경 불가':picked?'서브팀':'미선택'}</small></label>
+        <p id="team-help">메인 응원 구단을 포함해 리그별 1개씩 최대 5개입니다. 서브팀은 댓글·투표에 참여할 수 있습니다. 가입 후 1시간 동안 변경할 수 있고, 이후에는 2월·9월 1~7일에 리그별 한 번씩 변경할 수 있습니다. 구단 해제도 변경에 포함됩니다.</p>
+        {leagues.map(league=>{const picked=teams.find(id=>data.teams.find(t=>t.id===id)?.leagueId===league.id)??'';return <div className={`supported-club-field${picked?' picked':''}`} key={league.id}><label htmlFor={`profile-team-${league.id}`}><LeagueMark league={league} size="sm"/><span>{league.name}</span><small>{league.id===primaryLeague?'메인 응원 구단 · 변경 불가':picked?'서브팀':'미선택'}</small></label>
           <Select id={`profile-team-${league.id}`} label={`${league.name} 응원 구단`} describedBy="team-help" value={picked} disabled={busy || !data.teams.length || league.id===primaryLeague || !canChangeSubteam(profile,league.id)}
             onChange={id=>setDraftTeams([...teams.filter(team=>data.teams.find(t=>t.id===team)?.leagueId!==league.id),...(id?[id]:[])])}
             options={[{value:'',label:'선택 안 함'},...teamOptions.filter(o=>data.teams.some(t=>t.id===o.value&&t.leagueId===league.id))]} placeholder="선택 안 함"/>
@@ -159,7 +160,7 @@ function ProfileForm({ onboarding = false }: { onboarding?: boolean }) {
         <div role="radiogroup" aria-describedby="avatar-help">
           {AVATAR_ICONS.map(icon => { const value = `icon:${icon}`; return <button type="button" role="radio" aria-label={AVATAR_LABELS[icon]} aria-checked={avatar === value} key={icon} className={avatar === value ? "active" : ""} onClick={() => setDraftAvatar(value)}><UserAvatar className="avatar-option" avatar={value} seed={icon} /></button>; })}
           {teams.map(id => { const value = `club:${id}`; return <button type="button" role="radio" aria-checked={avatar === value} key={value} className={avatar === value ? "active" : ""} onClick={() => setDraftAvatar(value)}><UserAvatar className="avatar-option" avatar={value} seed={id} /><span>{data.teams.find(t => t.id === id)?.name ?? "응원 구단"}</span></button>; })}
-          <button type="button" role="radio" aria-label="기본 아이콘" aria-checked={avatar === null} className={avatar === null ? "active" : ""} onClick={() => setDraftAvatar(null)}><UserAvatar className="avatar-option" avatar={null} seed={data.session?.userId ?? "guest"} /></button>
+          <button type="button" role="radio" aria-label="기본 아이콘" title="기본 · 회원마다 자동으로 정해지는 아이콘" aria-checked={avatar === null} className={`avatar-auto-option ${avatar === null ? "active" : ""}`} onClick={() => setDraftAvatar(null)}><span className="avatar-option avatar-auto" aria-hidden="true"><Shuffle size={18} /></span></button>
         </div>
       </fieldset>
       {error && <p className="form-error" role="alert">{error}</p>}
@@ -212,7 +213,11 @@ export function MyPageScreen() {
         <UserAvatar className="profile-avatar" avatar={profile?.avatar} seed={data.session?.userId ?? "guest"} label="프로필 아이콘" />
         <div className="my-hero-text">
           <div className="my-hero-name"><h2>{profile?.primaryTeam&&<TeamBadge id={profile.primaryTeam}/>} {profile?.nickname || (data.session ? "프로필을 완성해 주세요" : "로그인이 필요합니다")}</h2><MockBadge compact /></div>
-          <div className="profile-supported-clubs" aria-label="선택한 응원 구단">{supportedTeams(profile).length ? supportedTeams(profile).map(id=><div className="profile-club" key={id}><TeamBadge id={id}/><strong>{getTeam(id)?.name||'구단 정보 없음'}</strong></div>) : <div className="profile-club">응원 구단 미선택</div>}</div>
+          <div className="profile-supported-clubs" aria-label="선택한 응원 구단">{supportedTeams(profile).length ? [...supportedTeams(profile)].sort((a, b) => Number(b === profile?.primaryTeam) - Number(a === profile?.primaryTeam)).map(id => {
+            const club = clubIdentity(getTeam(id)), main = id === profile?.primaryTeam;
+            // Main club as a solid badge in its colours; the other supported clubs as tinted chips.
+            return <div className={`profile-club${main ? " main" : ""}`} key={id} style={club ? { "--club": club.primary, "--club-2": club.secondary, "--club-ink": luminance(club.primary) > 0.55 ? "#111110" : "#ffffff" } as CSSProperties : undefined}><TeamBadge id={id}/><strong>{getTeam(id)?.name||'구단 정보 없음'}</strong>{main && <small>메인</small>}</div>;
+          }) : <div className="profile-club">응원 구단 미선택</div>}</div>
         </div>
         <dl className="profile-facts">
           <div><dt>보유 선수</dt><dd className="num">{member ? `${new Set(member.holdings.map((h) => h.playerId)).size}명` : "—"}</dd></div>

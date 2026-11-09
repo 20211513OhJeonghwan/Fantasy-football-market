@@ -502,8 +502,9 @@ button.pitch-player:hover { transform: translateY(-3px); }
 .podium-user { display: flex; align-items: center; gap: var(--s-4); position: relative; }
 .podium-user div { display: grid; }
 .podium-user strong { font-size: 22px; font-weight: 900; letter-spacing: -0.03em; }
-.podium-user span { font-size: var(--fs-small); color: var(--text-3); font-weight: 700; }
-.podium-card.place-1 .podium-user span { color: rgba(255, 255, 255, 0.6); }
+.podium-user > div > span { font-size: var(--fs-small); color: var(--text-3); font-weight: 700; }
+.podium-user strong span, .podium-user strong a { font-size: inherit; font-weight: inherit; color: inherit; }
+.podium-card.place-1 .podium-user > div > span { color: rgba(255, 255, 255, 0.6); }
 .podium-figures { display: flex; gap: var(--s-8); padding-top: var(--s-4); border-top: 1px solid var(--line); }
 .podium-card.place-1 .podium-figures { border-top-color: rgba(255, 255, 255, 0.18); }
 .podium-figures div { display: grid; gap: 4px; justify-items: start; }

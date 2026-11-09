@@ -91,7 +91,10 @@
 .my-hero-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .my-hero-name h2 { font-size: 24px; font-weight: 900; letter-spacing: -0.03em; overflow-wrap: anywhere; }
 .my-hero .profile-supported-clubs { display: flex; flex-wrap: wrap; gap: 6px; }
-.my-hero .profile-club { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; background: var(--surface-2); font-size: 12px; }
+.my-hero .profile-club { --club: var(--line-2); display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--club) 45%, white); background: color-mix(in srgb, var(--club) 10%, white); font-size: 12px; }
+.my-hero .profile-club strong { font-weight: 800; }
+.my-hero .profile-club.main { padding: 4px 6px 4px 5px; border-color: var(--club); background: var(--club); color: var(--club-ink); box-shadow: inset 0 -3px 0 var(--club-2); }
+.my-hero .profile-club.main small { padding: 1px 6px; border-radius: 999px; background: var(--club-ink); color: var(--club); font-size: 10.5px; font-weight: 900; }
 .my-hero .profile-facts { display: grid; grid-template-columns: repeat(3, auto); gap: 0; margin: 0; border: 0; }
 .my-hero .profile-facts > div { display: grid; justify-items: center; gap: 2px; padding: 0 16px; }
 .my-hero .profile-facts > div + div { border-left: 1px solid var(--line); }
@@ -223,3 +226,21 @@
   .activity-heading .author-avatar { width: 44px; height: 44px; }
   .notification-scroll li > a { padding: 12px 14px; gap: 10px; }
 }
+
+/* ---------- Profile icon picker (2026-11-08): round tiles, crests labelled, automatic icon dashed ---------- */
+.avatar-picker [role="radiogroup"] { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+.avatar-picker button { width: auto; min-height: 78px; align-content: center; padding: 10px 4px 8px; border-radius: 12px; transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease); }
+.avatar-picker button:hover { background: var(--surface-2); }
+.avatar-picker button.active { border-color: var(--ink); background: var(--yellow-wash); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.avatar-picker button.active .avatar-option { box-shadow: 0 0 0 3px var(--yellow); }
+.avatar-picker .avatar-option { width: 46px; height: 46px; }
+.avatar-picker button > span:last-child:not(.avatar-option) { font-size: 11px; }
+.avatar-auto { display: grid; place-items: center; border-radius: 50%; border: 1.5px dashed var(--text-3); color: var(--text-2); background: var(--surface); }
+@media (max-width: 640px) {
+  .avatar-picker [role="radiogroup"] { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .avatar-picker button { min-height: 66px; padding: 8px 2px 6px; }
+  .avatar-picker .avatar-option { width: 38px; height: 38px; }
+}
+.my-hero .profile-club.main .crest { padding: 2px; border-radius: 50%; background: #fff; }
+.supported-club-field > label { flex-wrap: wrap; row-gap: 4px; }
+.supported-club-field > label > small { white-space: nowrap; }

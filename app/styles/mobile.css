@@ -87,8 +87,10 @@
   .podium-medal { font-size: 9.5px; padding: 1px 5px; }
   .podium-user { flex-direction: column; align-items: flex-start; gap: 4px; }
   .podium-user .crest { --size: 26px; }
-  .podium-user strong { font-size: 13px; overflow-wrap: anywhere; }
-  .podium-user span { font-size: 10.5px; }
+  .podium-user > div { min-width: 0; width: 100%; }
+  .podium-user strong { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .podium-user > div > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .podium-user > div > span { font-size: 10.5px; }
   .podium-figures { display: grid; grid-template-columns: 1fr; gap: 4px; padding-top: 6px; }
   .podium-figures span { font-size: 10px; }
   .podium-figures b { font-size: 12px; }

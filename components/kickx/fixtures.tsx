@@ -9,7 +9,7 @@ import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Search } from "lu
 import { usePlatform } from "./provider";
 import { useCatalogPage } from "./catalog";
 import type { Fixture } from "@/lib/kickx/types";
-import { DataEmpty, LeagueMark, PageHeading, Tabs, TeamBadge } from "./ui";
+import { DataEmpty, LeagueMark, PageHeading, Tabs, TeamBadge, ScrollTopButton } from "./ui";
 import { clubIdentity } from "@/lib/kickx/club-identity";
 import { dateText } from "@/lib/kickx/data";
 import { fixtureGroup, fixtureStatus, koreanDay, fixturesByLeague } from "@/lib/kickx/fixtures";
@@ -103,6 +103,7 @@ export function FixturesScreen() {
   const latest=()=>{changeMonth(todayMonth);setJump(n=>n+1);};
   const stateLabel=STATES.find(([v])=>v===state)?.[1]??'전체';
   return <>
+    <ScrollTopButton />
     <PageHeading eyebrow="MATCH CENTRE" title="경기 일정" description="5대 정규 리그의 월별 일정과 결과를 확인하세요. 구단 상세페이지에서는 모든 대회의 일정을 볼 수 있습니다." action={<span className="tag outline"><CalendarDays size={14}/>대한민국 시간 · KST</span>}/>
     <section className="panel flush schedule-calendar">
       <div className="schedule-controls">

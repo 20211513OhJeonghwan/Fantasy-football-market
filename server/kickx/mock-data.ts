@@ -1,5 +1,5 @@
 import "server-only";
-import { SQUAD_FORMATION } from "@/lib/kickx/squad";
+import { FORMATIONS } from "@/lib/kickx/squad";
 /**
  * Development sample data (KICKX_MOCK_DATA=true).
  *
@@ -282,7 +282,7 @@ function players(now: number): Player[] {
   });
 }
 
-const formations = [SQUAD_FORMATION];
+const formations = FORMATIONS;
 
 function fixtures(now: number): Fixture[] {
   const pairs: [string, string, number, string, number | null, number | null][] = [

@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { ArrowRight, BookOpen, Search, Shield, TrendingUp, X } from "lucide-react";
 import { Pagination } from './pagination';
 import { dateText, money, score } from "@/lib/kickx/data";
-import { fixedSquadSlots, SQUAD_FORMATION } from "@/lib/kickx/squad";
+import { fixedSquadSlots, formationRule } from "@/lib/kickx/squad";
 import { fixtureGroup, fixtureStatus, selectFeaturedFixtures, featuredTeamIds, selectSupportedFixtures } from "@/lib/kickx/fixtures";
 import type { Fixture, Player } from "@/lib/kickx/types";
 import { clubIdentity } from "@/lib/kickx/club-identity";
@@ -66,7 +66,7 @@ function AssetsPanel() {
 function SquadPanel() {
   const { data, getPlayer } = usePlatform();
   const squad = data.member?.squad;
-  const formation = SQUAD_FORMATION;
+  const formation = formationRule(squad?.formationId);
   const slots = squad ? fixedSquadSlots(squad.slots, squad.formationId, getPlayer) : [];
   const filled = slots.filter(Boolean).length;
   return (
@@ -115,7 +115,7 @@ function FixturesPanel() {
         </ul>
       ) : (
         <div className="dash-placeholder"><Shield size={22} />
-          <span>{loading ? "응원 구단 경기를 불러오고 있습니다." : failed ? "응원 구단 경기를 불러오지 못했습니다." : personalized ? teams.length ? "본진·서브팀의 경기 일정이 아직 없습니다." : "본진과 서브팀을 설정하면 해당 구단의 경기가 표시됩니다." : "경기 일정이 준비되면 표시됩니다."}</span>
+          <span>{loading ? "응원 구단 경기를 불러오고 있습니다." : failed ? "응원 구단 경기를 불러오지 못했습니다." : personalized ? teams.length ? "메인 응원 구단·서브팀의 경기 일정이 아직 없습니다." : "메인 응원 구단과 서브팀을 설정하면 해당 구단의 경기가 표시됩니다." : "경기 일정이 준비되면 표시됩니다."}</span>
           {failed && <button type="button" className="text-link" onClick={remote.reload}>다시 시도</button>}
           {personalized && !teams.length && <Link className="text-link" href="/mypage">응원 구단 설정</Link>}
         </div>

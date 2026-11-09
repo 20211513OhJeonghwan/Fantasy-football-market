@@ -63,6 +63,9 @@
 .board-target .crest { --size:16px; }
 .board-target:hover { border-color:var(--club); background:color-mix(in srgb, var(--club) 22%, white); }
 .community-board-table tr.has-club td:first-child { box-shadow:inset 3px 0 0 var(--club); }
+/* Fixed-width club chip so every title starts at the same x; long names ellipsize (full name in title). */
+.community-board-table .board-target { width:140px; max-width:none; background:color-mix(in srgb, var(--club) 18%, white); }
+.board-post-link .board-poll { margin-left:4px; height:20px; padding:0 6px; font-size:11px; vertical-align:1px; }
 .board-post-link { font-size:14px; font-weight:600; overflow-wrap:anywhere; vertical-align:middle; }
 .board-post-link:visited { color:#5b5b55; }
 .board-post-link:hover { text-decoration:underline; }
@@ -151,6 +154,7 @@
   .community-board-table th.board-subject { text-align:left; padding-left:14px; }
   .community-board-table td.board-subject { padding:13px 14px; }
   .board-target { margin-bottom:5px; }
+  .community-board-table .board-target { width:auto; max-width:100%; }
   .community-board-table tr.has-club td.board-subject { box-shadow:inset 3px 0 0 var(--club); }
   .board-post-link { display:block; font-size:14px; }
   .board-mobile-meta { display:block; font-size:11px; color:var(--text-3); margin-top:7px; }
@@ -162,3 +166,9 @@
 /* Post detail: the club colour runs along the top of the article and tints the club crumb. */
 .article.has-club { border-top:4px solid var(--club); }
 .article.has-club .article-target { padding:3px 10px 3px 5px; border-radius:999px; background:color-mix(in srgb, var(--club) 13%, white); border:1px solid color-mix(in srgb, var(--club) 45%, white); color:var(--ink); font-weight:800; }
+/* Floating back-to-top on long schedules; clears the iOS home indicator. */
+.scroll-top { position:fixed; right:24px; bottom:calc(24px + env(safe-area-inset-bottom)); z-index:60; display:inline-flex; align-items:center; gap:6px; height:44px; padding:0 16px 0 12px; border-radius:999px; background:var(--ink); color:var(--yellow); font-size:13px; font-weight:900; box-shadow:0 10px 24px -10px rgba(0,0,0,.55); animation:kx-rise var(--t-base) var(--ease); }
+.scroll-top:hover { background:#000; }
+.scroll-top:focus-visible { outline:3px solid var(--yellow); outline-offset:2px; }
+@media(max-width:640px) { .scroll-top { right:14px; bottom:calc(14px + env(safe-area-inset-bottom)); width:44px; padding:0; justify-content:center; } .scroll-top span { display:none; } }
+@media (prefers-reduced-motion: reduce) { .scroll-top { animation:none; } }

@@ -8,7 +8,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowRight, LoaderCircle, Lock, MessageCircle, Paperclip, Pencil, X } from "lucide-react";
 import { dateText, money } from "@/lib/kickx/data";
-import { clubIdentity } from "@/lib/kickx/club-identity";
+import { clubIdentity, luminance } from "@/lib/kickx/club-identity";
 import { POST_LIMITS, validatePost, type PostField } from "@/lib/kickx/validation";
 import {apiRequest} from "@/lib/kickx/client";
 import {usePost} from "./community-detail";
@@ -19,6 +19,23 @@ import { useCatalogPlayer } from "./catalog";
 import { BackLink, ClubCrest, LeagueMark, DataEmpty, MemberNotice, PageHeading, PlayerPortrait } from "./ui";
 
 const HUB = { club: "/community/clubs", player: "/community/players" } as const;
+/** Club colours for themed surfaces; text colour follows the primary's luminance so it stays readable. */
+function clubTheme(identity: ReturnType<typeof clubIdentity>) {
+  if (!identity) return undefined;
+  return { "--club": identity.primary, "--club-2": identity.secondary, "--club-ink": luminance(identity.primary) > 0.55 ? "#111110" : "#ffffff" } as CSSProperties;
+}
+/** Hub banner for the selected club board: crest, colours and a way into that club's own lounge. */
+function ClubBanner({ id }: { id: string }) {
+  const { getTeam, getLeague } = usePlatform();
+  const team = getTeam(id), identity = clubIdentity(team), league = getLeague(team?.leagueId);
+  if (!team) return null;
+  return <section className="lounge-head club themed club-banner" style={clubTheme(identity)} aria-label={`${team.name} 게시판 안내`}>
+    <span className="lounge-head-watermark" aria-hidden="true"><ClubCrest id={team.id} size="xl" /></span>
+    <div className="lounge-head-mark"><ClubCrest id={team.id} size="large" /></div>
+    <div className="lounge-head-text"><span className="lounge-head-kicker">구단 게시판{league && <LeagueMark league={league} size="sm" />}</span><h2>{team.name}</h2><p>{team.english}</p></div>
+    <Link className="button secondary small" href={`${HUB.club}/${team.id}`}>라운지 입장 <ArrowRight size={14} /></Link>
+  </section>;
+}
 export function CommunityHub({ kind }: { kind: "club" | "player" }) {
   const { data, getTeam } = usePlatform();
   const [target,setTarget]=useState('');
@@ -26,13 +43,16 @@ export function CommunityHub({ kind }: { kind: "club" | "player" }) {
   const clubOptions=useTeamOptions('전체 구단','all','');
   if(kind==='player')return <><PageHeading eyebrow="PLAYER COMMUNITY" title="선수 커뮤니티" description="선수 상세페이지의 커뮤니티 탭에서 이야기를 나눠보세요."/><Link className="button primary" href="/market">선수 시장 <ArrowRight size={16}/></Link></>;
   return <>
-    <PageHeading eyebrow="COMMUNITY" title="구단 커뮤니티" description="응원 구단의 경기와 이야기를 나누세요." action={canPostToClub(data.session?.profile,target||undefined) ? <Link className="button primary" href={`/community/write?scope=club${target?`&target=${target}`:''}`}><Pencil size={16}/>글쓰기</Link> : !data.session?.profile?.primaryTeam?<Link className="button secondary" href={data.session?"/mypage#my-profile":"/login"}>{data.session?"본진 구단 선택":"로그인"}</Link>:<span className="fine-print">게시글은 본진 구단에서 작성할 수 있습니다.</span>}/>
+    <PageHeading eyebrow="COMMUNITY" title="구단 커뮤니티" description="응원 구단의 경기와 이야기를 나누세요." action={canPostToClub(data.session?.profile,target||undefined) ? <Link className="button primary" href={`/community/write?scope=club${target?`&target=${target}`:''}`}><Pencil size={16}/>글쓰기</Link> : !data.session?.profile?.primaryTeam?<Link className="button secondary" href={data.session?"/mypage#my-profile":"/login"}>{data.session?"메인 응원 구단 선택":"로그인"}</Link>:<span className="fine-print">게시글은 메인 응원 구단에서 작성할 수 있습니다.</span>}/>
     <section className="supported-board-clubs" aria-label="나의 응원 구단">
       <strong>나의 응원 구단</strong>
-      <nav aria-label="응원 구단 게시글"><button className={!target?'active':''} onClick={()=>setTarget('')}>전체 구단</button>{teams.map(id=><button key={id} className={target===id?'active':''} onClick={()=>setTarget(id)}><ClubCrest id={id} size="small"/>{getTeam(id)?.name||'구단 정보 없음'}</button>)}</nav>
+      <nav aria-label="응원 구단 게시글"><button className={!target?'active':''} onClick={()=>setTarget('')}>전체 구단</button>{teams.map(id=><button key={id} className={`club-chip${target===id?' active':''}`} style={clubTheme(clubIdentity(getTeam(id)))} onClick={()=>setTarget(id)}><ClubCrest id={id} size="small"/>{getTeam(id)?.name||'구단 정보 없음'}</button>)}</nav>
       <Link href={data.session?'/mypage':'/login'}>{teams.length?`설정 ${teams.length} / 5`:data.session?'응원 구단 설정':'로그인하고 응원 구단 설정'} <ArrowRight size={13}/></Link>
     </section>
-    <CommunityFeed key={target||'all'} scope="club" target={target||undefined} title={target?`${getTeam(target)?.name??'구단'} 게시판`:'전체 게시글'} compose={false} filter={<Select label="게시판 구단 선택" value={target} onChange={setTarget} options={clubOptions} className="community-club-filter"/>}/>
+    {target && <ClubBanner id={target} />}
+    <div className={target?'club-scoped':undefined} style={target?clubTheme(clubIdentity(getTeam(target))):undefined}>
+      <CommunityFeed key={target||'all'} scope="club" target={target||undefined} title={target?`${getTeam(target)?.name??'구단'} 게시판`:'전체 게시글'} compose={false} filter={<Select label="게시판 구단 선택" value={target} onChange={setTarget} options={clubOptions} className="community-club-filter"/>}/>
+    </div>
   </>;
 }
 export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
@@ -46,7 +66,8 @@ export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
   const league=getLeague(team?.leagueId??getTeam(player?.team)?.leagueId);
   return <>
     <BackLink href={scope==='player'?`/players/${target}`:HUB.club} label={scope==='player'?'선수 상세':'구단 커뮤니티'}/>
-    <header className={`lounge-head ${scope}`} style={identity?{'--club':identity.primary,'--club-2':identity.secondary} as CSSProperties:undefined}>
+    <header className={`lounge-head ${scope}${identity?' themed':''}`} style={clubTheme(identity)}>
+      {team && <span className="lounge-head-watermark" aria-hidden="true"><ClubCrest id={team.id} size="xl"/></span>}
       <div className="lounge-head-mark">{team?<ClubCrest id={team.id} size="large"/>:player?<PlayerPortrait player={player} size="md"/>:<MessageCircle size={28}/>}</div>
       <div className="lounge-head-text"><span className="lounge-head-kicker">{scope==='club'?'구단 게시판':'선수 커뮤니티'}{league&&<LeagueMark league={league} size="sm"/>}</span>
         <h1>{name?`${name} ${scope==='club'?'게시판':'커뮤니티'}`:status==='ready'?'게시판을 찾을 수 없습니다':'게시판'}</h1>
@@ -54,7 +75,7 @@ export function CommunityScreen({ scope }: { scope: "club" | "player" }) {
       </div>
       {found&&(scope==='player'||canPostToClub(data.session?.profile,target))&&<Link className="button primary" href={`/community/write?scope=${scope}&target=${target}`}><Pencil size={16}/>글쓰기</Link>}
     </header>
-    {found?<CommunityFeed scope={scope} target={target} targetName={name} title="게시글" compose={scope==='player'}/>:<DataEmpty entity="게시판" status={scope==='player'?detail.status:status} retry={scope==='player'?detail.reload:undefined}/>}
+    {found?<div className={identity?'club-scoped':undefined} style={clubTheme(identity)}><CommunityFeed scope={scope} target={target} targetName={name} title="게시글" compose={scope==='player'}/></div>:<DataEmpty entity="게시판" status={scope==='player'?detail.status:status} retry={scope==='player'?detail.reload:undefined}/>}
   </>;
 }
 export {PostDetail} from "./community-detail";
@@ -184,7 +205,7 @@ function PostEditor() {
               <label htmlFor="post-target">대상 구단 <span className="req" aria-hidden="true">*</span></label>
               <Select id="post-target" invalid={!!visible("target")} describedBy="post-target-hint" onBlur={blur("target")}
                 disabled={isEdit || phase !== "edit" || !myTeam} value={value.target} onChange={target => update({ target, transaction: "" })} placeholder="구단 선택" options={clubTargets}/>
-              <small id="post-target-hint">본진 구단에만 게시글을 작성할 수 있습니다. {!myTeam&&<Link className="text-link" href="/mypage#my-profile">본진 구단 설정 →</Link>}</small>
+              <small id="post-target-hint">메인 응원 구단에만 게시글을 작성할 수 있습니다. {!myTeam&&<Link className="text-link" href="/mypage#my-profile">메인 응원 구단 설정 →</Link>}</small>
             </> : <div id="post-target" className={`post-fixed-target${value.target ? "" : " missing"}`} tabIndex={-1}>{(() => { const target = getPlayer(value.target); return target ? <PlayerPortrait player={target} size="sm" /> : <span className="post-fixed-icon" aria-hidden="true"><MessageCircle size={18} /></span>; })()}<span className="post-fixed-text"><small>게시 대상</small><strong>{targetName ? `${targetName} 커뮤니티` : "선수 상세페이지에서 글쓰기를 시작해 주세요."}</strong>{value.target ? <small>이 선수에 대한 게시글을 작성합니다.</small> : <Link className="text-link" href="/market">선수 시장으로 이동 →</Link>}</span>{value.target && <span className="post-fixed-lock"><Lock size={12} />고정</span>}</div>}
             {fieldError("target")}
           </div>
