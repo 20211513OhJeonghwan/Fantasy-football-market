@@ -221,21 +221,21 @@ export function SquadScreen() {
         {listStatus !== "ready" ? <DataEmpty entity="선수" status={listStatus} retry={mock ? reload : remote.reload} rows={3}/> : <>
           <ul className="squad-market-list">{players.map(p => {
             const holding = member?.holdings.find(h => h.playerId === p.id), owned = !!holding;
-            return <li key={p.id} className={owned ? "owned" : ""}><Link href={`/players/${p.id}`} aria-label={`${p.name} 상세`}><PlayerPortrait player={p} size="sm"/></Link><div className="squad-market-name"><Link href={`/players/${p.id}`}><strong>{p.name}</strong>{owned && <span className="tag ink">{holding.bench ? "동결 벤치" : "보유"}</span>}</Link><span>{getTeam(p.team)?.name ?? "—"} · {p.position ?? "—"}</span><b className="num">{money(holding?.bench?.price ?? p.price)} P {!holding?.bench && <Change value={p.change}/>}</b></div><TradeButton player={p} side={owned ? "sell" : "buy"} className={`button ${owned ? "secondary" : "primary"} small`}/></li>;
+            return <li key={p.id} className={owned ? "owned" : ""}><Link href={`/players/${p.id}`} aria-label={`${p.name} 상세`}><PlayerPortrait player={p} size="sm"/></Link><div className="squad-market-name"><Link href={`/players/${p.id}`}><strong>{p.name}</strong>{owned && <span className="tag ink">{holding.bench ? "벤치" : "보유"}</span>}</Link><span>{getTeam(p.team)?.name ?? "—"} · {p.position ?? "—"}</span><b className="num">{money(holding?.bench?.price ?? p.price)} P {!holding?.bench && <Change value={p.change}/>}</b></div><TradeButton player={p} side={owned ? "sell" : "buy"} className={`button ${owned ? "secondary" : "primary"} small`}/></li>;
           })}</ul>
           {!players.length && <p className="feed-empty">검색 조건에 맞는 선수가 없습니다.</p>}
           <Pagination page={mock ? page : remote.data.page} total={total} size={MARKET_SIZE} onPage={setPage} label="스쿼드 선수"/>
         </>}
       </section>
     </div>
-    {!!bench.length && <section className="panel squad-bench" aria-label="동결 벤치">
-      <div className="section-title"><h2>동결 벤치 <span className="muted num">{bench.length}명</span></h2></div>
-      <p>이적·포지션·포메이션 변경으로 벤치에 이동한 선수입니다. 이동 당시 가격으로 동결되며 주전 정원에 포함되지 않습니다. 재배치는 불가능하고, 7일 안에 매각하지 않으면 수수료 2%를 적용해 자동 매각됩니다.</p>
+    {!!bench.length && <section className="panel squad-bench" aria-label="벤치">
+      <div className="section-title"><h2>벤치 <span className="muted num">{bench.length}명</span></h2></div>
+      <p>이적·포지션·포메이션 변경으로 벤치에 이동한 선수입니다. 매각 기준가는 이동 당시 가격으로 유지되며 주전 정원에 포함되지 않습니다. 재배치는 불가능하고, 7일 안에 매각하지 않으면 수수료 2%를 적용해 자동 매각됩니다.</p>
       <ul>{bench.map(h => {
         const p = getPlayer(h.playerId), frozen = h.bench!;
         return <li key={h.playerId}>
           {p && <PlayerPortrait player={p} size="sm"/>}
-          <div className="roster-bench-player"><strong>{p ? <Link href={`/players/${p.id}`}>{p.name}</Link> : h.playerName}</strong><span>{benchReason(frozen.reason)} · 가격 동결 · 재배치 불가</span><BenchDeadline expiresAt={frozen.expiresAt}/></div>
+          <div className="roster-bench-player"><strong>{p ? <Link href={`/players/${p.id}`}>{p.name}</Link> : h.playerName}</strong><span>{benchReason(frozen.reason)} · 재배치 불가</span><BenchDeadline expiresAt={frozen.expiresAt}/></div>
           <strong className="roster-bench-price num">{money(frozen.price)}<small> P</small></strong>
           <TradeButton player={p} side="sell" className="button secondary small"/>
         </li>;

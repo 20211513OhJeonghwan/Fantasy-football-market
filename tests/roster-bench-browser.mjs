@@ -44,7 +44,7 @@ try {
     const p = await c.newPage(); p.on('pageerror', e => report.errors.push(e.message));
     await p.goto(base + '/portfolio', { waitUntil: 'networkidle' });
     const holding = p.locator('.holding-row').filter({ hasText: players[0].name });
-    assert.match(await holding.innerText(), /동결 벤치/); assert.match(await holding.innerText(), /70,000/);
+    assert.equal(await holding.getByText('벤치', { exact: true }).count(), 1); assert.match(await holding.innerText(), /70,000/);
     await p.goto(base + '/squad', { waitUntil: 'networkidle' });
     const bench = p.locator('.squad-bench'); await bench.getByText(players[0].name, { exact: true }).waitFor();
     assert.match(await p.locator('.squad-count').innerText(), /1\s*\/\s*11/);
@@ -56,7 +56,7 @@ try {
     await bench.getByRole('button', { name: '매각', exact: true }).click();
     const dialog = p.getByRole('dialog');
     await p.waitForFunction(() => document.querySelector('.trade-summary')?.textContent.includes('70,000'));
-    assert.match(await dialog.locator('.trade-summary').innerText(), /동결 가격\s*70,000/);
+    assert.match(await dialog.locator('.trade-summary').innerText(), /매각 기준가\s*70,000/);
     assert.match(await dialog.innerText(), /1,400/); assert.equal(await dialog.locator('.trade-capacity').count(), 0);
     assert.equal(quotes, 1); assert(await dialog.getByRole('button', { name: '매각 확정', exact: true }).isEnabled());
     await p.screenshot({ path: `${out}/sale-${width}.png`, fullPage: true });

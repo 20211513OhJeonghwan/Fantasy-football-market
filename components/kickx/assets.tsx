@@ -87,10 +87,10 @@ export function PortfolioScreen() {
                   {p ? <Link href={`/players/${p.id}`} className="holding-player"><PlayerPortrait player={p} size="sm" /><span><strong>{p.name}</strong><small>{[getTeam(p.team)?.name, p.position].filter(Boolean).join(" · ") || "—"}</small></span></Link>
                     : <span className="holding-player"><span><strong>{h.playerName}</strong></span></span>}
                   <span className="holding-cost num"><small>매입가</small>{money(h.cost)}</span>
-                  <span className="holding-value num"><small>{h.bench ? "동결 가격" : "현재 가치"}</small><b>{money(h.value)}</b></span>
+                  <span className="holding-value num"><small>{h.bench ? "매각 기준가" : "현재 가치"}</small><b>{money(h.value)}</b></span>
                   <span className={`holding-pl num ${tone(h.profit)}`}><small>평가손익</small><b>{signed(h.profit)}</b><Change value={h.returnRate} /></span>
                   <span className="holding-weight"><span className="meter"><i style={{ width: `${weight ?? 0}%` }} /></span><small className="num">{weight == null ? "—" : `${weight.toFixed(1)}%`}</small></span>
-                  <span className="holding-state">{h.bench ? <><span className="tag">동결 벤치</span><BenchDeadline expiresAt={h.bench.expiresAt}/></> : starter ? <span className="tag ink">출전</span> : <span className="tag">벤치</span>}</span>
+                  <span className="holding-state">{h.bench ? <><span className="tag">벤치</span><BenchDeadline expiresAt={h.bench.expiresAt}/></> : starter ? <span className="tag ink">출전</span> : <span className="tag">벤치</span>}</span>
                   <span className="holding-action"><TradeButton player={p} side="sell" className="button secondary small" /></span>
                 </li>
               );

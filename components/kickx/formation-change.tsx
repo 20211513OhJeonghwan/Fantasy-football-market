@@ -28,7 +28,7 @@ export function FormationChangeDialog({ onClose }: { onClose: () => void }) {
     lock.current = true; setSaving(true); setError('');
     try {
       await apiRequest('/api/kickx/squad/formation','POST',{ formationId: target, benchPlayerIds: selected, revision });
-      reload(); notify(`포메이션을 ${target}(으)로 변경했습니다.${selected.length ? ` ${selected.length}명은 동결 벤치로 이동했습니다.` : ''}`); onClose();
+      reload(); notify(`포메이션을 ${target}(으)로 변경했습니다.${selected.length ? ` ${selected.length}명은 벤치로 이동했습니다.` : ''}`); onClose();
     } catch (e) { setError(e instanceof Error ? e.message : '포메이션을 변경하지 못했습니다.'); }
     finally { lock.current=false; setSaving(false); }
   }
@@ -50,11 +50,11 @@ export function FormationChangeDialog({ onClose }: { onClose: () => void }) {
           const player = getPlayer(h.playerId)!, checked = selected.includes(h.playerId), locked = !!player.tradeWindow?.locked;
           return <label key={h.playerId} className={checked ? 'checked' : ''}>
             <input type="checkbox" checked={checked} disabled={locked || !checked && count(pos) >= plan.required[pos]} onChange={() => toggle(h.playerId,pos)}/>
-            <PlayerPortrait player={player} size="sm"/><span><strong>{player.name}</strong><small>{locked ? '경기 거래 제한 중' : '선택 시 동결 벤치로 이동'}</small></span><b className="num">{money(player.price)} P</b>
+            <PlayerPortrait player={player} size="sm"/><span><strong>{player.name}</strong><small>{locked ? '경기 거래 제한 중' : '선택 시 벤치로 이동'}</small></span><b className="num">{money(player.price)} P</b>
           </label>;
         })}
       </fieldset>)}
-      {!!plan.benchCount && <p className="formation-warning"><b>벤치로 이동하면 재배치할 수 없습니다.</b>선택된 선수만 적용 시점 가격으로 동결됩니다. 7일 안에 직접 매각하지 않으면 2% 수수료를 적용해 자동 매각됩니다. 기존 벤치의 가격과 기한은 유지됩니다.</p>}
+      {!!plan.benchCount && <p className="formation-warning"><b>벤치로 이동하면 재배치할 수 없습니다.</b>선택한 선수의 매각 기준가는 이동 당시 가격으로 유지됩니다. 7일 안에 직접 매각하지 않으면 2% 수수료를 적용해 자동 매각됩니다. 기존 벤치의 가격과 기한은 유지됩니다.</p>}
       {formationRule(target).rows.length > 4 && <p className="fine-print">중간의 공격형 미드필더 줄도 MF 정원으로 계산합니다.</p>}
       {outdated && <p className="form-error" role="alert">보유 선수나 배치가 변경되었습니다. 이 창을 닫고 최신 스쿼드에서 다시 변경해 주세요.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}

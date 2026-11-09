@@ -17,10 +17,10 @@ try {
     const players=FORMATIONS[0].positions.map((position,i)=>({id:`p${i}`,name:`주전선수 ${i}`,short:`선수${i}`,position,price:50000+i*1000,team:'club',performance:8,change:1,history:[],records:[],analysis:null}));
     players[0].name='마누엘 노이어';players[0].short='마누엘 노이어';
     players.push({id:'extra-mf',name:'영입대상 미드필더',position:'MF',price:50000,team:'club',history:[],records:[],performance:9});
-    players.push({id:'old-bench',name:'기존 동결 선수',position:'DF',price:120000,team:'club',history:[],records:[],performance:9});
+    players.push({id:'old-bench',name:'기존 벤치 선수',position:'DF',price:120000,team:'club',history:[],records:[],performance:9});
     const state={...emptyPlatformData(),players,formations:FORMATIONS,teams:[{id:'club',name:'테스트 구단',leagueId:'bsd-1'}],leagues:[{id:'bsd-1',name:'Premier League'}],session:{userId:'member',role:'member',profile:{nickname:'포메이션 시험',team:'club',teams:['club'],primaryTeam:'club'}},member:{financialReady:true,points:700000,totalAssets:1300000,playerAssets:600000,holdings:players.slice(0,11).map(p=>({id:p.id,playerId:p.id,playerName:p.name,cost:50000,value:p.price,quantity:1})),ownedPlayers:players,transactions:[],watchlist:[],assetHistory:[],squad:{formationId:'4-3-3',slots:players.slice(0,11).map(p=>p.id),revision:1,value:550000,performance:8}}};
     const oldStart=new Date(Date.now()-86400000).toISOString();
-    state.member.holdings.push({id:'old-bench',playerId:'old-bench',playerName:'기존 동결 선수',cost:50000,value:70000,bench:{price:70000,reason:'transfer',startedAt:oldStart,expiresAt:new Date(Date.now()+6*86400000).toISOString()}});
+    state.member.holdings.push({id:'old-bench',playerId:'old-bench',playerName:'기존 벤치 선수',cost:50000,value:70000,bench:{price:70000,reason:'transfer',startedAt:oldStart,expiresAt:new Date(Date.now()+6*86400000).toISOString()}});
     let changes=0,moves=0,quotes=0;
     const context=await browser.newContext({viewport:{width,height:960},timezoneId:'Asia/Seoul'});
     await context.route(/^https:\/\//,r=>r.abort());
