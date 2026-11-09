@@ -185,16 +185,20 @@ export function Pitch({
                     style={{
                       letterSpacing: "-0.8px",
                       fontSize: compact
-                        ? row.slots.length >= 5 || displayName.length >= 6
+                        ? row.slots.length >= 5
                           ? "8px"
-                          : displayName.length > 4
+                          : displayName.length >= 5
                             ? "9px"
                             : "10px"
                         : displayName.length > 5
                           ? "10px"
                           : "11px",
                       lineHeight: compact ? "1.1" : "1.2",
-                      maxWidth: compact ? "72px" : "min(88px, 100%)",
+                      maxWidth: compact
+                        ? row.slots.length >= 5
+                          ? "58px"
+                          : "72px"
+                        : "min(88px, 100%)",
                       width: "max-content",
                       whiteSpace: "nowrap",
                       marginTop: compact ? "1px" : "2px",

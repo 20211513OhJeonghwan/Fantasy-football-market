@@ -54,8 +54,10 @@ export const SQUAD_LIMIT = 11;
 
 /** Teammate's compact pitch label: keep one-word registered names, otherwise show the final name part. */
 export function compactPlayerName(name: string) {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length <= 1) return name.trim();
+  if (!name) return "";
+  const trimmed = name.trim();
+  const parts = trimmed.split(/\s+/);
+  if (parts.length <= 1) return trimmed;
   const prefixes = [
     "더",
     "데",
@@ -72,11 +74,13 @@ export function compactPlayerName(name: string) {
     "von",
     "al",
   ];
-  const penultimate = parts[parts.length - 2]?.toLowerCase();
-  if (prefixes.includes(penultimate)) {
-    return `${parts[parts.length - 2]} ${parts[parts.length - 1]}`;
+  if (parts.length >= 2) {
+    const secondLast = parts[parts.length - 2].toLowerCase();
+    if (prefixes.includes(secondLast)) {
+      return `${parts[parts.length - 2]} ${parts[parts.length - 1]}`;
+    }
   }
-  return parts[parts.length - 1] ?? "";
+  return parts[parts.length - 1];
 }
 
 /** Holdings, rather than a separately saved lineup, determine purchase capacity. */
