@@ -40,6 +40,7 @@ do $$declare q jsonb;begin
  q:=public.kickx_quote('bench-enrich','sell');perform public.kickx_trade((q->>'id')::uuid,gen_random_uuid());
 end $$;
 update public.player_market_snapshots set price=70000 where id='bench-move';
+insert into public.price_history(player_id,value,recorded_at,rule_version) values('bench-move',70000,clock_timestamp(),'prototype-v1');
 set local role authenticated;
 set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000094';
 select set_config('bench.oldquote',public.kickx_quote('bench-move','sell')->>'id',true);
@@ -48,6 +49,7 @@ update public.players set team_id='bench-new' where id='bench-move';
 update public.players set position='FW' where id='bench-position';
 select set_config('bench.started',(select bench_started_at::text from public.holdings where player_id='bench-move' limit 1),true);
 update public.player_market_snapshots set price=99000 where id='bench-move';
+insert into public.price_history(player_id,value,recorded_at,rule_version) values('bench-move',99000,clock_timestamp(),'prototype-v1');
 -- A second change and an identical roster import cannot extend/reprice an existing bench.
 update public.players set team_id='bench-away',position='DF' where id='bench-move';
 update public.players set team_id=team_id,position=position where id='bench-move';
@@ -60,8 +62,8 @@ end $$;
 set local role authenticated;
 do $$declare m jsonb;q jsonb;begin
  m:=public.kickx_member_data();
- if (m->>'playerAssets')::bigint<>220000 then raise exception 'Portfolio did not retain frozen values: %',m->>'playerAssets';end if;
- if (select x->>'value' from jsonb_array_elements(m->'holdings') x where x->>'playerId'='bench-move')<>'70000' then raise exception 'Frozen value missing';end if;
+ if (m->>'playerAssets')::bigint<>249000 then raise exception 'Portfolio did not retain frozen values: %',m->>'playerAssets';end if;
+ if (select (x->>'value')::numeric from jsonb_array_elements(m->'holdings') x where x->>'playerId'='bench-move')<>99000 then raise exception 'Frozen value missing';end if;
  if (select (x#>>'{bench,expiresAt}')::timestamptz-(x#>>'{bench,startedAt}')::timestamptz from jsonb_array_elements(m->'holdings') x where x->>'playerId'='bench-move') is distinct from interval '168 hours' then raise exception 'Bench deadline must be seven days';end if;
  perform pg_temp.bench_error(format('select public.kickx_trade(%L,gen_random_uuid())',current_setting('bench.oldquote')),'PRICE_CHANGED');
  perform pg_temp.bench_error($q$select public.kickx_quote('bench-move','buy')$q$,'ALREADY_OWNED');
@@ -83,23 +85,27 @@ update public.players set trade_status='거래 중지' where id='bench-move';
 select set_config('bench.historyAt',clock_timestamp()::text,true);
 select set_config('bench.historyAssets',public.kickx_assets('00000000-0000-0000-0000-000000000094')::text,true);
 set local role authenticated;
+select pg_temp.bench_error($q$select public.kickx_quote('bench-move','sell')$q$,'MATCH_TRADING_LOCKED');
+reset role;delete from public.fixtures where id='bench-live';
+set local role authenticated;
 select set_config('bench.salequote',public.kickx_quote('bench-move','sell')->>'id',true);
 select set_config('bench.request',gen_random_uuid()::text,true);
 select set_config('bench.balance',(select balance::text from public.wallets where user_id=auth.uid()),true);
 reset role;
 update public.player_market_snapshots set price=120000 where id='bench-move';
+insert into public.price_history(player_id,value,recorded_at,rule_version) values('bench-move',120000,clock_timestamp(),'prototype-v1');
 set local role authenticated;
 do $$declare t jsonb;begin
+ perform pg_temp.bench_error(format('select public.kickx_trade(%L,gen_random_uuid())',current_setting('bench.salequote')),'PRICE_CHANGED');
+ perform set_config('bench.salequote',public.kickx_quote('bench-move','sell')->>'id',true);
  t:=public.kickx_trade(current_setting('bench.salequote')::uuid,current_setting('bench.request')::uuid);
- if (t->>'price')::bigint<>70000 or (t->>'fee')::bigint<>1400 or (t->>'net')::bigint<>68600 or t->>'execution_reason'<>'bench_manual' then raise exception 'Manual frozen settlement wrong: %',t;end if;
+ if (t->>'price')::bigint<>120000 or (t->>'fee')::bigint<>2400 or (t->>'net')::bigint<>117600 or t->>'execution_reason'<>'bench_manual' then raise exception 'Manual frozen settlement wrong: %',t;end if;
  if public.kickx_trade(current_setting('bench.salequote')::uuid,current_setting('bench.request')::uuid)<>t then raise exception 'Manual retry not idempotent';end if;
  if public.kickx_trade(current_setting('bench.salequote')::uuid,gen_random_uuid())<>t then raise exception 'Quote retry not idempotent';end if;
- if (select balance from public.wallets where user_id=auth.uid())<>current_setting('bench.balance')::bigint+68600 then raise exception 'Wallet paid twice';end if;
+ if (select balance from public.wallets where user_id=auth.uid())<>current_setting('bench.balance')::bigint+117600 then raise exception 'Wallet paid twice';end if;
  if exists(select 1 from public.holdings where player_id='bench-move') then raise exception 'Manual sale retained owner holding';end if;
  if (select count(*) from public.wallet_ledger where trade_id=(t->>'id')::uuid)<>1 then raise exception 'Ledger receipt duplicated';end if;
  if not exists(select 1 from jsonb_array_elements(public.kickx_member_data()->'transactions') x where x->>'status'='벤치 매각') then raise exception 'Sale reason not returned';end if;
- -- Selling a normal holding still respects its ordinary live match window.
- perform pg_temp.bench_error($q$select public.kickx_quote('bench-replacement','sell')$q$,'MATCH_TRADING_LOCKED');
 end $$;
 -- Another user cannot settle the quote, even if the quote ID is known.
 set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000095';

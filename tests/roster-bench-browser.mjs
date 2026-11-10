@@ -9,20 +9,21 @@ const { emptyPlatformData } = loadTs('../lib/kickx/data.ts');
 const base = 'http://localhost:3112', out = 'test-artifacts/roster-bench';
 const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', 'localhost', '-p', '3112'], { stdio: 'ignore' });
 let browser;
-const report = { widths: [320, 390, 1440], checks: [], errors: [] };
+const report = { widths: [320, 390, 768, 1440], checks: [], errors: [] };
 try {
   for (let i = 0; i < 40; i++) { try { if ((await fetch(base)).ok) break; } catch {} if (i === 39) throw Error('App did not start'); await new Promise(r => setTimeout(r, 500)); }
   browser = await chromium.launch({ executablePath: process.env.KICKX_BROWSER_EXECUTABLE || undefined }); await mkdir(out, { recursive: true });
   for (const width of report.widths) {
-    const frozen = { price: 70000, startedAt: new Date(Date.now() - 2 * 86400000).toISOString(), expiresAt: new Date(Date.now() + 5 * 86400000).toISOString(), reason: 'transfer_position' };
+    const benchState = { price: 120000, startedAt: new Date(Date.now() - 2 * 86400000).toISOString(), expiresAt: new Date(Date.now() + 5 * 86400000).toISOString(), reason: 'transfer_position' };
     const players = [
-      { id: 'bench-player', name: '이적한 테스트 선수', position: 'DF', price: 120000, status: '거래 중지', tradeWindow: { locked: true }, team: 'new-club' },
+      { id: 'bench-player', name: '이적한 테스트 선수', position: 'DF', price: 120000, status: null, tradeWindow: { locked: false }, team: 'new-club' },
       { id: 'active-player', name: '주전 테스트 선수', position: 'GK', price: 50000, team: 'new-club' },
     ].map(p => ({ ...p, change: 0, performance: 8, history: [], records: [], analysis: null }));
-    const state = { ...emptyPlatformData(), players, leagues: [{ id: 'bsd-1', name: 'Premier League' }], teams: [{ id: 'new-club', name: '현재 소속 구단', leagueId: 'bsd-1' }], session: { userId: 'member', role: 'member', profile: { nickname: '벤치 테스트', team: 'new-club', teams: ['new-club'], primaryTeam: 'new-club' } }, member: { financialReady: true, points: 1000000, totalAssets: 1120000, playerAssets: 120000, profit: 20000, returnRate: 2, holdings: [{ id: 'bench-player', playerId: 'bench-player', playerName: players[0].name, cost: 50000, value: 70000, profit: 20000, returnRate: 40, quantity: 1, bench: frozen }, { id: 'active-player', playerId: 'active-player', cost: 50000, value: 50000, profit: 0, returnRate: 0, quantity: 1 }], ownedPlayers: players, transactions: [], watchlist: [], assetHistory: [], squad: { formationId: '4-3-3', slots: ['active-player', ...Array(10).fill(null)], revision: 1, value: 50000 } } };
+    const state = { ...emptyPlatformData(), players, leagues: [{ id: 'bsd-1', name: 'Premier League' }], teams: [{ id: 'new-club', name: '현재 소속 구단', leagueId: 'bsd-1' }], session: { userId: 'member', role: 'member', profile: { nickname: '벤치 테스트', team: 'new-club', teams: ['new-club'], primaryTeam: 'new-club' } }, member: { financialReady: true, points: 1000000, totalAssets: 1170000, playerAssets: 170000, profit: 70000, returnRate: 2, holdings: [{ id: 'bench-player', playerId: 'bench-player', playerName: players[0].name, cost: 50000, value: 120000, profit: 70000, returnRate: 140, quantity: 1, bench: benchState }, { id: 'active-player', playerId: 'active-player', cost: 50000, value: 50000, profit: 0, returnRate: 0, quantity: 1 }], ownedPlayers: players, transactions: [], watchlist: [], assetHistory: [], squad: { formationId: '4-3-3', slots: ['active-player', ...Array(10).fill(null)], revision: 1, value: 50000 } } };
     const c = await browser.newContext({ viewport: { width, height: 960 }, timezoneId: 'Asia/Seoul' });
     await c.route(/^https:\/\//, r => r.abort());
-    let quotes = 0, submissions = 0;
+    const originalMember = structuredClone(state.member);
+    let quotes = 0, submissions = 0, restores = 0;
     await c.route('**/api/**', async route => {
       const req = route.request(), path = new URL(req.url()).pathname;
       const ready = data => route.fulfill({ json: { status: 'ready', data } });
@@ -31,12 +32,17 @@ try {
       if (path === '/api/kickx/notifications') return ready({ hasUnread: false, matchNotifications: true });
       if (path === '/api/kickx/trades/quote') {
         quotes++; assert.deepEqual(req.postDataJSON(), { playerId: 'bench-player', side: 'sell' });
-        return route.fulfill({ json: { id: 'frozen-quote', playerId: 'bench-player', side: 'sell', quantity: 1, price: 70000, fee: 1400, settlement: 68600, balance: 1000000, balanceAfter: 1068600, quotedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString() } });
+        return route.fulfill({ json: { id: 'live-quote', playerId: 'bench-player', side: 'sell', quantity: 1, price: 120000, fee: 2400, settlement: 117600, balance: 1000000, balanceAfter: 1117600, quotedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString() } });
+      }
+      if (path === '/api/kickx/squad/bench' && req.method() === 'POST') {
+        restores++; assert.deepEqual(req.postDataJSON(), { playerId: 'bench-player', revision: 1 });
+        delete state.member.holdings[0].bench; state.member.squad.slots[1] = 'bench-player'; state.member.squad.revision = 2;
+        return route.fulfill({ json: state.member.squad });
       }
       if (path === '/api/kickx/trades' && req.method() === 'POST') {
-        submissions++; assert.equal(req.postDataJSON().quoteId, 'frozen-quote');
-        state.member.holdings = state.member.holdings.filter(h => !h.bench); state.member.points = 1068600;
-        state.member.playerAssets = 50000; state.member.totalAssets = 1118600;
+        submissions++; assert.equal(req.postDataJSON().quoteId, 'live-quote');
+        state.member.holdings = state.member.holdings.filter(h => !h.bench); state.member.points = 1117600;
+        state.member.playerAssets = 50000; state.member.totalAssets = 1167600;
         return route.fulfill({ json: { accepted: true } });
       }
       return ready({ items: [], total: 0, page: 1, size: 20 });
@@ -44,7 +50,8 @@ try {
     const p = await c.newPage(); p.on('pageerror', e => report.errors.push(e.message));
     await p.goto(base + '/portfolio', { waitUntil: 'networkidle' });
     const holding = p.locator('.holding-row').filter({ hasText: players[0].name });
-    assert.equal(await holding.getByText('벤치', { exact: true }).count(), 1); assert.match(await holding.innerText(), /70,000/);
+    assert.equal(await holding.getByText('벤치', { exact: true }).count(), 1); assert.match(await holding.innerText(), /120,000/);
+    assert(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Portfolio overflow at ${width}`);
     await p.goto(base + '/squad', { waitUntil: 'networkidle' });
     const bench = p.locator('.squad-bench'); await bench.getByText(players[0].name, { exact: true }).waitFor();
     assert.match(await p.locator('.squad-count').innerText(), /1\s*\/\s*11/);
@@ -55,15 +62,24 @@ try {
     await p.screenshot({ path: `${out}/bench-${width}.png`, fullPage: true });
     await bench.getByRole('button', { name: '매각', exact: true }).click();
     const dialog = p.getByRole('dialog');
-    await p.waitForFunction(() => document.querySelector('.trade-summary')?.textContent.includes('70,000'));
-    assert.match(await dialog.locator('.trade-summary').innerText(), /매각 기준가\s*70,000/);
-    assert.match(await dialog.innerText(), /1,400/); assert.equal(await dialog.locator('.trade-capacity').count(), 0);
+    await p.waitForFunction(() => document.querySelector('.trade-summary')?.textContent.includes('120,000'));
+    assert.match(await dialog.locator('.trade-summary').innerText(), /현재 가치\s*120,000/);
+    assert.match(await dialog.innerText(), /2,400/); assert.equal(await dialog.locator('.trade-capacity').count(), 0);
     assert.equal(quotes, 1); assert(await dialog.getByRole('button', { name: '매각 확정', exact: true }).isEnabled());
     await p.screenshot({ path: `${out}/sale-${width}.png`, fullPage: true });
     await dialog.getByRole('button', { name: '매각 확정', exact: true }).click();
     await p.waitForFunction(() => !document.querySelector('.squad-bench'));
-    assert.equal(submissions, 1); assert.equal(state.member.points, 1068600);
-    report.checks.push({ width, frozenPrice: 70000, net: 68600, quotes, submissions }); await c.close();
+    assert.equal(submissions, 1); assert.equal(state.member.points, 1117600);
+    state.member = structuredClone(originalMember); await p.reload({ waitUntil: 'networkidle' });
+    const returnedBench = p.locator('.squad-bench');
+    await returnedBench.getByRole('button', { name: '주전 복귀', exact: true }).waitFor();
+    await p.screenshot({ path: `${out}/live-bench-${width}.png`, fullPage: true });
+    await returnedBench.screenshot({ path: `${out}/live-bench-panel-${width}.png` });
+    await returnedBench.getByRole('button', { name: '주전 복귀', exact: true }).click();
+    await p.waitForFunction(() => !document.querySelector('.squad-bench'));
+    assert.equal(restores, 1); assert.equal(state.member.points, originalMember.points); assert.equal(state.member.holdings[0].cost, 50000);
+    assert.match(await p.locator('.squad-count').innerText(), /2\s*\/\s*11/);
+    report.checks.push({ width, price: 120000, net: 117600, quotes, submissions, restores }); await c.close();
   }
   assert.deepEqual(report.errors, []); console.log(JSON.stringify(report));
 } finally {

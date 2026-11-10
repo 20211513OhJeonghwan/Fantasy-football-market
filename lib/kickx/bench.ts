@@ -1,4 +1,4 @@
-import type { Holding, Player } from './types';
+import type { Holding, Player, Position } from './types';
 
 export const BENCH_DAYS = 7;
 export function tradeExecutionStatus(reason?: string | null) {
@@ -18,7 +18,23 @@ export function benchTimeRemaining(expiresAt: string, now = Date.now()) {
 export function benchExpired(bench: Holding['bench'], now = Date.now()) {
   return !!bench && Date.parse(bench.expiresAt) <= now;
 }
-/** A sale preview must use the owner's protected value, including out-of-scope/paused players. */
+/** Bench sale follows current shared prices and the ordinary match lock. */
 export function benchSalePlayer(player: Player, holding?: Pick<Holding, 'bench'>): Player {
-  return holding?.bench ? { ...player, price: holding.bench.price, change: null, status: null, tradeWindow: { locked: false } } : player;
+  return holding?.bench ? { ...player, price: player.price ?? holding.bench.price, status: null } : player;
+}
+
+export function benchRestoreBlock(player: Player | undefined, bench: Holding['bench'],
+  capacity: { counts: Record<Position, number>; limits: Record<Position, number>; total: number; unknown: number; excess: boolean },
+  inScope: boolean, now = Date.now()) {
+  if (!bench) return '이미 주전인 선수입니다.';
+  if (benchExpired(bench, now)) return '자동 매각 처리 중';
+  if (!player || !player.position) return '포지션 확인 필요';
+  if (!inScope) return '5대 리그 소속 선수만 복귀 가능';
+  if (player.status) return player.status;
+  if (player.price == null) return '가격 확인 필요';
+  if (player.tradeWindow?.locked) return '경기 거래 제한';
+  if (capacity.unknown || capacity.excess) return '주전 정원 확인 필요';
+  if (capacity.total >= 11) return '주전 정원 마감';
+  if (capacity.counts[player.position] >= capacity.limits[player.position]) return `${player.position} 정원 마감`;
+  return null;
 }

@@ -663,7 +663,7 @@ function TradeDialog({ player, side, bench, onClose }: { player: Player; side: "
     }
   }
   const rows: [string, ReactNode, string?][] = [
-    [bench ? "매각 기준가" : "현재 가치", <>{money(quote?.price)}<span className="unit">P</span></>],
+    ["현재 가치", <>{money(quote?.price)}<span className="unit">P</span></>],
     ["수량", <>{quote?.quantity ?? "—"}<span className="unit">명</span></>],
     [side === "sell" ? "판매 수수료" : "수수료", quote?.fee == null ? "—" : <>{side === "sell" && quote.fee > 0 ? "−" : ""}{money(quote?.fee)}<span className="unit">P</span></>, "minor"],
     [side === "buy" ? "결제 금액" : "예상 정산액", quote?.settlement == null ? "—" : <>{money(quote?.settlement)}<span className="unit">P</span></>, "total"],
@@ -690,7 +690,7 @@ function TradeDialog({ player, side, bench, onClose }: { player: Player; side: "
             </div>
             <Change value={player.change} />
           </div>
-          {bench && <div className="trade-notice" role="note"><b>{benchReason(bench.reason)} · 벤치</b><span>이동 당시 {money(bench.price)}P로 매각합니다. 수수료 2%가 적용되며 재배치는 불가능합니다.</span><BenchDeadline expiresAt={bench.expiresAt}/></div>}
+          {bench && <div className="trade-notice" role="note"><b>{benchReason(bench.reason)} · 벤치</b><span>현재 시세로 매각하며 수수료 2%가 적용됩니다. 7일 안에 빈 정원으로 주전 복귀할 수도 있습니다.</span><BenchDeadline expiresAt={bench.expiresAt}/></div>}
           {data.member && !bench && <section className="trade-capacity" aria-label="현재 포지션별 보유 현황">
             <div><strong>현재 보유 현황</strong><span className={`num trade-capacity-total ${capacity.total >= 11 ? "full" : ""}`}>{capacity.total} / 11명</span></div>
             <ul>{(["GK", "DF", "MF", "FW"] as const).map(pos => {
@@ -725,7 +725,7 @@ function TradeDialog({ player, side, bench, onClose }: { player: Player; side: "
           )}
           {expired && (
             <div className="trade-state warn" role="alert">
-              <span>견적이 만료되었습니다. {bench ? "매각 기준가로" : "현재 가격으로"} 새 견적을 받아 주세요.</span>
+              <span>견적이 만료되었습니다. 현재 가격으로 새 견적을 받아 주세요.</span>
               <button className="button secondary small" onClick={() => setAttempt((a) => a + 1)}>새 견적 받기</button>
             </div>
           )}
@@ -740,7 +740,7 @@ function TradeDialog({ player, side, bench, onClose }: { player: Player; side: "
           )}
           <p className="fine-print">
             {service.available
-              ? `${mock ? "예시 모드 · 수수료와 정산액은 예시 값입니다. " : ""}${bench ? "매각 기준가는 시세와 무관하게 유지됩니다. 7일 기한 이후에는 자동 매각됩니다." : "확정 시점의 가격으로 체결되며, 가격이 바뀌면 다시 확인을 요청합니다."}`
+              ? `${mock ? "예시 모드 · 수수료와 정산액은 예시 값입니다. " : ""}${bench ? "현재 시세로 정산하며 가격이 바뀌면 다시 확인합니다. 7일 기한 이후에는 경기 제한 해제 후 자동 매각됩니다." : "확정 시점의 가격으로 체결되며, 가격이 바뀌면 다시 확인을 요청합니다."}`
               : "거래 서비스 준비 중입니다. 현재는 주문을 접수할 수 없습니다."}
           </p>
           <div className="modal-actions">
@@ -794,7 +794,7 @@ export function TradeButton({
 export function TradeNotice({ player }: { player: Player }) {
   const { data } = usePlatform();
   const bench = data.member?.holdings.find(h => h.playerId === player.id)?.bench;
-  if (bench) return <p className="trade-notice" role="note"><b>벤치</b><span>{benchReason(bench.reason)}에 따라 벤치 선수의 매각 기준가는 {money(bench.price)}P로 유지됩니다. 기한까지 직접 매각할 수 있으며, 이후 수수료 2%를 적용해 자동 매각됩니다.<BenchDeadline expiresAt={bench.expiresAt}/></span></p>;
+  if (bench) return <p className="trade-notice" role="note"><b>벤치</b><span>{benchReason(bench.reason)}에 따라 벤치로 이동했습니다. 현재 시세를 반영하며 7일 안에 빈 주전 자리로 복귀하거나 매각할 수 있습니다. 이후 현재 시세에서 수수료 2%를 차감해 자동 매각합니다.<BenchDeadline expiresAt={bench.expiresAt}/></span></p>;
   const lock = player.tradeWindow;
   if (lock?.locked) return (
     <p className="trade-notice lock" role="note">

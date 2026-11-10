@@ -100,7 +100,7 @@ update public.player_market_snapshots set price=120000 where id in('form-DF-4','
 set local role authenticated;
 do $$declare q jsonb;begin
  q:=public.kickx_quote('form-DF-4','sell');
- if (q->>'price')::bigint<>70000 or (q->>'fee')::bigint<>1400 or (q->>'settlement')::bigint<>68600 then raise exception 'Frozen sale does not match';end if;
+ if (q->>'price')::bigint<>120000 or (q->>'fee')::bigint<>2400 or (q->>'settlement')::bigint<>117600 then raise exception 'Current bench sale does not match';end if;
 end $$;
 -- The second member can change among every supported system without affecting the first.
 set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000097';
@@ -119,7 +119,7 @@ do $$declare sold integer;begin
   where user_id='00000000-0000-0000-0000-000000000096' and bench_reason='formation';
  sold:=kickx_private.expire_roster_bench();if sold<>2 then raise exception 'Formation benches did not auto sell: %',sold;end if;
  if kickx_private.expire_roster_bench()<>0 then raise exception 'Repeated automatic sale';end if;
- if (select balance from public.wallets where user_id='00000000-0000-0000-0000-000000000096')<>current_setting('formation.balance')::bigint-100000+127400 then raise exception 'Automatic net settlement mismatch';end if;
+ if (select balance from public.wallets where user_id='00000000-0000-0000-0000-000000000096')<>current_setting('formation.balance')::bigint-100000+235200 then raise exception 'Automatic net settlement mismatch';end if;
  if (select count(*) from public.trades where execution_reason='bench_expired')<>2 then raise exception 'Missing automatic receipts';end if;
  if (select formation_id from public.squads where user_id='00000000-0000-0000-0000-000000000096')<>'3-5-2' then raise exception 'Automatic sale reset formation';end if;
 end $$;

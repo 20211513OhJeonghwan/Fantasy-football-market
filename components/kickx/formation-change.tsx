@@ -65,7 +65,7 @@ export function FormationChangeDialog({ onClose }: { onClose: () => void }) {
         })}
       </fieldset>)}
       {/* 3. One shared rules note instead of a warning on every row. */}
-      {!!plan.benchCount && <div className="formation-warning"><b>벤치로 이동하면 재배치할 수 없습니다</b><p>매각 기준가는 이동 당시 가격으로 유지됩니다. 벤치 선수는 다시 배치할 수 없으며, 7일 안에 직접 매각하지 않으면 수수료 2%를 적용해 자동 매각됩니다. 기존 벤치의 가격과 기한은 바뀌지 않습니다.</p></div>}
+      {!!plan.benchCount && <div className="formation-warning"><b>벤치도 현재 시세를 반영합니다</b><p>벤치도 현재 시세로 평가되어 전체 보유 인원은 11명을 넘을 수 있습니다. 주전은 11명과 포지션별 정원을 지켜야 합니다. 7일 안에 빈 포지션으로 복귀하거나 매각할 수 있으며, 기한이 지나면 수수료 2%를 적용해 자동 매각합니다. 경기 거래 제한 중에는 해제 후 처리합니다. 계속 벤치인 선수의 시작 시각과 기한은 유지됩니다.</p></div>}
       {formationRule(target).rows.length > 4 && <p className="fine-print">중간의 공격형 미드필더 줄도 MF 정원으로 계산합니다.</p>}
       {outdated && <p className="form-error" role="alert">보유 선수나 배치가 변경되었습니다. 이 창을 닫고 최신 스쿼드에서 다시 변경해 주세요.</p>}
       {error && <p className="form-error" role="alert">{error}</p>}

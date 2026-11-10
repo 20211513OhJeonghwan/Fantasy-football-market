@@ -126,3 +126,17 @@
   .player-community-entry { min-height: 220px; }
   .player-community-entry h2 { font-size: 19px; }
 }
+
+.roster-bench-action { display: flex; align-items: start; gap: 8px; }
+.bench-restore { display: grid; gap: 5px; min-width: 0; }
+.bench-restore > small { max-width: 150px; color: var(--text-3); font-size: 10.5px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+.holding-action:has(.bench-restore) { display: grid; gap: 8px; }
+@media (max-width: 1000px) {
+  .squad-bench li { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "id id" "price deadline" "action action"; gap: 10px 12px; padding: 12px; }
+  .roster-bench-id { grid-area: id; }
+  .roster-bench-price { grid-area: price; }
+  .squad-bench .bench-deadline { grid-area: deadline; }
+  .roster-bench-action { grid-area: action; justify-self: stretch; }
+  .roster-bench-action > .bench-restore, .roster-bench-action > .button { flex: 1; min-width: 0; }
+  .roster-bench-action .button { width: 100%; justify-content: center; }
+}

@@ -15,6 +15,7 @@ import {
 } from "@/lib/kickx/squad";
 import { FormationChangeDialog } from "./formation-change";
 import { BenchDeadline } from "./bench-deadline";
+import { BenchRestoreButton } from "./bench-restore";
 import type { Player, Position } from "@/lib/kickx/types";
 import { usePlatform } from "./provider";
 import { useCatalogPage } from "./catalog";
@@ -372,7 +373,7 @@ export function SquadScreen() {
               <span className="tag outline">자동 반영</span>
             </div>
             <div className="squad-count">
-              <span>보유 선수</span>
+              <span>주전 선수</span>
               <strong className="num">
                 {member ? capacity.total : "—"}
                 <small> / 11</small>
@@ -429,7 +430,7 @@ export function SquadScreen() {
                 ? "배치를 저장하고 있습니다."
                 : selected != null && slots[selected]
                   ? `${getPlayer(slots[selected])?.name ?? "선택한 선수"}의 새 자리를 고르세요. 점선으로 표시된 같은 포지션 자리로만 옮길 수 있습니다.`
-                  : "옮길 주전 선수를 누르세요. 벤치 선수는 다시 배치할 수 없습니다."}
+                  : "옮길 주전 선수를 누르세요. 벤치는 주전 복귀 버튼으로 빈자리에 복귀할 수 있습니다."}
             </p>
           )}
           <Pitch
@@ -631,13 +632,9 @@ export function SquadScreen() {
                           {getTeam(p.team)?.name ?? "—"} · {p.position ?? "—"}
                         </span>
                         <b className="num">
-                          {holding?.bench && (
-                            <small className="bench-price-label">
-                              매각 기준가
-                            </small>
-                          )}
-                          {money(holding?.bench?.price ?? p.price)} P{" "}
-                          {!holding?.bench && <Change value={p.change} />}
+
+                          {money(p.price ?? holding?.bench?.price)} P{" "}
+                          <Change value={p.change} />
                         </b>
                       </div>
                       <TradeButton
@@ -670,11 +667,7 @@ export function SquadScreen() {
               벤치 <span className="muted num">{bench.length}명</span>
             </h2>
           </div>
-          <p className="squad-bench-rule">
-            매각 기준가는 이동 당시 가격으로 유지됩니다. 벤치 선수는 다시 배치할
-            수 없으며, 7일 안에 매각하지 않으면 수수료 2%를 적용해 자동
-            매각됩니다.
-          </p>
+          <p className="squad-bench-rule">벤치도 현재 시세로 평가되어 전체 보유 인원은 11명을 넘을 수 있습니다. 주전은 11명과 포지션별 정원을 지켜야 합니다. 7일 안에 빈 포지션으로 복귀하거나 매각할 수 있으며, 기한이 지나면 수수료 2%를 적용해 자동 매각합니다. 경기 거래 제한 중에는 해제 후 처리합니다.</p>
           {/* Read order: who, why, price, deadline, action. */}
           <ul>
             {bench.map((h) => {
@@ -704,9 +697,9 @@ export function SquadScreen() {
                     </div>
                   </div>
                   <div className="roster-bench-price">
-                    <small>매각 기준가</small>
+                    <small>현재 가치</small>
                     <strong className="num">
-                      {money(saved.price)}
+                      {money(p?.price ?? saved.price)}
                       <small> P</small>
                     </strong>
                   </div>
@@ -715,11 +708,7 @@ export function SquadScreen() {
                     {overdue ? (
                       <span className="status-pill">자동 매각 처리 중</span>
                     ) : (
-                      <TradeButton
-                        player={p}
-                        side="sell"
-                        className="button secondary small"
-                      />
+                      <><BenchRestoreButton playerId={h.playerId}/><TradeButton player={p} side="sell" className="button secondary small" /></>
                     )}
                   </div>
                 </li>
@@ -748,11 +737,7 @@ export function SquadScreen() {
                       <PlayerPortrait player={p} size="sm" />
                       <Link href={`/players/${p.id}`}>{p.name}</Link>
                       <PositionBadge position={p.position} />
-                      <TradeButton
-                        player={p}
-                        side="sell"
-                        className="button secondary small"
-                      />
+                      <TradeButton player={p} side="sell" className="button secondary small" />
                     </>
                   ) : (
                     <span>선수 정보를 확인하고 있습니다.</span>
